@@ -6,6 +6,7 @@ using Sunmax0731.IconPaletteVariantGenerator.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Utilities;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 {
@@ -33,6 +34,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal const string PackageVersion = "1.0.0";
         internal const string ValidatedUnityVersion = "6000.4.0f1";
         internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.0";
+        internal const string MainWindowRootName = "palette-variant-main-root";
+        internal const string MainWindowImguiContainerName = "palette-variant-main-imgui-container";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private const string AutoPreviewPrefsKey = "Sunmax.IconPaletteVariantGenerator.AutoPreview";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
@@ -81,6 +84,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Vector2 previewPan;
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
+        private IMGUIContainer imguiContainer;
 
         [MenuItem("Tools/Palette Variant Generator/開く")]
         public static void Open()
@@ -115,7 +119,40 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             LoadLanguageMode();
         }
 
+        public void CreateGUI()
+        {
+            rootVisualElement.Clear();
+
+            VisualElement root = new VisualElement { name = MainWindowRootName };
+            root.style.flexGrow = 1f;
+            root.style.flexDirection = FlexDirection.Column;
+
+            imguiContainer = new IMGUIContainer(DrawImGuiContent)
+            {
+                name = MainWindowImguiContainerName
+            };
+            imguiContainer.style.flexGrow = 1f;
+            root.Add(imguiContainer);
+            rootVisualElement.Add(root);
+        }
+
+        internal bool IsUiToolkitHostActive()
+        {
+            return rootVisualElement != null
+                && rootVisualElement.Q<IMGUIContainer>(MainWindowImguiContainerName) != null;
+        }
+
         private void OnGUI()
+        {
+            if (IsUiToolkitHostActive())
+            {
+                return;
+            }
+
+            DrawImGuiContent();
+        }
+
+        private void DrawImGuiContent()
         {
             bool compactLayout = ShouldUseCompactLayout(position.width);
             DrawToolbar();

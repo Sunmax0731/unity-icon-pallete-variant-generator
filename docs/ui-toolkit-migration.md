@@ -19,6 +19,15 @@
 - preview window はソース情報、解析設定、グループ設定、出力設定、プリセット、プレビュー、パレット、バリエーション、置換ルール、色別ルールの主要セクション構成を UI Toolkit で検証する。
 - `ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS` で、window の生成、タイトル、最小サイズ、主要セクションの存在を headless validation する。
 - `ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS` で、ObjectField、ColorField、PopupField、ScrollView、Slider、プレビューの pan / wheel zoom / split compare の入力受け口を headless validation する。
+- `ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS` で、本番 main window が UI Toolkit root と `IMGUIContainer` のホスト構成で開くことを headless validation する。
+
+## main window の移行方針
+
+本番 window は UI Toolkit root で `IMGUIContainer` をホストする hybrid 構成に移行した。
+
+- Analyze、Auto Group、Preview、Export、Session、Preset、Batch Export などの既存 IMGUI ワークフローは維持する。
+- Window の管理、root、将来の置き換え単位は UI Toolkit 側に寄せる。
+- 純 UI Toolkit 化は preview window で標準コントロールと入力受け口を検証しながら、セクション単位で置き換える。
 
 ## compact layout
 

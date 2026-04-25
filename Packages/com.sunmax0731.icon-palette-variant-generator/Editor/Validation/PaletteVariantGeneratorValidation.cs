@@ -48,6 +48,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue23DockedLayout();
             ValidateIssue23UiToolkitPreview();
             ValidateIssue23UiToolkitInteractionControls();
+            ValidateIssue23MainWindowUiToolkitHost();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -70,6 +71,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS");
             Debug.Log("ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS");
+            Debug.Log("ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -932,6 +934,24 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("UI Toolkit preview controls do not match the required control types.");
             }
+        }
+
+        private static void ValidateIssue23MainWindowUiToolkitHost()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null || !window.IsUiToolkitHostActive())
+            {
+                throw new System.InvalidOperationException("Main window is not hosted by UI Toolkit.");
+            }
+
+            if (window.rootVisualElement.Q<UnityEngine.UIElements.VisualElement>(PaletteVariantGeneratorWindow.MainWindowRootName) == null
+                || window.rootVisualElement.Q<UnityEngine.UIElements.IMGUIContainer>(PaletteVariantGeneratorWindow.MainWindowImguiContainerName) == null)
+            {
+                throw new System.InvalidOperationException("Main window UI Toolkit host elements are missing.");
+            }
+
+            window.Close();
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)
