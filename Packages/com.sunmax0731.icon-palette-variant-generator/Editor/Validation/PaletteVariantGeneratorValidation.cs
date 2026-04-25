@@ -31,11 +31,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateColorGrouping();
             ValidateColorReplacement();
             ValidatePngExport();
+            ValidateSessionJson();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
             Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
             Debug.Log("ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE5_PNG_EXPORT_VALIDATION=PASS");
+            Debug.Log("ISSUE6_SESSION_JSON_VALIDATION=PASS");
         }
 
         private static void ValidateColorExtraction()
@@ -162,6 +164,56 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             finally
             {
                 Object.DestroyImmediate(texture);
+                if (System.IO.Directory.Exists(tempRoot))
+                {
+                    System.IO.Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        private static void ValidateSessionJson()
+        {
+            string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IconPaletteSessionValidation", System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(tempRoot);
+            string path = System.IO.Path.Combine(tempRoot, "session.json");
+
+            try
+            {
+                PaletteVariantSession session = new PaletteVariantSession
+                {
+                    sourceImageAssetPath = "Assets/Icons/source.png",
+                    paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                    {
+                        new PaletteColorEntry
+                        {
+                            id = "#FF0000",
+                            hex = "#FF0000",
+                            color = new Color32(255, 0, 0, 255),
+                            pixelCount = 1,
+                            groupId = "group_01"
+                        }
+                    },
+                    colorGroups = new System.Collections.Generic.List<ColorGroup>
+                    {
+                        new ColorGroup
+                        {
+                            id = "group_01",
+                            targetColor = new Color32(0, 0, 255, 255),
+                            blendRatio = 0.5f
+                        }
+                    }
+                };
+
+                SessionJsonService service = new SessionJsonService();
+                service.Save(path, session);
+                SessionLoadResult result = service.Load(path);
+                if (!result.Success || result.Session.colorGroups.Count != 1)
+                {
+                    throw new System.InvalidOperationException("Session JSON validation failed.");
+                }
+            }
+            finally
+            {
                 if (System.IO.Directory.Exists(tempRoot))
                 {
                     System.IO.Directory.Delete(tempRoot, true);

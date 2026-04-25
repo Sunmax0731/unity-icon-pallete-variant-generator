@@ -18,12 +18,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float MinPreviewHeight = 260f;
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
 
-        private readonly PaletteVariantSession session = new PaletteVariantSession();
+        private PaletteVariantSession session = new PaletteVariantSession();
         private readonly TextureAssetLoader textureAssetLoader = new TextureAssetLoader();
         private readonly ColorExtractionService colorExtractionService = new ColorExtractionService();
         private readonly ColorGroupingService colorGroupingService = new ColorGroupingService();
         private readonly ColorReplacementService colorReplacementService = new ColorReplacementService();
         private readonly PngExportService pngExportService = new PngExportService();
+        private readonly SessionJsonService sessionJsonService = new SessionJsonService();
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
@@ -95,10 +96,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
                 }
 
-                using (new EditorGUI.DisabledScope(true))
+                using (new EditorGUI.DisabledScope(false))
                 {
-                    GUILayout.Button("Save Session", EditorStyles.toolbarButton);
-                    GUILayout.Button("Load Session", EditorStyles.toolbarButton);
+                    if (GUILayout.Button("Save Session", EditorStyles.toolbarButton, GUILayout.Width(104f)))
+                    {
+                        SaveSession();
+                    }
+
+                    if (GUILayout.Button("Load Session", EditorStyles.toolbarButton, GUILayout.Width(104f)))
+                    {
+                        LoadSession();
+                    }
                 }
 
                 using (new EditorGUI.DisabledScope(readableSourceImage == null || session.colorGroups.Count == 0))
@@ -364,6 +372,83 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 reportMessage = result.Message;
                 reportType = MessageType.Error;
             }
+        }
+
+        private void SaveSession()
+        {
+            string path = EditorUtility.SaveFilePanel(
+                "Save Palette Variant Session",
+                GetProjectRoot(),
+                "palette-variant-session.json",
+                "json");
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            try
+            {
+                sessionJsonService.Save(path, session);
+                reportMessage = $"Session saved: {path}";
+                reportType = MessageType.Info;
+            }
+            catch (System.Exception ex)
+            {
+                reportMessage = ex.Message;
+                reportType = MessageType.Error;
+            }
+        }
+
+        private void LoadSession()
+        {
+            string path = EditorUtility.OpenFilePanel("Load Palette Variant Session", GetProjectRoot(), "json");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            SessionLoadResult result = sessionJsonService.Load(path);
+            if (!result.Success)
+            {
+                reportMessage = string.Join("\n", result.Warnings);
+                reportType = MessageType.Error;
+                return;
+            }
+
+            session = result.Session;
+            sourceAssetPath = session.sourceImageAssetPath;
+            sourceImage = string.IsNullOrWhiteSpace(sourceAssetPath)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<Texture2D>(sourceAssetPath);
+
+            DestroyReadableSourceImage();
+            DestroyAfterPreview();
+            string loadError = string.Empty;
+            if (sourceImage != null && textureAssetLoader.TryLoadReadableTexture(sourceImage, out Texture2D loadedTexture, out _, out loadError))
+            {
+                readableSourceImage = loadedTexture;
+                if (session.colorGroups.Count > 0)
+                {
+                    RefreshAfterPreview();
+                }
+            }
+            else if (sourceImage != null)
+            {
+                reportMessage = loadError;
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            reportMessage = result.Warnings.Count == 0
+                ? $"Session loaded: {path}"
+                : string.Join("\n", result.Warnings);
+            reportType = result.Warnings.Count == 0 ? MessageType.Info : MessageType.Warning;
+        }
+
+        internal void SaveSessionForValidation(string path)
+        {
+            sessionJsonService.Save(path, session);
         }
 
         private void SelectOutputFolder()
