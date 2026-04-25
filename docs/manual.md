@@ -49,6 +49,12 @@ Tools > Palette Variant Generator > 開く
 - `File Suffix`: controls the output file suffix for that variation.
 - `Output File`: previews the generated PNG file name before export.
 
+## Preview Workflow
+
+- `Preview`: manually refreshes the generated preview.
+- `Auto Preview`: automatically refreshes the preview after color, blend, or mode edits with a short debounce.
+- Large images use a longer Auto Preview delay to avoid excessive recalculation while editing.
+
 ## Samples
 
 Validation samples are included under:

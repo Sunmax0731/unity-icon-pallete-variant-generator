@@ -36,6 +36,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue10UiPolish();
             ValidateIssue7Variations();
             ValidateIssue12VariationUx();
+            ValidateIssue13AutoPreviewDebounce();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -47,6 +48,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE8_SAMPLE_QA_VALIDATION=PASS");
             Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
             Debug.Log("ISSUE12_VARIATION_UX_VALIDATION=PASS");
+            Debug.Log("ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -401,6 +403,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 || duplicate.exportEnabled)
             {
                 throw new System.InvalidOperationException("Variation UX validation failed.");
+            }
+        }
+
+        private static void ValidateIssue13AutoPreviewDebounce()
+        {
+            Texture2D smallTexture = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+            Texture2D largeTexture = new Texture2D(1024, 1024, TextureFormat.RGBA32, false);
+
+            try
+            {
+                double smallDelay = PaletteVariantGeneratorWindow.GetAutoPreviewDebounceSeconds(smallTexture);
+                double largeDelay = PaletteVariantGeneratorWindow.GetAutoPreviewDebounceSeconds(largeTexture);
+                if (smallDelay <= 0d || largeDelay <= smallDelay)
+                {
+                    throw new System.InvalidOperationException("Auto Preview debounce validation failed.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(smallTexture);
+                Object.DestroyImmediate(largeTexture);
             }
         }
 

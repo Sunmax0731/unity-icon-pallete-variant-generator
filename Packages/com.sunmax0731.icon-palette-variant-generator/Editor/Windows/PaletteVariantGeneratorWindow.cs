@@ -20,12 +20,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float MinPreviewHeight = 260f;
         private const float PaletteListHeight = 170f;
         private const float VariationListHeight = 126f;
+        private const double AutoPreviewDebounceSeconds = 0.25d;
+        private const double LargeImageAutoPreviewDebounceSeconds = 0.75d;
+        private const int LargeImageAutoPreviewPixelCount = 1024 * 1024;
         internal const string ProductName = "Unity Icon Palette Variant Generator";
         internal const string PackageName = "com.sunmax0731.icon-palette-variant-generator";
         internal const string PackageVersion = "1.0.0";
         internal const string ValidatedUnityVersion = "6000.4.0f1";
         internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.0";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
+        private const string AutoPreviewPrefsKey = "Sunmax.IconPaletteVariantGenerator.AutoPreview";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
         private static readonly Color OverlayBorderColor = new Color(0.1f, 0.65f, 1f, 0.85f);
@@ -55,6 +59,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private PaletteVariantLanguageMode languageMode = PaletteVariantLanguageMode.Auto;
         private PaletteVariantDisplayLanguage displayLanguage = PaletteVariantDisplayLanguage.English;
         private ParameterHelpWindow parameterHelpWindow;
+        private bool autoPreviewEnabled = true;
+        private bool autoPreviewPending;
+        private double autoPreviewScheduledTime;
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
 
@@ -87,6 +94,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private void OnEnable()
         {
             checkerboardTexture = CreateCheckerboardTexture();
+            autoPreviewEnabled = EditorPrefs.GetBool(AutoPreviewPrefsKey, true);
             LoadLanguageMode();
         }
 
@@ -163,7 +171,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 {
                     if (GUILayout.Button(T("preview", "Preview"), EditorStyles.toolbarButton, GUILayout.Width(78f)))
                     {
+                        CancelScheduledAutoPreview();
                         RefreshAfterPreview();
+                    }
+                }
+
+                bool nextAutoPreview = GUILayout.Toggle(
+                    autoPreviewEnabled,
+                    T("autoPreview", "Auto Preview"),
+                    EditorStyles.toolbarButton,
+                    GUILayout.Width(104f));
+                if (nextAutoPreview != autoPreviewEnabled)
+                {
+                    autoPreviewEnabled = nextAutoPreview;
+                    EditorPrefs.SetBool(AutoPreviewPrefsKey, autoPreviewEnabled);
+                    if (!autoPreviewEnabled)
+                    {
+                        CancelScheduledAutoPreview();
                     }
                 }
 
@@ -392,8 +416,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     group.replacementMode = (ColorReplacementMode)EditorGUILayout.EnumPopup(T("mode", "Mode"), group.replacementMode);
                     if (change.changed && afterPreview != null)
                     {
-                        variationService.SyncActiveVariation(session);
-                        RefreshAfterPreview();
+                        HandlePreviewSettingChanged();
                     }
                 }
 
@@ -441,8 +464,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                             rule.enabled = EditorGUILayout.ToggleLeft(T("enabled", "Enabled"), rule.enabled, GUILayout.Width(84f));
                             if (change.changed && afterPreview != null)
                             {
-                                variationService.SyncActiveVariation(session);
-                                RefreshAfterPreview();
+                                HandlePreviewSettingChanged();
                             }
                         }
                     }
@@ -455,8 +477,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         rule.blendRatio = EditorGUILayout.Slider(T("blendRatio", "Blend Ratio"), rule.blendRatio, 0f, 1f);
                         if (change.changed && afterPreview != null)
                         {
-                            variationService.SyncActiveVariation(session);
-                            RefreshAfterPreview();
+                            HandlePreviewSettingChanged();
                         }
                     }
 
@@ -526,6 +547,77 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             afterPreview = colorReplacementService.Apply(readableSourceImage, session);
             reportMessage = "After preview updated.";
             reportType = MessageType.Info;
+        }
+
+        private void HandlePreviewSettingChanged()
+        {
+            variationService.SyncActiveVariation(session);
+            if (autoPreviewEnabled)
+            {
+                ScheduleAutoPreviewUpdate();
+                return;
+            }
+
+            CancelScheduledAutoPreview();
+            reportMessage = "Preview settings changed. Click Preview to update.";
+            reportType = MessageType.Info;
+        }
+
+        private void ScheduleAutoPreviewUpdate()
+        {
+            if (!CanAutoPreview())
+            {
+                return;
+            }
+
+            double debounceSeconds = GetAutoPreviewDebounceSeconds(readableSourceImage);
+            autoPreviewPending = true;
+            autoPreviewScheduledTime = EditorApplication.timeSinceStartup + debounceSeconds;
+            EditorApplication.update -= ProcessScheduledAutoPreview;
+            EditorApplication.update += ProcessScheduledAutoPreview;
+
+            if (IsLargeAutoPreviewSource(readableSourceImage))
+            {
+                reportMessage = "Large image detected. Auto Preview will update with a longer delay.";
+                reportType = MessageType.Warning;
+            }
+        }
+
+        private bool CanAutoPreview()
+        {
+            return autoPreviewEnabled
+                && readableSourceImage != null
+                && session.colorGroups.Count > 0;
+        }
+
+        private void ProcessScheduledAutoPreview()
+        {
+            if (!autoPreviewPending || EditorApplication.timeSinceStartup < autoPreviewScheduledTime)
+            {
+                return;
+            }
+
+            CancelScheduledAutoPreview();
+            RefreshAfterPreview();
+            Repaint();
+        }
+
+        private void CancelScheduledAutoPreview()
+        {
+            autoPreviewPending = false;
+            EditorApplication.update -= ProcessScheduledAutoPreview;
+        }
+
+        internal static double GetAutoPreviewDebounceSeconds(Texture2D texture)
+        {
+            return IsLargeAutoPreviewSource(texture)
+                ? LargeImageAutoPreviewDebounceSeconds
+                : AutoPreviewDebounceSeconds;
+        }
+
+        private static bool IsLargeAutoPreviewSource(Texture2D texture)
+        {
+            return texture != null && texture.width * texture.height >= LargeImageAutoPreviewPixelCount;
         }
 
         private void ExportPreview()
@@ -1109,6 +1201,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "saveSession" => "Save Session",
                 "loadSession" => "Load Session",
                 "preview" => "Preview",
+                "autoPreview" => "Auto Preview",
                 "help" => "Help",
                 "analyzeSettings" => "解析設定",
                 "alphaThreshold" => "透明度しきい値",
@@ -1166,6 +1259,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void OnDisable()
         {
+            CancelScheduledAutoPreview();
             DestroyReadableSourceImage();
             DestroyAfterPreview();
             DestroySelectionOverlayTexture();
