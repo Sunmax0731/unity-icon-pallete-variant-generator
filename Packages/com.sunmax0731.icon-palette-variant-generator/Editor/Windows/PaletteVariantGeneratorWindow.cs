@@ -5,6 +5,7 @@ using Sunmax0731.IconPaletteVariantGenerator.Models;
 using Sunmax0731.IconPaletteVariantGenerator.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Utilities;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -35,7 +36,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal const string ValidatedUnityVersion = "6000.4.0f1";
         internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.1";
         internal const string MainWindowRootName = "palette-variant-main-root";
-        internal const string MainWindowImguiContainerName = "palette-variant-main-imgui-container";
+        internal const string MainWindowScrollName = "palette-variant-main-scroll";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private const string AutoPreviewPrefsKey = "Sunmax.IconPaletteVariantGenerator.AutoPreview";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
@@ -84,7 +85,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Vector2 previewPan;
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
-        private IMGUIContainer imguiContainer;
+        private Label reportLabel;
+        private Label sourcePathLabel;
+        private Label sourceSizeLabel;
+        private Label sourcePaletteLabel;
+        private Image beforePreviewImage;
+        private Image afterPreviewImage;
+        private ScrollView paletteListElement;
+        private ScrollView groupListElement;
+        private ScrollView variationListElement;
+        private VisualElement replacementRuleContainer;
+        private VisualElement colorRuleContainer;
+        private bool isRefreshingUiToolkit;
 
         [MenuItem("Tools/Palette Variant Generator/開く")]
         public static void Open()
@@ -122,24 +134,794 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         public void CreateGUI()
         {
             rootVisualElement.Clear();
-
-            VisualElement root = new VisualElement { name = MainWindowRootName };
-            root.style.flexGrow = 1f;
-            root.style.flexDirection = FlexDirection.Column;
-
-            imguiContainer = new IMGUIContainer(DrawImGuiContent)
-            {
-                name = MainWindowImguiContainerName
-            };
-            imguiContainer.style.flexGrow = 1f;
-            root.Add(imguiContainer);
-            rootVisualElement.Add(root);
+            rootVisualElement.Add(BuildUiToolkitRoot());
+            RefreshUiToolkitContent();
         }
 
         internal bool IsUiToolkitHostActive()
         {
             return rootVisualElement != null
-                && rootVisualElement.Q<IMGUIContainer>(MainWindowImguiContainerName) != null;
+                && rootVisualElement.Q<VisualElement>(MainWindowRootName) != null
+                && rootVisualElement.Q<IMGUIContainer>() == null;
+        }
+
+        internal bool ContainsProductionUiToolkitSections()
+        {
+            return rootVisualElement.Q<VisualElement>("source-section") != null
+                && rootVisualElement.Q<VisualElement>("analyze-section") != null
+                && rootVisualElement.Q<VisualElement>("group-section") != null
+                && rootVisualElement.Q<VisualElement>("preview-section") != null
+                && rootVisualElement.Q<VisualElement>("palette-section") != null
+                && rootVisualElement.Q<VisualElement>("variation-section") != null
+                && rootVisualElement.Q<VisualElement>("replacement-rule-section") != null
+                && rootVisualElement.Q<VisualElement>("color-rule-section") != null
+                && rootVisualElement.Q<ScrollView>(MainWindowScrollName) != null;
+        }
+
+        private VisualElement BuildUiToolkitRoot()
+        {
+            VisualElement root = new VisualElement { name = MainWindowRootName };
+            root.style.flexGrow = 1f;
+            root.style.flexDirection = FlexDirection.Column;
+            root.style.paddingLeft = 8f;
+            root.style.paddingRight = 8f;
+            root.style.paddingTop = 6f;
+            root.style.paddingBottom = 6f;
+
+            root.Add(BuildUiToolkitToolbar());
+
+            reportLabel = new Label { name = "report-label" };
+            reportLabel.style.whiteSpace = WhiteSpace.Normal;
+            reportLabel.style.marginTop = 4f;
+            reportLabel.style.marginBottom = 4f;
+            root.Add(reportLabel);
+
+            ScrollView scroll = new ScrollView(ScrollViewMode.Vertical) { name = MainWindowScrollName };
+            scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            scroll.style.flexGrow = 1f;
+
+            VisualElement content = new VisualElement { name = "main-content" };
+            content.style.flexDirection = FlexDirection.Row;
+            content.style.flexWrap = Wrap.Wrap;
+            content.style.alignItems = Align.Stretch;
+
+            VisualElement leftColumn = CreateUiColumn("settings-column", 300f, 1f);
+            leftColumn.Add(BuildSourceSection());
+            leftColumn.Add(BuildAnalyzeSection());
+            leftColumn.Add(BuildGroupSection());
+            leftColumn.Add(BuildExportSection());
+            leftColumn.Add(BuildBatchSection());
+            leftColumn.Add(BuildPresetSection());
+
+            VisualElement centerColumn = CreateUiColumn("preview-column", 420f, 2f);
+            centerColumn.Add(BuildPreviewSection());
+            centerColumn.Add(BuildPaletteSection());
+
+            VisualElement rightColumn = CreateUiColumn("rules-column", 420f, 1f);
+            rightColumn.Add(BuildVariationSection());
+            rightColumn.Add(BuildReplacementRuleSection());
+            rightColumn.Add(BuildColorRuleSection());
+
+            content.Add(leftColumn);
+            content.Add(centerColumn);
+            content.Add(rightColumn);
+            scroll.Add(content);
+            root.Add(scroll);
+            return root;
+        }
+
+        private Toolbar BuildUiToolkitToolbar()
+        {
+            Toolbar toolbar = new Toolbar { name = "main-toolbar" };
+            ObjectField sourceField = new ObjectField(T("sourceImage", "Source Image"))
+            {
+                name = "source-image-field",
+                objectType = typeof(Texture2D),
+                allowSceneObjects = false,
+                value = sourceImage
+            };
+            sourceField.style.minWidth = 240f;
+            sourceField.style.flexGrow = 1f;
+            sourceField.RegisterValueChangedCallback(evt =>
+            {
+                if (isRefreshingUiToolkit)
+                {
+                    return;
+                }
+
+                sourceImage = evt.newValue as Texture2D;
+                RefreshUiToolkitContent();
+            });
+            toolbar.Add(sourceField);
+            toolbar.Add(CreateToolbarButton(T("analyze", "Analyze"), () => AnalyzeSourceImage(), () => sourceImage != null));
+            toolbar.Add(CreateToolbarButton(T("autoGroup", "Auto Group"), () => AutoGroupPalette(), () => session.paletteColors.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("preview", "Preview"), () => RefreshAfterPreview(), () => readableSourceImage != null && session.colorGroups.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("export", "Export"), () => ExportPreview(), () => afterPreview != null));
+            toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => ExportAllVariations(), () => readableSourceImage != null && session.variations.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("saveSession", "Save Session"), () => SaveSession(), () => true));
+            toolbar.Add(CreateToolbarButton(T("loadSession", "Load Session"), () => LoadSession(), () => true));
+            toolbar.Add(CreateToolbarButton(T("help", "Help"), () => OpenHelpWindow(), () => true));
+            toolbar.Add(BuildLanguagePopup());
+            toolbar.Add(BuildAutoPreviewToggle());
+            return toolbar;
+        }
+
+        private Button CreateToolbarButton(string text, System.Action action, System.Func<bool> enabled)
+        {
+            Button button = new Button(() => RunUiToolkitAction(action)) { text = text };
+            button.SetEnabled(enabled == null || enabled());
+            button.style.minWidth = 72f;
+            return button;
+        }
+
+        private VisualElement BuildLanguagePopup()
+        {
+            EnumField field = new EnumField(languageMode) { name = "language-popup" };
+            field.tooltip = T("language", "Language");
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (isRefreshingUiToolkit)
+                {
+                    return;
+                }
+
+                languageMode = (PaletteVariantLanguageMode)evt.newValue;
+                displayLanguage = ResolveDisplayLanguage(languageMode);
+                EditorPrefs.SetInt(LanguageModePrefsKey, (int)languageMode);
+                CreateGUI();
+            });
+            return field;
+        }
+
+        private Toggle BuildAutoPreviewToggle()
+        {
+            Toggle toggle = new Toggle(T("autoPreview", "Auto Preview")) { name = "auto-preview-toggle", value = autoPreviewEnabled };
+            toggle.RegisterValueChangedCallback(evt =>
+            {
+                if (isRefreshingUiToolkit)
+                {
+                    return;
+                }
+
+                autoPreviewEnabled = evt.newValue;
+                EditorPrefs.SetBool(AutoPreviewPrefsKey, autoPreviewEnabled);
+            });
+            return toggle;
+        }
+
+        private VisualElement BuildSourceSection()
+        {
+            VisualElement section = CreateUiSection("source-section", T("sourceInfo", "Source Info"));
+            sourcePathLabel = CreateWrappingLabel("source-asset-path-label");
+            sourceSizeLabel = CreateWrappingLabel("source-size-label");
+            sourcePaletteLabel = CreateWrappingLabel("source-palette-label");
+            section.Add(sourcePathLabel);
+            section.Add(sourceSizeLabel);
+            section.Add(sourcePaletteLabel);
+            return section;
+        }
+
+        private VisualElement BuildAnalyzeSection()
+        {
+            VisualElement section = CreateUiSection("analyze-section", T("analyzeSettings", "Analyze Settings"));
+            section.Add(CreateSliderInt("alpha-threshold-slider", T("alphaThreshold", "Alpha Threshold"), session.analyzeSettings.alphaThreshold, 0, 255, value => session.analyzeSettings.alphaThreshold = value));
+            section.Add(CreateIntegerField("minimum-pixel-count-field", T("minimumPixelCount", "Minimum Pixel Count"), session.analyzeSettings.minimumPixelCount, value => session.analyzeSettings.minimumPixelCount = Mathf.Max(1, value)));
+            section.Add(CreateSliderInt("quantize-step-slider", T("quantizeStep", "Quantize Step"), session.analyzeSettings.quantizeStep, 1, 64, value => session.analyzeSettings.quantizeStep = value));
+            section.Add(CreateIntegerField("max-palette-colors-field", T("maxPaletteColors", "Max Palette Colors"), session.analyzeSettings.maxPaletteColors, value => session.analyzeSettings.maxPaletteColors = Mathf.Max(1, value)));
+            return section;
+        }
+
+        private VisualElement BuildGroupSection()
+        {
+            VisualElement section = CreateUiSection("group-section", T("groupSettings", "Group Settings"));
+            section.Add(CreateSliderInt("target-group-count-slider", T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64, value => session.groupSettings.targetGroupCount = value));
+            section.Add(CreateEnumField("distance-mode-popup", T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode, value => session.groupSettings.distanceMode = (ColorDistanceMode)value));
+            section.Add(CreateSlider("near-color-threshold-slider", T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f, value => session.groupSettings.maxColorDistance = value));
+            section.Add(CreateToggle("preserve-dark-outline-toggle", T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline, value => session.groupSettings.preserveDarkOutline = value));
+            section.Add(CreateToggle("preserve-alpha-toggle", T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha, value => session.groupSettings.preserveAlpha = value));
+
+            section.Add(CreateUiSubHeader(T("noiseRemoval", "Noise Removal")));
+            session.noiseRemovalSettings ??= new NoiseRemovalSettings();
+            section.Add(CreateToggle("noise-removal-toggle", T("noiseRemovalEnabled", "Enable Noise Removal"), session.noiseRemovalSettings.enabled, value => session.noiseRemovalSettings.enabled = value));
+            section.Add(CreateSliderInt("max-noise-region-slider", T("maxNoiseRegionPixels", "Max Noise Size"), session.noiseRemovalSettings.maxRegionPixels, 1, 64, value => session.noiseRemovalSettings.maxRegionPixels = value));
+            section.Add(CreateSlider("noise-neighbor-threshold-slider", T("noiseNeighborThreshold", "Neighbor Threshold"), session.noiseRemovalSettings.neighborDistanceThreshold, 0f, 441f, value => session.noiseRemovalSettings.neighborDistanceThreshold = value));
+            section.Add(CreateToggle("same-group-only-toggle", T("sameGroupOnly", "Same Group Only"), session.noiseRemovalSettings.sameGroupOnly, value => session.noiseRemovalSettings.sameGroupOnly = value));
+            return section;
+        }
+
+        private VisualElement BuildExportSection()
+        {
+            VisualElement section = CreateUiSection("export-section", T("exportSettings", "Export Settings"));
+            VisualElement folderRow = new VisualElement { name = "export-folder-row" };
+            folderRow.style.flexDirection = FlexDirection.Row;
+            TextField outputField = CreateTextField("export-folder-field", T("outputFolder", "Output Folder"), session.exportSettings.outputFolder, value => session.exportSettings.outputFolder = value);
+            outputField.style.flexGrow = 1f;
+            folderRow.Add(outputField);
+            folderRow.Add(new Button(() => RunUiToolkitAction(SelectOutputFolder)) { text = "..." });
+            section.Add(folderRow);
+            section.Add(CreateTextField("file-prefix-field", T("filePrefix", "File Prefix"), session.exportSettings.filePrefix, value => session.exportSettings.filePrefix = value));
+            section.Add(CreateTextField("file-suffix-field", T("fileSuffix", "File Suffix"), session.exportSettings.fileSuffix, value =>
+            {
+                session.exportSettings.fileSuffix = value;
+                IconVariation activeVariation = variationService.GetActiveVariation(session);
+                if (activeVariation != null)
+                {
+                    activeVariation.fileSuffix = value;
+                }
+            }));
+            section.Add(CreateEnumField("conflict-mode-popup", T("conflictMode", "Conflict Mode"), session.exportSettings.conflictMode, value => session.exportSettings.conflictMode = (ExportConflictMode)value));
+            section.Add(CreateToggle("refresh-asset-database-toggle", T("refreshAssetDatabase", "Refresh AssetDatabase"), session.exportSettings.refreshAssetDatabase, value => session.exportSettings.refreshAssetDatabase = value));
+            return section;
+        }
+
+        private VisualElement BuildBatchSection()
+        {
+            VisualElement section = CreateUiSection("batch-export-section", T("batchExport", "Batch Export"));
+            VisualElement row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            TextField folder = CreateTextField("batch-source-folder-field", T("sourceFolder", "Source Folder"), batchSourceFolder, value => batchSourceFolder = value);
+            folder.style.flexGrow = 1f;
+            row.Add(folder);
+            row.Add(new Button(() => RunUiToolkitAction(SelectBatchSourceFolder)) { text = "..." });
+            section.Add(row);
+            Button exportButton = new Button(() => RunUiToolkitAction(ExportBatchSourceFolder)) { text = T("exportFolder", "Export Folder") };
+            exportButton.SetEnabled(session.colorGroups.Count > 0 && session.variations.Count > 0);
+            section.Add(exportButton);
+            return section;
+        }
+
+        private VisualElement BuildPresetSection()
+        {
+            VisualElement section = CreateUiSection("preset-section", T("presetAsset", "Preset Asset"));
+            ObjectField presetField = new ObjectField(T("presetAsset", "Preset Asset"))
+            {
+                name = "preset-object-field",
+                objectType = typeof(PaletteVariantRulePresetAsset),
+                allowSceneObjects = false,
+                value = presetAsset
+            };
+            presetField.RegisterValueChangedCallback(evt => presetAsset = evt.newValue as PaletteVariantRulePresetAsset);
+            section.Add(presetField);
+            section.Add(CreateButtonRow(
+                (T("createPresetAsset", "Create Preset Asset"), () => CreateRulePresetAsset(), session.colorGroups.Count > 0),
+                (T("updatePresetAsset", "Update Preset Asset"), () => UpdateRulePresetAsset(), presetAsset != null && session.colorGroups.Count > 0),
+                (T("loadPresetAsset", "Load Preset Asset"), () => LoadRulePresetAsset(), presetAsset != null)));
+            section.Add(CreateButtonRow(
+                (T("exportPreset", "Export Preset"), () => ExportRulePreset(), session.colorGroups.Count > 0),
+                (T("importPreset", "Import Preset"), () => ImportRulePreset(), true)));
+            return section;
+        }
+
+        private VisualElement BuildPreviewSection()
+        {
+            VisualElement section = CreateUiSection("preview-section", T("preview", "Preview"));
+            section.Add(CreateEnumField("compare-mode-popup", T("compareMode", "Compare"), previewCompareMode, value =>
+            {
+                previewCompareMode = (PreviewCompareMode)value;
+                RefreshUiToolkitContent();
+            }));
+            section.Add(CreateSlider("preview-zoom-slider", T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom, value => previewZoom = value));
+            section.Add(CreateSlider("preview-split-slider", T("split", "Split"), previewSplit, 0f, 1f, value => previewSplit = value));
+
+            VisualElement row = new VisualElement { name = "preview-image-row" };
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            beforePreviewImage = CreatePreviewImage("before-preview-image");
+            afterPreviewImage = CreatePreviewImage("after-preview-image");
+            row.Add(beforePreviewImage);
+            row.Add(afterPreviewImage);
+            section.Add(row);
+            section.Add(new Button(() =>
+            {
+                previewZoom = 1f;
+                previewSplit = 0.5f;
+                previewPan = Vector2.zero;
+                RefreshUiToolkitContent();
+            }) { text = T("resetView", "Reset View") });
+            return section;
+        }
+
+        private VisualElement BuildPaletteSection()
+        {
+            VisualElement section = CreateUiSection("palette-section", T("palette", "Palette"));
+            paletteListElement = new ScrollView(ScrollViewMode.Vertical) { name = "palette-scroll-view" };
+            paletteListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            paletteListElement.style.height = PaletteListHeight;
+            section.Add(paletteListElement);
+            groupListElement = new ScrollView(ScrollViewMode.Vertical) { name = "group-scroll-view" };
+            groupListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            groupListElement.style.maxHeight = 220f;
+            section.Add(groupListElement);
+            return section;
+        }
+
+        private VisualElement BuildVariationSection()
+        {
+            VisualElement section = CreateUiSection("variation-section", T("variations", "Variations"));
+            section.Add(CreateButtonRow(
+                (T("add", "Add"), () => { variationService.AddVariation(session); variationService.SyncActiveVariation(session); }, session.colorGroups.Count > 0),
+                (T("duplicate", "Duplicate"), () => { variationService.DuplicateActiveVariation(session); variationService.SyncActiveVariation(session); }, session.variations.Count > 0),
+                (T("remove", "Remove"), () => { variationService.RemoveActiveVariation(session); variationService.SyncActiveVariation(session); }, session.variations.Count > 1)));
+            variationListElement = new ScrollView(ScrollViewMode.Vertical) { name = "variation-scroll-view" };
+            variationListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            variationListElement.style.height = VariationListHeight;
+            section.Add(variationListElement);
+            return section;
+        }
+
+        private VisualElement BuildReplacementRuleSection()
+        {
+            replacementRuleContainer = CreateUiSection("replacement-rule-section", T("replacementRules", "Replacement Rules"));
+            return replacementRuleContainer;
+        }
+
+        private VisualElement BuildColorRuleSection()
+        {
+            colorRuleContainer = CreateUiSection("color-rule-section", T("colorRules", "Color Rules"));
+            return colorRuleContainer;
+        }
+
+        private void RefreshUiToolkitContent()
+        {
+            if (rootVisualElement.Q<VisualElement>(MainWindowRootName) == null)
+            {
+                return;
+            }
+
+            isRefreshingUiToolkit = true;
+            if (reportLabel != null)
+            {
+                reportLabel.text = reportMessage;
+            }
+
+            if (sourcePathLabel != null)
+            {
+                sourcePathLabel.text = $"{T("assetPath", "Asset Path")}: {(string.IsNullOrWhiteSpace(sourceAssetPath) ? "-" : sourceAssetPath)}";
+            }
+
+            if (sourceSizeLabel != null)
+            {
+                sourceSizeLabel.text = readableSourceImage == null
+                    ? $"{T("size", "Size")}: -"
+                    : $"{T("size", "Size")}: {readableSourceImage.width} x {readableSourceImage.height}";
+            }
+
+            if (sourcePaletteLabel != null)
+            {
+                sourcePaletteLabel.text = $"{T("paletteColors", "Palette Colors")}: {session.paletteColors.Count} / {T("groups", "Groups")}: {session.colorGroups.Count}";
+            }
+
+            if (beforePreviewImage != null)
+            {
+                beforePreviewImage.image = readableSourceImage;
+                beforePreviewImage.style.display = DisplayStyle.Flex;
+            }
+
+            if (afterPreviewImage != null)
+            {
+                afterPreviewImage.image = afterPreview;
+                afterPreviewImage.style.display = afterPreview == null ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+
+            RefreshPaletteListElement();
+            RefreshGroupListElement();
+            RefreshVariationListElement();
+            RefreshReplacementRuleElement();
+            RefreshColorRuleElement();
+            RefreshToolbarButtonStates();
+            isRefreshingUiToolkit = false;
+        }
+
+        private void RefreshToolbarButtonStates()
+        {
+            Toolbar toolbar = rootVisualElement.Q<Toolbar>("main-toolbar");
+            if (toolbar == null)
+            {
+                return;
+            }
+
+            foreach (Button button in toolbar.Children().OfType<Button>())
+            {
+                switch (button.text)
+                {
+                    case var text when text == T("analyze", "Analyze"):
+                        button.SetEnabled(sourceImage != null);
+                        break;
+                    case var text when text == T("autoGroup", "Auto Group"):
+                        button.SetEnabled(session.paletteColors.Count > 0);
+                        break;
+                    case var text when text == T("preview", "Preview"):
+                        button.SetEnabled(readableSourceImage != null && session.colorGroups.Count > 0);
+                        break;
+                    case var text when text == T("export", "Export"):
+                        button.SetEnabled(afterPreview != null);
+                        break;
+                    case var text when text == T("exportAll", "Export All"):
+                        button.SetEnabled(readableSourceImage != null && session.variations.Count > 0);
+                        break;
+                }
+            }
+        }
+
+        private void RefreshPaletteListElement()
+        {
+            if (paletteListElement == null)
+            {
+                return;
+            }
+
+            paletteListElement.Clear();
+            if (session.paletteColors.Count == 0)
+            {
+                paletteListElement.Add(CreateWrappingLabel(T("noPalette", "No palette colors. Analyze a source image first.")));
+                return;
+            }
+
+            int totalPixels = Mathf.Max(1, session.paletteColors.Sum(entry => entry == null ? 0 : entry.pixelCount));
+            foreach (PaletteColorEntry entry in session.paletteColors)
+            {
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                VisualElement row = CreateSelectableRow(entry.id == selectedColorEntryId);
+                row.Add(CreateSwatch(entry.color));
+                row.Add(CreateWrappingLabel($"{entry.hex}  {entry.pixelCount} px  {(entry.pixelCount / (float)totalPixels):P1}"));
+                row.RegisterCallback<PointerDownEvent>(_ =>
+                {
+                    selectedColorEntryId = entry.id;
+                    selectedGroupId = entry.groupId;
+                    RefreshUiToolkitContent();
+                });
+                paletteListElement.Add(row);
+            }
+        }
+
+        private void RefreshGroupListElement()
+        {
+            if (groupListElement == null)
+            {
+                return;
+            }
+
+            groupListElement.Clear();
+            if (session.colorGroups.Count == 0)
+            {
+                groupListElement.Add(CreateWrappingLabel(T("noGroups", "No color groups. Run Auto Group first.")));
+                return;
+            }
+
+            foreach (ColorGroup group in session.colorGroups)
+            {
+                VisualElement row = CreateSelectableRow(group.id == selectedGroupId);
+                row.Add(CreateSwatch(group.representativeColor));
+                row.Add(CreateWrappingLabel($"{group.displayName}  {group.colorEntryIds.Count} colors  {group.pixelRatio:P1}"));
+                row.RegisterCallback<PointerDownEvent>(_ =>
+                {
+                    selectedGroupId = group.id;
+                    selectedColorEntryId = string.Empty;
+                    RefreshUiToolkitContent();
+                });
+                groupListElement.Add(row);
+            }
+        }
+
+        private void RefreshVariationListElement()
+        {
+            if (variationListElement == null)
+            {
+                return;
+            }
+
+            variationListElement.Clear();
+            if (session.variations.Count == 0)
+            {
+                variationListElement.Add(CreateWrappingLabel(T("noVariations", "No variations. Run Auto Group first.")));
+                return;
+            }
+
+            foreach (IconVariation variation in session.variations)
+            {
+                VisualElement row = CreateSelectableRow(variation.id == session.activeVariationId);
+                row.style.alignItems = Align.Center;
+                Toggle exportToggle = new Toggle { value = variation.exportEnabled };
+                exportToggle.RegisterValueChangedCallback(evt => variation.exportEnabled = evt.newValue);
+                row.Add(exportToggle);
+                TextField nameField = new TextField { value = variation.displayName };
+                nameField.style.minWidth = 130f;
+                nameField.RegisterValueChangedCallback(evt => variation.displayName = evt.newValue);
+                row.Add(nameField);
+                TextField suffixField = new TextField { value = variation.fileSuffix };
+                suffixField.style.minWidth = 90f;
+                suffixField.RegisterValueChangedCallback(evt =>
+                {
+                    variation.fileSuffix = evt.newValue;
+                    if (variation.id == session.activeVariationId)
+                    {
+                        session.exportSettings.fileSuffix = evt.newValue;
+                    }
+                });
+                row.Add(suffixField);
+                row.RegisterCallback<PointerDownEvent>(_ =>
+                {
+                    variationService.SyncActiveVariation(session);
+                    variationService.ApplyVariation(session, variation.id);
+                    session.exportSettings.fileSuffix = variation.fileSuffix;
+                    RefreshUiToolkitContent();
+                });
+                variationListElement.Add(row);
+            }
+        }
+
+        private void RefreshReplacementRuleElement()
+        {
+            if (replacementRuleContainer == null)
+            {
+                return;
+            }
+
+            replacementRuleContainer.Clear();
+            replacementRuleContainer.Add(CreateUiSubHeader(T("replacementRules", "Replacement Rules")));
+            ColorGroup group = session.colorGroups.FirstOrDefault(candidate => candidate != null && candidate.id == selectedGroupId)
+                ?? session.colorGroups.FirstOrDefault();
+            if (group == null)
+            {
+                replacementRuleContainer.Add(CreateWrappingLabel(T("noGroups", "No color groups. Run Auto Group first.")));
+                ColorField placeholder = new ColorField(T("targetColor", "Target Color")) { name = "group-color-field", value = Color.clear };
+                placeholder.SetEnabled(false);
+                replacementRuleContainer.Add(placeholder);
+                return;
+            }
+
+            selectedGroupId = group.id;
+            replacementRuleContainer.Add(CreateWrappingLabel($"{group.displayName} / {group.colorEntryIds.Count} colors"));
+            replacementRuleContainer.Add(CreateColorField("group-color-field", T("targetColor", "Target Color"), group.targetColor, value =>
+            {
+                group.targetColor = ToColor32(value);
+                HandlePreviewSettingChanged();
+            }));
+            replacementRuleContainer.Add(CreateSlider("group-blend-slider", T("blendRatio", "Blend Ratio"), group.blendRatio, 0f, 1f, value =>
+            {
+                group.blendRatio = value;
+                HandlePreviewSettingChanged();
+            }));
+            replacementRuleContainer.Add(CreateEnumField("replacement-mode-popup", T("mode", "Mode"), group.replacementMode, value =>
+            {
+                group.replacementMode = (ColorReplacementMode)value;
+                HandlePreviewSettingChanged();
+            }));
+            replacementRuleContainer.Add(CreateToggle("group-locked-toggle", T("locked", "Locked"), group.lockedGroup, value => group.lockedGroup = value));
+        }
+
+        private void RefreshColorRuleElement()
+        {
+            if (colorRuleContainer == null)
+            {
+                return;
+            }
+
+            colorRuleContainer.Clear();
+            colorRuleContainer.Add(CreateUiSubHeader(T("colorRules", "Color Rules")));
+            PaletteColorEntry entry = session.paletteColors.FirstOrDefault(candidate => candidate != null && candidate.id == selectedColorEntryId);
+            if (entry == null)
+            {
+                colorRuleContainer.Add(CreateWrappingLabel(T("selectPaletteColor", "Select a palette color to edit a per-color rule.")));
+                ColorField placeholder = new ColorField(T("targetColor", "Target Color")) { name = "color-rule-color-field", value = Color.clear };
+                placeholder.SetEnabled(false);
+                colorRuleContainer.Add(placeholder);
+                return;
+            }
+
+            ColorReplacementRule rule = GetOrCreateColorRule(entry);
+            colorRuleContainer.Add(CreateWrappingLabel($"{entry.hex} / {entry.pixelCount} px"));
+            colorRuleContainer.Add(CreateColorField("color-rule-color-field", T("targetColor", "Target Color"), rule.targetColor, value =>
+            {
+                rule.targetColor = ToColor32(value);
+                HandlePreviewSettingChanged();
+            }));
+            colorRuleContainer.Add(CreateSlider("color-rule-blend-slider", T("blendRatio", "Blend Ratio"), rule.blendRatio, 0f, 1f, value =>
+            {
+                rule.blendRatio = value;
+                HandlePreviewSettingChanged();
+            }));
+            colorRuleContainer.Add(CreateToggle("color-rule-enabled-toggle", T("enabled", "Enabled"), rule.enabled, value =>
+            {
+                rule.enabled = value;
+                HandlePreviewSettingChanged();
+            }));
+        }
+
+        private void RunUiToolkitAction(System.Action action)
+        {
+            action?.Invoke();
+            RefreshUiToolkitContent();
+        }
+
+        private static VisualElement CreateUiSection(string name, string title)
+        {
+            VisualElement section = new VisualElement { name = name };
+            section.style.borderTopWidth = 1f;
+            section.style.borderRightWidth = 1f;
+            section.style.borderBottomWidth = 1f;
+            section.style.borderLeftWidth = 1f;
+            section.style.borderTopColor = SeparatorColor;
+            section.style.borderRightColor = SeparatorColor;
+            section.style.borderBottomColor = SeparatorColor;
+            section.style.borderLeftColor = SeparatorColor;
+            section.style.borderTopLeftRadius = 4f;
+            section.style.borderTopRightRadius = 4f;
+            section.style.borderBottomLeftRadius = 4f;
+            section.style.borderBottomRightRadius = 4f;
+            section.style.paddingLeft = 8f;
+            section.style.paddingRight = 8f;
+            section.style.paddingTop = 6f;
+            section.style.paddingBottom = 6f;
+            section.style.marginRight = 8f;
+            section.style.marginBottom = 8f;
+            section.Add(CreateUiSubHeader(title));
+            return section;
+        }
+
+        private static Label CreateUiSubHeader(string title)
+        {
+            Label label = new Label(title);
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            label.style.marginBottom = 4f;
+            return label;
+        }
+
+        private static VisualElement CreateUiColumn(string name, float minWidth, float flexGrow)
+        {
+            VisualElement column = new VisualElement { name = name };
+            column.style.minWidth = minWidth;
+            column.style.flexBasis = 0f;
+            column.style.flexGrow = flexGrow;
+            column.style.marginRight = 8f;
+            return column;
+        }
+
+        private static Label CreateWrappingLabel(string text)
+        {
+            Label label = new Label(text);
+            label.style.whiteSpace = WhiteSpace.Normal;
+            label.style.marginBottom = 2f;
+            return label;
+        }
+
+        private static Label CreateWrappingLabel()
+        {
+            return CreateWrappingLabel(string.Empty);
+        }
+
+        private static Image CreatePreviewImage(string name)
+        {
+            Image image = new Image { name = name, scaleMode = ScaleMode.ScaleToFit };
+            image.style.height = MinPreviewHeight;
+            image.style.minWidth = 180f;
+            image.style.flexGrow = 1f;
+            image.style.marginRight = 6f;
+            image.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f);
+            return image;
+        }
+
+        private static VisualElement CreateSelectableRow(bool selected)
+        {
+            VisualElement row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.alignItems = Align.Center;
+            row.style.paddingTop = 3f;
+            row.style.paddingBottom = 3f;
+            row.style.paddingLeft = 4f;
+            row.style.paddingRight = 4f;
+            row.style.marginBottom = 2f;
+            if (selected)
+            {
+                row.style.backgroundColor = new Color(0.18f, 0.32f, 0.48f, 0.45f);
+            }
+
+            return row;
+        }
+
+        private static VisualElement CreateSwatch(Color32 color)
+        {
+            VisualElement swatch = new VisualElement();
+            swatch.style.width = 18f;
+            swatch.style.height = 18f;
+            swatch.style.marginRight = 6f;
+            swatch.style.backgroundColor = ToColor(color);
+            return swatch;
+        }
+
+        private VisualElement CreateButtonRow(params (string Label, System.Action Action, bool Enabled)[] buttons)
+        {
+            VisualElement row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.marginTop = 4f;
+            foreach ((string label, System.Action action, bool enabled) in buttons)
+            {
+                Button button = new Button(() => RunUiToolkitAction(action)) { text = label };
+                button.SetEnabled(enabled);
+                button.style.marginRight = 4f;
+                row.Add(button);
+            }
+
+            return row;
+        }
+
+        private SliderInt CreateSliderInt(string name, string label, int value, int lowValue, int highValue, System.Action<int> onChanged)
+        {
+            SliderInt slider = new SliderInt(label, lowValue, highValue) { name = name, value = value, showInputField = true };
+            slider.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return slider;
+        }
+
+        private Slider CreateSlider(string name, string label, float value, float lowValue, float highValue, System.Action<float> onChanged)
+        {
+            Slider slider = new Slider(label, lowValue, highValue) { name = name, value = value, showInputField = true };
+            slider.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return slider;
+        }
+
+        private IntegerField CreateIntegerField(string name, string label, int value, System.Action<int> onChanged)
+        {
+            IntegerField field = new IntegerField(label) { name = name, value = value };
+            field.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return field;
+        }
+
+        private TextField CreateTextField(string name, string label, string value, System.Action<string> onChanged)
+        {
+            TextField field = new TextField(label) { name = name, value = value };
+            field.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return field;
+        }
+
+        private EnumField CreateEnumField(string name, string label, System.Enum value, System.Action<System.Enum> onChanged)
+        {
+            EnumField field = new EnumField(label, value) { name = name };
+            field.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return field;
+        }
+
+        private Toggle CreateToggle(string name, string label, bool value, System.Action<bool> onChanged)
+        {
+            Toggle toggle = new Toggle(label) { name = name, value = value };
+            toggle.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return toggle;
+        }
+
+        private ColorField CreateColorField(string name, string label, Color32 value, System.Action<Color> onChanged)
+        {
+            ColorField field = new ColorField(label) { name = name, value = ToColor(value) };
+            field.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
+            return field;
+        }
+
+        private void ApplyUiChange(System.Action action)
+        {
+            if (isRefreshingUiToolkit)
+            {
+                return;
+            }
+
+            action?.Invoke();
+        }
+
+        private static Color ToColor(Color32 value)
+        {
+            return new Color(value.r / 255f, value.g / 255f, value.b / 255f, value.a / 255f);
+        }
+
+        private static Color32 ToColor32(Color value)
+        {
+            return new Color32(
+                (byte)Mathf.RoundToInt(Mathf.Clamp01(value.r) * 255f),
+                (byte)Mathf.RoundToInt(Mathf.Clamp01(value.g) * 255f),
+                (byte)Mathf.RoundToInt(Mathf.Clamp01(value.b) * 255f),
+                (byte)Mathf.RoundToInt(Mathf.Clamp01(value.a) * 255f));
         }
 
         private void OnGUI()

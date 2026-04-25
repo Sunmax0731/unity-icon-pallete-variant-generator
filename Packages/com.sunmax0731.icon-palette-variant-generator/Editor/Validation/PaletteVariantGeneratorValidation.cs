@@ -50,6 +50,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue23UiToolkitInteractionControls();
             ValidateIssue23MainWindowUiToolkitHost();
             ValidateIssue25PreviewMenuHidden();
+            ValidateIssue25ProductionUiToolkitMainWindow();
             ValidateIssue26NoiseRemoval();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
@@ -75,6 +76,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS");
             Debug.Log("ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS");
             Debug.Log("ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS");
+            Debug.Log("ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS");
             Debug.Log("ISSUE26_NOISE_REMOVAL_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
@@ -950,7 +952,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             if (window.rootVisualElement.Q<UnityEngine.UIElements.VisualElement>(PaletteVariantGeneratorWindow.MainWindowRootName) == null
-                || window.rootVisualElement.Q<UnityEngine.UIElements.IMGUIContainer>(PaletteVariantGeneratorWindow.MainWindowImguiContainerName) == null)
+                || window.rootVisualElement.Q<UnityEngine.UIElements.ScrollView>(PaletteVariantGeneratorWindow.MainWindowScrollName) == null)
             {
                 throw new System.InvalidOperationException("Main window UI Toolkit host elements are missing.");
             }
@@ -973,6 +975,36 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("UI Toolkit preview window should not be exposed as a production menu item.");
             }
+        }
+
+        private static void ValidateIssue25ProductionUiToolkitMainWindow()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for production UI Toolkit validation.");
+            }
+
+            if (!window.IsUiToolkitHostActive() || !window.ContainsProductionUiToolkitSections())
+            {
+                throw new System.InvalidOperationException("Main window is not using the production UI Toolkit section layout.");
+            }
+
+            if (window.rootVisualElement.Q<UnityEngine.UIElements.IMGUIContainer>() != null)
+            {
+                throw new System.InvalidOperationException("Production UI Toolkit window must not depend on IMGUIContainer.");
+            }
+
+            if (window.rootVisualElement.Q<UnityEditor.UIElements.ObjectField>("source-image-field") == null
+                || window.rootVisualElement.Q<UnityEngine.UIElements.ScrollView>("palette-scroll-view") == null
+                || window.rootVisualElement.Q<UnityEditor.UIElements.ColorField>("group-color-field") == null
+                || window.rootVisualElement.Q<UnityEngine.UIElements.ScrollView>("variation-scroll-view") == null)
+            {
+                throw new System.InvalidOperationException("Production UI Toolkit controls are missing.");
+            }
+
+            window.Close();
         }
 
         private static void ValidateIssue26NoiseRemoval()

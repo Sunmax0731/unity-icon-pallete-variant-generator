@@ -61,8 +61,9 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | ドッキング向け compact layout | PASS | issue 23 docked layout validation で最小サイズと切り替え条件を検証。wide / compact の目視確認を推奨。 |
 | UI Toolkit プレビュー Window | PASS | issue 23 UI Toolkit preview validation で評価用 window と主要セクション構成を検証。本番操作は IMGUI 版を使用。 |
 | UI Toolkit 標準コントロール同等性 | PASS | ObjectField / ColorField / PopupField / ScrollView / Slider と preview pan / wheel zoom / split compare の入力受け口を検証。 |
-| Main Window UI Toolkit ホスト | PASS | 本番 window が UI Toolkit root と IMGUIContainer で開き、既存 IMGUI ワークフローを維持することを検証。 |
-| UI Toolkit プレビューメニュー非表示 | PASS | issue 25 preview menu hidden validation で、評価用 preview window が通常メニューに表示されないことを検証。純 UI Toolkit 本番導入は #25 で管理。 |
+| Main Window UI Toolkit ホスト | PASS | 本番 window が UI Toolkit root と ScrollView で開き、IMGUIContainer に依存しないことを検証。 |
+| UI Toolkit 本番導入 | PASS | issue 25 production UI Toolkit validation で、主要セクションと ObjectField / ColorField / ScrollView が本番 window に存在することを検証。 |
+| UI Toolkit プレビューメニュー非表示 | PASS | issue 25 preview menu hidden validation で、評価用 preview window が通常メニューに表示されないことを検証。 |
 | ノイズ削除 | PASS | issue 26 noise removal validation で、小さな色領域を同一グループ内の近傍色で補正できることを検証。 |
 | Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
 | パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |

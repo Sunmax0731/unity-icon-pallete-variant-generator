@@ -118,6 +118,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE25_PREVIEW_MENU_HIDDEN_VAL
     throw "Unity UI Toolkit preview menu hidden validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS" -Quiet)) {
+    throw "Unity production UI Toolkit validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE26_NOISE_REMOVAL_VALIDATION=PASS" -Quiet)) {
     throw "Unity noise removal validation did not emit pass marker. Log: $logPath"
 }
@@ -149,6 +153,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS",
     "ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS",
     "ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS",
+    "ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS",
     "ISSUE26_NOISE_REMOVAL_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
