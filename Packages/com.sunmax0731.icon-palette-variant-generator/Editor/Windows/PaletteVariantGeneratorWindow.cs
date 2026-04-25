@@ -38,6 +38,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
         private Texture2D checkerboardTexture;
+        private Texture2D selectionOverlayTexture;
+        private string selectionOverlayCacheKey = string.Empty;
         private Vector2 leftScroll;
         private Vector2 paletteScroll;
         private Vector2 variationScroll;
@@ -310,6 +312,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         {
                             selectedColorEntryId = entry.id;
                             selectedGroupId = entry.groupId;
+                            InvalidateSelectionOverlay();
                             Repaint();
                         }
 
@@ -349,6 +352,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     {
                         selectedGroupId = group.id;
                         selectedColorEntryId = string.Empty;
+                        InvalidateSelectionOverlay();
                         Repaint();
                     }
 
@@ -405,6 +409,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         {
                             selectedColorEntryId = entry.id;
                             selectedGroupId = entry.groupId;
+                            InvalidateSelectionOverlay();
                             Repaint();
                         }
 
@@ -457,6 +462,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.activeVariationId = string.Empty;
             selectedGroupId = string.Empty;
             selectedColorEntryId = string.Empty;
+            InvalidateSelectionOverlay();
             DestroyAfterPreview();
             reportMessage = $"Analyzed {session.paletteColors.Count} palette colors from {assetPath}.";
             reportType = MessageType.Info;
@@ -472,6 +478,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             variationService.SyncActiveVariation(session);
             selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
             selectedColorEntryId = string.Empty;
+            InvalidateSelectionOverlay();
             reportMessage = $"Created {session.colorGroups.Count} color groups.";
             reportType = session.colorGroups.Count == 0 ? MessageType.Warning : MessageType.Info;
             RefreshAfterPreview();
@@ -659,6 +666,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 : AssetDatabase.LoadAssetAtPath<Texture2D>(sourceAssetPath);
             selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
             selectedColorEntryId = string.Empty;
+            InvalidateSelectionOverlay();
 
             DestroyReadableSourceImage();
             DestroyAfterPreview();
@@ -843,6 +851,34 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
+            EnsureSelectionOverlayTexture();
+            if (selectionOverlayTexture == null)
+            {
+                return;
+            }
+
+            GUI.DrawTexture(imageRect, selectionOverlayTexture, ScaleMode.StretchToFill, true);
+            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, imageRect.width, 1f), OverlayBorderColor);
+            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.yMax - 1f, imageRect.width, 1f), OverlayBorderColor);
+            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
+            EditorGUI.DrawRect(new Rect(imageRect.xMax - 1f, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
+        }
+
+        private void EnsureSelectionOverlayTexture()
+        {
+            string cacheKey = BuildSelectionOverlayCacheKey();
+            if (cacheKey == selectionOverlayCacheKey)
+            {
+                return;
+            }
+
+            selectionOverlayCacheKey = cacheKey;
+            DestroySelectionOverlayTexture();
+            if (string.IsNullOrEmpty(cacheKey))
+            {
+                return;
+            }
+
             HashSet<uint> selectedKeys = GetSelectedColorKeys();
             if (selectedKeys.Count == 0)
             {
@@ -850,19 +886,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
-            Color32[] pixels = readableSourceImage.GetPixels32();
-            float pixelWidth = imageRect.width / readableSourceImage.width;
-            float pixelHeight = imageRect.height / readableSourceImage.height;
-            float drawWidth = Mathf.Max(1f, pixelWidth);
-            float drawHeight = Mathf.Max(1f, pixelHeight);
+            int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
+            Color32[] sourcePixels = readableSourceImage.GetPixels32();
+            Color32[] overlayPixels = new Color32[sourcePixels.Length];
+            Color32 overlayColor = OverlayColor;
 
             for (int y = 0; y < readableSourceImage.height; y++)
             {
                 int sourceY = readableSourceImage.height - 1 - y;
                 for (int x = 0; x < readableSourceImage.width; x++)
                 {
-                    Color32 pixel = pixels[(sourceY * readableSourceImage.width) + x];
-                    if (pixel.a <= session.analyzeSettings.alphaThreshold)
+                    int sourceIndex = (sourceY * readableSourceImage.width) + x;
+                    Color32 pixel = sourcePixels[sourceIndex];
+                    if (pixel.a <= alphaThreshold)
                     {
                         continue;
                     }
@@ -873,19 +909,59 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         continue;
                     }
 
-                    Rect pixelRect = new Rect(
-                        imageRect.x + (x * pixelWidth),
-                        imageRect.y + (y * pixelHeight),
-                        drawWidth,
-                        drawHeight);
-                    EditorGUI.DrawRect(pixelRect, OverlayColor);
+                    int overlayIndex = ((readableSourceImage.height - 1 - sourceY) * readableSourceImage.width) + x;
+                    overlayPixels[overlayIndex] = overlayColor;
                 }
             }
 
-            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, imageRect.width, 1f), OverlayBorderColor);
-            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.yMax - 1f, imageRect.width, 1f), OverlayBorderColor);
-            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
-            EditorGUI.DrawRect(new Rect(imageRect.xMax - 1f, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
+            selectionOverlayTexture = new Texture2D(readableSourceImage.width, readableSourceImage.height, TextureFormat.RGBA32, false)
+            {
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            selectionOverlayTexture.SetPixels32(overlayPixels);
+            selectionOverlayTexture.Apply(false, true);
+        }
+
+        private string BuildSelectionOverlayCacheKey()
+        {
+            if (readableSourceImage == null)
+            {
+                return string.Empty;
+            }
+
+            if (string.IsNullOrEmpty(selectedColorEntryId) && string.IsNullOrEmpty(selectedGroupId))
+            {
+                return string.Empty;
+            }
+
+            return string.Join(
+                "|",
+                readableSourceImage.GetInstanceID().ToString(),
+                readableSourceImage.width.ToString(),
+                readableSourceImage.height.ToString(),
+                session.analyzeSettings.alphaThreshold.ToString(),
+                session.analyzeSettings.quantizeStep.ToString(),
+                selectedGroupId,
+                selectedColorEntryId,
+                session.paletteColors.Count.ToString());
+        }
+
+        private void InvalidateSelectionOverlay()
+        {
+            selectionOverlayCacheKey = string.Empty;
+        }
+
+        private void DestroySelectionOverlayTexture()
+        {
+            if (selectionOverlayTexture == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(selectionOverlayTexture);
+            selectionOverlayTexture = null;
         }
 
         private HashSet<uint> GetSelectedColorKeys()
@@ -1037,6 +1113,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             DestroyReadableSourceImage();
             DestroyAfterPreview();
+            DestroySelectionOverlayTexture();
             if (checkerboardTexture != null)
             {
                 DestroyImmediate(checkerboardTexture);
@@ -1053,6 +1130,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(readableSourceImage);
             readableSourceImage = null;
+            InvalidateSelectionOverlay();
         }
 
         private void DestroyAfterPreview()
