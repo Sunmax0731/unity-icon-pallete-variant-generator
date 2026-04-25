@@ -24,6 +24,7 @@
 - スクロール可能なパレット一覧
 - PNG 出力
 - セッション JSON の保存 / 読み込み
+- 置換ルールプリセット JSON の export / import
 - 複数バリエーション管理と一括出力
 - Help、言語設定、Auto Preview
 
@@ -56,6 +57,7 @@ ISSUE10_UI_POLISH_VALIDATION=PASS
 ISSUE12_VARIATION_UX_VALIDATION=PASS
 ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
 ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS
+ISSUE18_RULE_PRESET_VALIDATION=PASS
 ```
 
 ## ドキュメント

@@ -45,6 +45,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly IconVariationService variationService = new IconVariationService();
         private readonly PngExportService pngExportService = new PngExportService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
+        private readonly RulePresetJsonService rulePresetJsonService = new RulePresetJsonService();
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
@@ -170,6 +171,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     if (GUILayout.Button(T("loadSession", "Load Session"), EditorStyles.toolbarButton, GUILayout.Width(104f)))
                     {
                         LoadSession();
+                    }
+                }
+
+                using (new EditorGUI.DisabledScope(session.colorGroups.Count == 0))
+                {
+                    if (GUILayout.Button(T("exportPreset", "Export Preset"), EditorStyles.toolbarButton, GUILayout.Width(104f)))
+                    {
+                        ExportRulePreset();
+                    }
+
+                    if (GUILayout.Button(T("importPreset", "Import Preset"), EditorStyles.toolbarButton, GUILayout.Width(104f)))
+                    {
+                        ImportRulePreset();
                     }
                 }
 
@@ -969,6 +983,63 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             sessionJsonService.Save(path, session);
         }
 
+        private void ExportRulePreset()
+        {
+            string path = EditorUtility.SaveFilePanel(
+                "Export Rule Preset",
+                GetProjectRoot(),
+                "palette-rule-preset.json",
+                "json");
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            try
+            {
+                variationService.SyncActiveVariation(session);
+                PaletteVariantRulePreset preset = rulePresetJsonService.CreatePreset(session, "Rule Preset");
+                rulePresetJsonService.Save(path, preset);
+                reportMessage = $"Rule preset exported: {path}";
+                reportType = MessageType.Info;
+            }
+            catch (System.Exception ex)
+            {
+                reportMessage = ex.Message;
+                reportType = MessageType.Error;
+            }
+        }
+
+        private void ImportRulePreset()
+        {
+            string path = EditorUtility.OpenFilePanel("Import Rule Preset", GetProjectRoot(), "json");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            RulePresetLoadResult result = rulePresetJsonService.Load(path);
+            if (!result.Success)
+            {
+                reportMessage = string.Join("\n", result.Warnings);
+                reportType = MessageType.Error;
+                return;
+            }
+
+            IReadOnlyList<string> warnings = rulePresetJsonService.ApplyToSession(result.Preset, session);
+            variationService.SyncActiveVariation(session);
+            if (afterPreview != null)
+            {
+                RefreshAfterPreview();
+            }
+
+            reportMessage = warnings.Count == 0
+                ? $"Rule preset imported: {path}"
+                : $"Rule preset imported with warnings:\n{string.Join("\n", warnings)}";
+            reportType = warnings.Count == 0 ? MessageType.Info : MessageType.Warning;
+        }
+
         private void SelectOutputFolder()
         {
             string currentFolder = ResolveOutputFolderForPanel(session.exportSettings.outputFolder);
@@ -1358,6 +1429,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "exportAll" => "Export All",
                 "saveSession" => "Save Session",
                 "loadSession" => "Load Session",
+                "exportPreset" => "Export Preset",
+                "importPreset" => "Import Preset",
                 "preview" => "Preview",
                 "autoPreview" => "Auto Preview",
                 "compareMode" => "比較",

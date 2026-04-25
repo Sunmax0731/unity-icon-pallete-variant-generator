@@ -34,6 +34,12 @@ Tools > Palette Variant Generator > 開く
 8. active なバリエーションだけ出力する場合は `Export`、出力対象の全バリエーションを出力する場合は `Export All` を押す。
 9. 設定を再利用したい場合は `Save Session` で JSON 保存する。
 
+## プリセット操作
+
+- `Export Preset`: 現在のグループ置換設定と色別ルールを JSON として保存します。
+- `Import Preset`: 保存済みプリセットを現在のセッションへ適用します。
+- 現在のセッションに存在しない group がプリセットに含まれる場合、その項目はスキップされ、report panel に warning が表示されます。
+
 ## 置換モード
 
 - `GroupUniform`: グループ内の全色に、同じ置換色とブレンド率を適用します。

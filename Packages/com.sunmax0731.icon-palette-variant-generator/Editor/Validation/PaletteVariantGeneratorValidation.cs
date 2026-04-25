@@ -38,6 +38,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue12VariationUx();
             ValidateIssue13AutoPreviewDebounce();
             ValidateIssue17PreviewNavigation();
+            ValidateIssue18RulePresetWorkflow();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -51,6 +52,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE12_VARIATION_UX_VALIDATION=PASS");
             Debug.Log("ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS");
             Debug.Log("ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS");
+            Debug.Log("ISSUE18_RULE_PRESET_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -450,6 +452,84 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 || zoomedCoords.yMax > 1f)
             {
                 throw new System.InvalidOperationException("Zoomed preview texcoord validation failed.");
+            }
+        }
+
+        private static void ValidateIssue18RulePresetWorkflow()
+        {
+            PaletteVariantSession sourceSession = new PaletteVariantSession
+            {
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        replacementMode = ColorReplacementMode.Hybrid,
+                        targetColor = new Color32(12, 34, 56, 255),
+                        blendRatio = 0.75f
+                    }
+                },
+                colorRules = new System.Collections.Generic.List<ColorReplacementRule>
+                {
+                    new ColorReplacementRule
+                    {
+                        id = "rule_01",
+                        groupId = "group_01",
+                        colorEntryId = "#FF0000",
+                        scope = ColorReplacementScope.ColorEntry,
+                        targetColor = new Color32(0, 255, 0, 255),
+                        blendRatio = 0.5f,
+                        enabled = true
+                    }
+                }
+            };
+
+            PaletteVariantSession targetSession = new PaletteVariantSession
+            {
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        replacementMode = ColorReplacementMode.GroupUniform,
+                        targetColor = new Color32(0, 0, 0, 255),
+                        blendRatio = 1f
+                    }
+                },
+                colorRules = new System.Collections.Generic.List<ColorReplacementRule>()
+            };
+
+            string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IconPaletteRulePresetValidation", System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(tempRoot);
+            string path = System.IO.Path.Combine(tempRoot, "preset.json");
+
+            try
+            {
+                RulePresetJsonService service = new RulePresetJsonService();
+                PaletteVariantRulePreset preset = service.CreatePreset(sourceSession, "Validation Preset");
+                service.Save(path, preset);
+                RulePresetLoadResult loadResult = service.Load(path);
+                if (!loadResult.Success)
+                {
+                    throw new System.InvalidOperationException("Rule preset load validation failed.");
+                }
+
+                var warnings = service.ApplyToSession(loadResult.Preset, targetSession);
+                if (warnings.Count != 0
+                    || targetSession.colorGroups[0].replacementMode != ColorReplacementMode.Hybrid
+                    || targetSession.colorGroups[0].targetColor.r != 12
+                    || targetSession.colorRules.Count != 1
+                    || targetSession.colorRules[0].targetColor.g != 255)
+                {
+                    throw new System.InvalidOperationException("Rule preset apply validation failed.");
+                }
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(tempRoot))
+                {
+                    System.IO.Directory.Delete(tempRoot, true);
+                }
             }
         }
 
