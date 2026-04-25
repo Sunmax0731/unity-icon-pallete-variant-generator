@@ -43,6 +43,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
         private static readonly Color OverlayBorderColor = new Color(0.1f, 0.65f, 1f, 0.85f);
+        private static readonly Color BadgeNeutralColor = new Color(0.32f, 0.36f, 0.42f, 1f);
+        private static readonly Color BadgeActiveColor = new Color(0.12f, 0.5f, 0.27f, 1f);
+        private static readonly Color BadgeWarningColor = new Color(0.74f, 0.42f, 0.08f, 1f);
+        private static readonly Color BadgeTransparentColor = new Color(0.35f, 0.24f, 0.62f, 1f);
 
         private PaletteVariantSession session = new PaletteVariantSession();
         private readonly TextureAssetLoader textureAssetLoader = new TextureAssetLoader();
@@ -696,7 +700,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 VisualElement row = CreateSelectableRow(entry.id == selectedColorEntryId);
                 row.Add(CreateSwatch(entry.color));
-                row.Add(CreateWrappingLabel($"{entry.hex}  {entry.pixelCount} px  {(entry.pixelCount / (float)totalPixels):P1}"));
+                Label infoLabel = CreateWrappingLabel($"{entry.hex}  {entry.pixelCount} px  {(entry.pixelCount / (float)totalPixels):P1}");
+                infoLabel.style.flexGrow = 1f;
+                infoLabel.style.minWidth = 120f;
+                row.Add(infoLabel);
+                row.Add(CreatePaletteRuleBadgeRow(entry));
                 row.RegisterCallback<PointerDownEvent>(_ =>
                 {
                     SelectPaletteEntry(entry, "Palette");
@@ -1477,6 +1485,93 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             swatch.style.marginRight = 6f;
             swatch.style.backgroundColor = ToColor(color);
             return swatch;
+        }
+
+        private VisualElement CreatePaletteRuleBadgeRow(PaletteColorEntry entry)
+        {
+            VisualElement badgeRow = new VisualElement();
+            badgeRow.style.flexDirection = FlexDirection.Row;
+            badgeRow.style.flexWrap = Wrap.Wrap;
+            badgeRow.style.justifyContent = Justify.FlexEnd;
+            badgeRow.style.flexShrink = 1f;
+            badgeRow.style.minWidth = 0f;
+            foreach (PaletteRuleBadge badge in BuildPaletteRuleBadges(session, entry))
+            {
+                badgeRow.Add(CreateStatusBadge(badge.Text, badge.Color));
+            }
+
+            return badgeRow;
+        }
+
+        private static List<PaletteRuleBadge> BuildPaletteRuleBadges(PaletteVariantSession paletteSession, PaletteColorEntry entry)
+        {
+            List<PaletteRuleBadge> badges = new List<PaletteRuleBadge>();
+            if (paletteSession == null || entry == null)
+            {
+                return badges;
+            }
+
+            ColorGroup group = paletteSession.colorGroups?.FirstOrDefault(candidate => candidate != null && candidate.id == entry.groupId);
+            ColorReplacementRule rule = paletteSession.colorRules?.FirstOrDefault(candidate =>
+                candidate != null
+                && candidate.scope == ColorReplacementScope.ColorEntry
+                && candidate.colorEntryId == entry.id);
+            bool hasRule = rule != null;
+            bool ruleEnabled = rule != null && rule.enabled;
+            bool colorRuleMode = group != null
+                && (group.replacementMode == ColorReplacementMode.PerColor || group.replacementMode == ColorReplacementMode.Hybrid);
+
+            badges.Add(new PaletteRuleBadge(hasRule ? "Rule" : "NoRule", hasRule ? BadgeNeutralColor : new Color(0.22f, 0.22f, 0.22f, 1f)));
+            if (hasRule)
+            {
+                badges.Add(new PaletteRuleBadge(ruleEnabled ? "On" : "Off", ruleEnabled ? BadgeActiveColor : BadgeNeutralColor));
+            }
+
+            if (group != null)
+            {
+                badges.Add(new PaletteRuleBadge(group.replacementMode.ToString(), colorRuleMode ? BadgeActiveColor : BadgeNeutralColor));
+            }
+
+            if (hasRule && ruleEnabled)
+            {
+                badges.Add(new PaletteRuleBadge(colorRuleMode ? "Active" : "ModeOff", colorRuleMode ? BadgeActiveColor : BadgeWarningColor));
+            }
+
+            Color32 replacementColor = hasRule && ruleEnabled && colorRuleMode
+                ? rule.targetColor
+                : group?.targetColor ?? entry.color;
+            if (replacementColor.a == 0)
+            {
+                badges.Add(new PaletteRuleBadge("Alpha", BadgeTransparentColor));
+            }
+
+            return badges;
+        }
+
+        internal static IReadOnlyList<string> BuildPaletteRuleBadgeTextsForValidation(PaletteVariantSession paletteSession, PaletteColorEntry entry)
+        {
+            return BuildPaletteRuleBadges(paletteSession, entry).Select(badge => badge.Text).ToList();
+        }
+
+        private static Label CreateStatusBadge(string text, Color color)
+        {
+            Label badge = new Label(text);
+            badge.style.fontSize = 10f;
+            badge.style.unityFontStyleAndWeight = FontStyle.Bold;
+            badge.style.color = Color.white;
+            badge.style.backgroundColor = color;
+            badge.style.paddingLeft = 4f;
+            badge.style.paddingRight = 4f;
+            badge.style.paddingTop = 1f;
+            badge.style.paddingBottom = 1f;
+            badge.style.marginLeft = 3f;
+            badge.style.marginTop = 1f;
+            badge.style.marginBottom = 1f;
+            badge.style.borderTopLeftRadius = 3f;
+            badge.style.borderTopRightRadius = 3f;
+            badge.style.borderBottomLeftRadius = 3f;
+            badge.style.borderBottomRightRadius = 3f;
+            return badge;
         }
 
         private VisualElement CreateButtonRow(params (string Label, System.Action Action, bool Enabled)[] buttons)
@@ -3909,6 +4004,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             Selection.activeObject = asset;
             EditorGUIUtility.PingObject(asset);
+        }
+
+        private readonly struct PaletteRuleBadge
+        {
+            public PaletteRuleBadge(string text, Color color)
+            {
+                Text = text;
+                Color = color;
+            }
+
+            public string Text { get; }
+
+            public Color Color { get; }
         }
     }
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Windows;
 using Sunmax0731.IconPaletteVariantGenerator.Models;
@@ -63,6 +64,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue35PreviewDisplayTextureCache();
             ValidateIssue36DelayedPreviewRefresh();
             ValidateIssue37SelectedColorInfoPanel();
+            ValidateIssue38PaletteRuleStatusBadges();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -100,6 +102,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS");
             Debug.Log("ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS");
             Debug.Log("ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS");
+            Debug.Log("ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1424,6 +1427,47 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             window.Close();
+        }
+
+        private static void ValidateIssue38PaletteRuleStatusBadges()
+        {
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            PaletteColorEntry red = session.paletteColors.Find(entry => entry.id == "red");
+            PaletteColorEntry blue = session.paletteColors.Find(entry => entry.id == "blue");
+            session.colorGroups.Find(group => group.id == "blueGroup").replacementMode = ColorReplacementMode.Hybrid;
+            session.colorRules.Add(new ColorReplacementRule
+            {
+                id = "blue_rule",
+                groupId = "blueGroup",
+                colorEntryId = "blue",
+                scope = ColorReplacementScope.ColorEntry,
+                targetColor = new Color32(0, 255, 0, 0),
+                blendRatio = 1f,
+                enabled = true
+            });
+
+            System.Collections.Generic.IReadOnlyList<string> blueBadges = PaletteVariantGeneratorWindow.BuildPaletteRuleBadgeTextsForValidation(session, blue);
+            if (!blueBadges.Contains("Rule")
+                || !blueBadges.Contains("On")
+                || !blueBadges.Contains("Hybrid")
+                || !blueBadges.Contains("Active")
+                || !blueBadges.Contains("Alpha"))
+            {
+                throw new System.InvalidOperationException("Palette rule badges did not expose active transparent color-rule state.");
+            }
+
+            System.Collections.Generic.IReadOnlyList<string> redBadges = PaletteVariantGeneratorWindow.BuildPaletteRuleBadgeTextsForValidation(session, red);
+            if (!redBadges.Contains("NoRule") || !redBadges.Contains("GroupUniform"))
+            {
+                throw new System.InvalidOperationException("Palette rule badges did not expose no-rule group mode state.");
+            }
+
+            session.colorGroups.Find(group => group.id == "blueGroup").replacementMode = ColorReplacementMode.GroupUniform;
+            System.Collections.Generic.IReadOnlyList<string> inactiveBadges = PaletteVariantGeneratorWindow.BuildPaletteRuleBadgeTextsForValidation(session, blue);
+            if (!inactiveBadges.Contains("ModeOff"))
+            {
+                throw new System.InvalidOperationException("Palette rule badges did not expose color-rule mode mismatch state.");
+            }
         }
 
         private static Texture2D CreatePreviewPickValidationTexture()
