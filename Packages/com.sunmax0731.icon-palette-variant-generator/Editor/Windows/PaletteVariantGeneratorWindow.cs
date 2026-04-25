@@ -58,6 +58,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
+        private Texture2D splitPreviewTexture;
         private Texture2D checkerboardTexture;
         private Texture2D selectionOverlayTexture;
         private string selectionOverlayCacheKey = string.Empty;
@@ -401,7 +402,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 RefreshUiToolkitContent();
             }));
             section.Add(CreateSlider("preview-zoom-slider", T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom, value => previewZoom = value));
-            section.Add(CreateSlider("preview-split-slider", T("split", "Split"), previewSplit, 0f, 1f, value => previewSplit = value));
+            section.Add(CreateSlider("preview-split-slider", T("split", "Split"), previewSplit, 0f, 1f, value =>
+            {
+                previewSplit = value;
+                RefreshUiToolkitContent();
+            }));
 
             VisualElement row = new VisualElement { name = "preview-image-row" };
             row.style.flexDirection = FlexDirection.Row;
@@ -490,14 +495,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             if (beforePreviewImage != null)
             {
-                beforePreviewImage.image = readableSourceImage;
+                if (previewCompareMode != PreviewCompareMode.Split)
+                {
+                    DestroySplitPreviewTexture();
+                }
+
+                beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Split
+                    ? GetSplitPreviewTexture()
+                    : readableSourceImage;
                 beforePreviewImage.style.display = DisplayStyle.Flex;
             }
 
             if (afterPreviewImage != null)
             {
                 afterPreviewImage.image = afterPreview;
-                afterPreviewImage.style.display = afterPreview == null ? DisplayStyle.None : DisplayStyle.Flex;
+                afterPreviewImage.style.display = previewCompareMode == PreviewCompareMode.Split || afterPreview == null
+                    ? DisplayStyle.None
+                    : DisplayStyle.Flex;
             }
 
             RefreshPaletteListElement();
@@ -806,6 +820,55 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             image.style.marginRight = 6f;
             image.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f);
             return image;
+        }
+
+        private Texture2D GetSplitPreviewTexture()
+        {
+            DestroySplitPreviewTexture();
+            if (readableSourceImage == null)
+            {
+                return null;
+            }
+
+            Texture2D rightTexture = afterPreview != null ? afterPreview : readableSourceImage;
+            int width = readableSourceImage.width;
+            int height = readableSourceImage.height;
+            Color32[] leftPixels = readableSourceImage.GetPixels32();
+            Color32[] rightPixels = rightTexture.GetPixels32();
+            Color32[] outputPixels = new Color32[leftPixels.Length];
+            int splitX = Mathf.Clamp(Mathf.RoundToInt(width * previewSplit), 0, width);
+
+            for (int y = 0; y < height; y++)
+            {
+                int rowOffset = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    int index = rowOffset + x;
+                    outputPixels[index] = x < splitX ? leftPixels[index] : rightPixels[index];
+                }
+            }
+
+            splitPreviewTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = "PaletteVariantGenerator_SplitPreview",
+                filterMode = readableSourceImage.filterMode,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            splitPreviewTexture.SetPixels32(outputPixels);
+            splitPreviewTexture.Apply(false, false);
+            return splitPreviewTexture;
+        }
+
+        private void DestroySplitPreviewTexture()
+        {
+            if (splitPreviewTexture == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(splitPreviewTexture);
+            splitPreviewTexture = null;
         }
 
         private static VisualElement CreateSelectableRow(bool selected)
@@ -2793,6 +2856,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             CancelScheduledAutoPreview();
             DestroyReadableSourceImage();
             DestroyAfterPreview();
+            DestroySplitPreviewTexture();
             DestroySelectionOverlayTexture();
             if (checkerboardTexture != null)
             {
@@ -2810,6 +2874,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(readableSourceImage);
             readableSourceImage = null;
+            DestroySplitPreviewTexture();
             InvalidateSelectionOverlay();
         }
 
@@ -2822,6 +2887,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(afterPreview);
             afterPreview = null;
+            DestroySplitPreviewTexture();
         }
 
         private void DrawSectionHeader(string title)
