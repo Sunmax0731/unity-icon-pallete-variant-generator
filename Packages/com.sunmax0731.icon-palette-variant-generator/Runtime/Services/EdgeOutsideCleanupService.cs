@@ -57,6 +57,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             int maxRegionPixels = Mathf.Max(1, settings.maxRegionPixels);
             int maxDistancePixels = Mathf.Max(1, settings.maxDistancePixels);
             bool[] foreground = BuildForegroundMask(pixels, width, height, session, alphaThreshold);
+            if (settings.mode == EdgeOutsideCleanupMode.BoundaryTrim)
+            {
+                return ApplyBoundaryTrim(pixels, width, height, foreground, Mathf.Max(1, settings.trimDistancePixels));
+            }
+
             List<List<int>> regions = FindForegroundRegions(foreground, width, height);
             if (regions.Count <= 1)
             {
@@ -95,6 +100,58 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             }
 
             return new EdgeOutsideCleanupResult(clearedRegions, clearedPixels, clearedPixelIndices);
+        }
+
+        private static EdgeOutsideCleanupResult ApplyBoundaryTrim(Color32[] pixels, int width, int height, bool[] foreground, int trimDistancePixels)
+        {
+            HashSet<int> trimCandidates = new HashSet<int>();
+            for (int index = 0; index < foreground.Length; index++)
+            {
+                if (!foreground[index])
+                {
+                    continue;
+                }
+
+                int x = index % width;
+                int y = index / width;
+                if (DistanceToOutside(x, y, width, height, foreground, trimDistancePixels) <= trimDistancePixels)
+                {
+                    trimCandidates.Add(index);
+                }
+            }
+
+            foreach (int index in trimCandidates)
+            {
+                Color32 pixel = pixels[index];
+                pixel.a = 0;
+                pixels[index] = pixel;
+            }
+
+            return new EdgeOutsideCleanupResult(trimCandidates.Count > 0 ? 1 : 0, trimCandidates.Count, trimCandidates.ToList());
+        }
+
+        private static int DistanceToOutside(int x, int y, int width, int height, bool[] foreground, int maxDistance)
+        {
+            for (int distance = 1; distance <= maxDistance; distance++)
+            {
+                foreach (Vector2Int offset in ConnectedOffsets)
+                {
+                    int nx = x + (offset.x * distance);
+                    int ny = y + (offset.y * distance);
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+                    {
+                        return distance;
+                    }
+
+                    int neighborIndex = (ny * width) + nx;
+                    if (!foreground[neighborIndex])
+                    {
+                        return distance;
+                    }
+                }
+            }
+
+            return maxDistance + 1;
         }
 
         private bool[] BuildForegroundMask(Color32[] pixels, int width, int height, PaletteVariantSession session, int alphaThreshold)

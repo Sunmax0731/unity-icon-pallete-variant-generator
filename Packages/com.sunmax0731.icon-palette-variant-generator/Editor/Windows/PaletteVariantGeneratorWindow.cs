@@ -72,12 +72,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D zoomedBeforePreviewTexture;
         private Texture2D zoomedAfterPreviewTexture;
         private Texture2D zoomedSplitPreviewTexture;
+        private Texture2D diffPreviewTexture;
         private string highlightedBeforePreviewKey = string.Empty;
         private string highlightedAfterPreviewKey = string.Empty;
         private string highlightedSplitPreviewKey = string.Empty;
         private string zoomedBeforePreviewKey = string.Empty;
         private string zoomedAfterPreviewKey = string.Empty;
         private string zoomedSplitPreviewKey = string.Empty;
+        private string diffPreviewKey = string.Empty;
         private string splitPreviewCacheKey = string.Empty;
         private Texture2D checkerboardTexture;
         private Texture2D selectionOverlayTexture;
@@ -116,6 +118,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private bool previewRefreshProcessing;
         private int previewRefreshRequestVersion;
         private int scheduledPreviewRefreshVersion;
+        private bool showSourceSection = true;
+        private bool showAnalyzeSection = true;
+        private bool showGroupSection = true;
+        private bool showExportSection = true;
+        private bool showPresetSection = true;
+        private readonly Stack<string> undoSnapshots = new Stack<string>();
+        private readonly Stack<string> redoSnapshots = new Stack<string>();
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
         private Label reportLabel;
@@ -223,11 +232,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             content.style.alignItems = Align.Stretch;
 
             VisualElement leftColumn = CreateUiColumn("settings-column", 300f, 1f);
-            leftColumn.Add(BuildSourceSection());
-            leftColumn.Add(BuildAnalyzeSection());
-            leftColumn.Add(BuildGroupSection());
-            leftColumn.Add(BuildExportSection());
-            leftColumn.Add(BuildPresetSection());
+            leftColumn.Add(CreateCollapsibleSection("source-foldout", T("sourceInfo", "Source Info"), showSourceSection, value => showSourceSection = value, BuildSourceSection));
+            leftColumn.Add(CreateCollapsibleSection("analyze-foldout", T("analyzeSettings", "Analyze Settings"), showAnalyzeSection, value => showAnalyzeSection = value, BuildAnalyzeSection));
+            leftColumn.Add(CreateCollapsibleSection("group-foldout", T("groupSettings", "Group Settings"), showGroupSection, value => showGroupSection = value, BuildGroupSection));
+            leftColumn.Add(CreateCollapsibleSection("export-foldout", T("exportSettings", "Export Settings"), showExportSection, value => showExportSection = value, BuildExportSection));
+            leftColumn.Add(CreateCollapsibleSection("preset-foldout", T("presetAsset", "Preset Asset"), showPresetSection, value => showPresetSection = value, BuildPresetSection));
 
             VisualElement centerColumn = CreateUiColumn("preview-column", 420f, 2f);
             centerColumn.Add(BuildPreviewSection());
@@ -274,6 +283,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             toolbar.Add(CreateToolbarButton(T("preview", "Preview"), () => RequestPreviewRefresh("Preview update queued."), () => readableSourceImage != null && session.colorGroups.Count > 0));
             toolbar.Add(CreateToolbarButton(T("export", "Export"), () => OpenExportSettingsWindow(), () => true));
             toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => OpenExportSettingsWindow(), () => true));
+            toolbar.Add(CreateToolbarButton(T("undo", "Undo"), () => UndoSessionEdit(), () => undoSnapshots.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("redo", "Redo"), () => RedoSessionEdit(), () => redoSnapshots.Count > 0));
             toolbar.Add(CreateToolbarButton(T("saveSession", "Save Session"), () => SaveSession(), () => true));
             toolbar.Add(CreateToolbarButton(T("loadSession", "Load Session"), () => LoadSession(), () => true));
             toolbar.Add(CreateToolbarButton(T("help", "Help"), () => OpenHelpWindow(), () => true));
@@ -288,6 +299,75 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             button.SetEnabled(enabled == null || enabled());
             button.style.minWidth = 72f;
             return button;
+        }
+
+        private void RecordSessionEdit(System.Action edit)
+        {
+            if (edit == null)
+            {
+                return;
+            }
+
+            undoSnapshots.Push(JsonUtility.ToJson(session));
+            redoSnapshots.Clear();
+            edit.Invoke();
+            variationService.SyncActiveVariation(session);
+            HandlePreviewSettingChanged();
+        }
+
+        private void UndoSessionEdit()
+        {
+            if (undoSnapshots.Count == 0)
+            {
+                return;
+            }
+
+            redoSnapshots.Push(JsonUtility.ToJson(session));
+            RestoreSessionSnapshot(undoSnapshots.Pop());
+            reportMessage = "Undo applied.";
+            reportType = MessageType.Info;
+        }
+
+        private void RedoSessionEdit()
+        {
+            if (redoSnapshots.Count == 0)
+            {
+                return;
+            }
+
+            undoSnapshots.Push(JsonUtility.ToJson(session));
+            RestoreSessionSnapshot(redoSnapshots.Pop());
+            reportMessage = "Redo applied.";
+            reportType = MessageType.Info;
+        }
+
+        private void RestoreSessionSnapshot(string snapshot)
+        {
+            if (string.IsNullOrWhiteSpace(snapshot))
+            {
+                return;
+            }
+
+            session = JsonUtility.FromJson<PaletteVariantSession>(snapshot) ?? new PaletteVariantSession();
+            NormalizeSessionDefaults(session);
+            selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
+            selectedColorEntryId = string.Empty;
+            DestroyAfterPreview();
+            InvalidateSelectionOverlay();
+            RequestPreviewRefresh("Preview update queued after history change.");
+        }
+
+        private static void NormalizeSessionDefaults(PaletteVariantSession targetSession)
+        {
+            targetSession.analyzeSettings ??= new AnalyzeSettings();
+            targetSession.groupSettings ??= new GroupSettings();
+            targetSession.edgeOutsideCleanupSettings ??= new EdgeOutsideCleanupSettings();
+            targetSession.noiseRemovalSettings ??= new NoiseRemovalSettings();
+            targetSession.exportSettings ??= new ExportSettings();
+            targetSession.paletteColors ??= new List<PaletteColorEntry>();
+            targetSession.colorGroups ??= new List<ColorGroup>();
+            targetSession.colorRules ??= new List<ColorReplacementRule>();
+            targetSession.variations ??= new List<IconVariation>();
         }
 
         private VisualElement BuildLanguagePopup()
@@ -350,17 +430,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement BuildGroupSection()
         {
             VisualElement section = CreateUiSection("group-section", T("groupSettings", "Group Settings"));
-            section.Add(CreateSliderInt("target-group-count-slider", T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64, value => session.groupSettings.targetGroupCount = value));
-            section.Add(CreateEnumField("distance-mode-popup", T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode, value => session.groupSettings.distanceMode = (ColorDistanceMode)value));
-            section.Add(CreateSlider("near-color-threshold-slider", T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f, value => session.groupSettings.maxColorDistance = value));
-            section.Add(CreateToggle("preserve-dark-outline-toggle", T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline, value => session.groupSettings.preserveDarkOutline = value));
-            section.Add(CreateToggle("preserve-alpha-toggle", T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha, value => session.groupSettings.preserveAlpha = value));
+            section.Add(CreateSliderInt("target-group-count-slider", T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64, value => RecordSessionEdit(() => session.groupSettings.targetGroupCount = value)));
+            section.Add(CreateEnumField("distance-mode-popup", T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode, value => RecordSessionEdit(() => session.groupSettings.distanceMode = (ColorDistanceMode)value)));
+            section.Add(CreateSlider("near-color-threshold-slider", T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f, value => RecordSessionEdit(() => session.groupSettings.maxColorDistance = value)));
+            section.Add(CreateToggle("preserve-dark-outline-toggle", T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline, value => RecordSessionEdit(() => session.groupSettings.preserveDarkOutline = value)));
+            section.Add(CreateToggle("preserve-alpha-toggle", T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha, value => RecordSessionEdit(() => session.groupSettings.preserveAlpha = value)));
 
             section.Add(CreateUiSubHeader(T("edgeOutsideCleanup", "Edge Outside Cleanup")));
             session.edgeOutsideCleanupSettings ??= new EdgeOutsideCleanupSettings();
-            section.Add(CreateToggle("edge-cleanup-toggle", T("edgeCleanupEnabled", "Enable Edge Cleanup"), session.edgeOutsideCleanupSettings.enabled, value => session.edgeOutsideCleanupSettings.enabled = value));
-            section.Add(CreateSliderInt("edge-cleanup-distance-slider", T("edgeCleanupDistance", "Outside Distance"), session.edgeOutsideCleanupSettings.maxDistancePixels, 1, 12, value => session.edgeOutsideCleanupSettings.maxDistancePixels = value));
-            section.Add(CreateSliderInt("edge-cleanup-region-slider", T("edgeCleanupMaxRegion", "Max Outside Region"), session.edgeOutsideCleanupSettings.maxRegionPixels, 1, 128, value => session.edgeOutsideCleanupSettings.maxRegionPixels = value));
+            section.Add(CreateToggle("edge-cleanup-toggle", T("edgeCleanupEnabled", "Enable Edge Cleanup"), session.edgeOutsideCleanupSettings.enabled, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.enabled = value)));
+            section.Add(CreateEnumField("edge-cleanup-mode-popup", T("edgeCleanupMode", "Cleanup Mode"), session.edgeOutsideCleanupSettings.mode, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.mode = (EdgeOutsideCleanupMode)value)));
+            section.Add(CreateSliderInt("edge-cleanup-distance-slider", T("edgeCleanupDistance", "Outside Distance"), session.edgeOutsideCleanupSettings.maxDistancePixels, 1, 12, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.maxDistancePixels = value)));
+            section.Add(CreateSliderInt("edge-cleanup-region-slider", T("edgeCleanupMaxRegion", "Max Outside Region"), session.edgeOutsideCleanupSettings.maxRegionPixels, 1, 128, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.maxRegionPixels = value)));
+            section.Add(CreateSliderInt("edge-trim-distance-slider", T("edgeTrimDistance", "Trim Distance"), session.edgeOutsideCleanupSettings.trimDistancePixels, 1, 4, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.trimDistancePixels = value)));
 
             section.Add(CreateUiSubHeader(T("noiseRemoval", "Noise Removal")));
             session.noiseRemovalSettings ??= new NoiseRemovalSettings();
@@ -447,6 +529,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement BuildPreviewSection()
         {
             VisualElement section = CreateUiSection("preview-section", T("preview", "Preview"));
+            VisualElement miniToolbar = new VisualElement { name = "preview-mini-toolbar" };
+            miniToolbar.style.flexDirection = FlexDirection.Row;
+            miniToolbar.style.flexWrap = Wrap.Wrap;
+            miniToolbar.style.marginBottom = 4f;
+            miniToolbar.Add(CreateStatusBadge(T("clickPick", "Click: Pick"), BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge(previewZoom > MinPreviewZoom ? T("dragPan", "Drag: Pan") : T("dragPanDisabled", "Drag Pan Off"), previewZoom > MinPreviewZoom ? BadgeActiveColor : BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge(selectionHighlightEnabled ? T("selectionHighlight", "Selection Highlight") : T("selectionHighlightOff", "Selection Off"), selectionHighlightEnabled ? BadgeActiveColor : BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge(effectHighlightEnabled ? T("effectHighlight", "Effect Highlight") : T("effectHighlightOff", "Effect Off"), effectHighlightEnabled ? BadgeWarningColor : BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge($"{T("zoom", "Zoom")} {previewZoom:0.##}x", BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge(previewCompareMode.ToString(), previewCompareMode == PreviewCompareMode.Split ? BadgeActiveColor : BadgeNeutralColor));
+            section.Add(miniToolbar);
             section.Add(CreateEnumField("compare-mode-popup", T("compareMode", "Compare"), previewCompareMode, value =>
             {
                 previewCompareMode = (PreviewCompareMode)value;
@@ -571,7 +664,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     DestroySplitPreviewTexture();
                 }
 
-                beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Split
+                beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Difference
+                    ? GetDisplayPreviewTexture(GetDiffPreviewTexture(), HighlightPreviewSlot.Split)
+                    : previewCompareMode == PreviewCompareMode.Split
                     ? GetDisplayPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
                     : GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
                 beforePreviewImage.style.display = DisplayStyle.Flex;
@@ -580,7 +675,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             if (afterPreviewImage != null)
             {
                 afterPreviewImage.image = GetDisplayPreviewTexture(afterPreview, HighlightPreviewSlot.After);
-                afterPreviewImage.style.display = previewCompareMode == PreviewCompareMode.Split || afterPreview == null
+                afterPreviewImage.style.display = previewCompareMode == PreviewCompareMode.Split || previewCompareMode == PreviewCompareMode.Difference || afterPreview == null
                     ? DisplayStyle.None
                     : DisplayStyle.Flex;
             }
@@ -620,6 +715,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         break;
                     case var text when text == T("exportAll", "Export All"):
                         button.SetEnabled(readableSourceImage != null && session.variations.Count > 0);
+                        break;
+                    case var text when text == T("undo", "Undo"):
+                        button.SetEnabled(undoSnapshots.Count > 0);
+                        break;
+                    case var text when text == T("redo", "Redo"):
+                        button.SetEnabled(redoSnapshots.Count > 0);
                         break;
                 }
             }
@@ -830,20 +931,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             replacementRuleContainer.Add(CreateWrappingLabel($"{group.displayName} / {group.colorEntryIds.Count} colors"));
             replacementRuleContainer.Add(CreateColorField("group-color-field", T("targetColor", "Target Color"), group.targetColor, value =>
             {
-                group.targetColor = ToColor32(value);
-                HandlePreviewSettingChanged();
+                RecordSessionEdit(() => group.targetColor = ToColor32(value));
             }));
             replacementRuleContainer.Add(CreateSlider("group-blend-slider", T("blendRatio", "Blend Ratio"), group.blendRatio, 0f, 1f, value =>
             {
-                group.blendRatio = value;
-                HandlePreviewSettingChanged();
+                RecordSessionEdit(() => group.blendRatio = value);
             }));
             replacementRuleContainer.Add(CreateEnumField("replacement-mode-popup", T("mode", "Mode"), group.replacementMode, value =>
             {
-                group.replacementMode = (ColorReplacementMode)value;
-                HandlePreviewSettingChanged();
+                RecordSessionEdit(() => group.replacementMode = (ColorReplacementMode)value);
             }));
-            replacementRuleContainer.Add(CreateToggle("group-locked-toggle", T("locked", "Locked"), group.lockedGroup, value => group.lockedGroup = value));
+            replacementRuleContainer.Add(CreateToggle("group-locked-toggle", T("locked", "Locked"), group.lockedGroup, value => RecordSessionEdit(() => group.lockedGroup = value)));
         }
 
         private void RefreshColorRuleElement()
@@ -869,25 +967,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             colorRuleContainer.Add(CreateWrappingLabel($"{entry.hex} / {entry.pixelCount} px"));
             colorRuleContainer.Add(CreateColorField("color-rule-color-field", T("targetColor", "Target Color"), rule.targetColor, value =>
             {
-                rule.targetColor = ToColor32(value);
-                rule.enabled = true;
-                EnsureGroupSupportsColorRule(entry);
-                HandlePreviewSettingChanged();
+                RecordSessionEdit(() =>
+                {
+                    rule.targetColor = ToColor32(value);
+                    rule.enabled = true;
+                    EnsureGroupSupportsColorRule(entry);
+                });
             }));
             colorRuleContainer.Add(CreateSlider("color-rule-blend-slider", T("blendRatio", "Blend Ratio"), rule.blendRatio, 0f, 1f, value =>
             {
-                rule.blendRatio = value;
-                HandlePreviewSettingChanged();
+                RecordSessionEdit(() => rule.blendRatio = value);
             }));
             colorRuleContainer.Add(CreateToggle("color-rule-enabled-toggle", T("enabled", "Enabled"), rule.enabled, value =>
             {
-                rule.enabled = value;
-                if (value)
+                RecordSessionEdit(() =>
                 {
-                    EnsureGroupSupportsColorRule(entry);
-                }
-
-                HandlePreviewSettingChanged();
+                    rule.enabled = value;
+                    if (value)
+                    {
+                        EnsureGroupSupportsColorRule(entry);
+                    }
+                });
             }));
         }
 
@@ -938,6 +1038,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             column.style.flexGrow = flexGrow;
             column.style.marginRight = 8f;
             return column;
+        }
+
+        private VisualElement CreateCollapsibleSection(string name, string title, bool expanded, System.Action<bool> onExpandedChanged, System.Func<VisualElement> buildContent)
+        {
+            Foldout foldout = new Foldout { name = name, text = title, value = expanded };
+            foldout.style.marginBottom = 4f;
+            foldout.RegisterValueChangedCallback(evt => onExpandedChanged(evt.newValue));
+            foldout.Add(buildContent());
+            return foldout;
         }
 
         private static Label CreateWrappingLabel(string text)
@@ -1063,6 +1172,46 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return splitPreviewTexture;
         }
 
+        private Texture2D GetDiffPreviewTexture()
+        {
+            if (readableSourceImage == null || afterPreview == null)
+            {
+                return readableSourceImage;
+            }
+
+            string cacheKey = $"{readableSourceImage.GetInstanceID()}|{afterPreview.GetInstanceID()}|diff";
+            if (diffPreviewTexture != null && diffPreviewKey == cacheKey)
+            {
+                return diffPreviewTexture;
+            }
+
+            DestroyDiffPreviewTexture();
+            diffPreviewKey = cacheKey;
+            Color32[] beforePixels = readableSourceImage.GetPixels32();
+            Color32[] afterPixels = afterPreview.GetPixels32();
+            Color32[] outputPixels = new Color32[beforePixels.Length];
+            for (int index = 0; index < beforePixels.Length; index++)
+            {
+                Color32 before = beforePixels[index];
+                Color32 after = afterPixels[index];
+                bool changed = before.r != after.r || before.g != after.g || before.b != after.b || before.a != after.a;
+                outputPixels[index] = changed
+                    ? BlendHighlight(after, after.a == 0 ? EdgeEffectHighlightColor : BadgeActiveColor)
+                    : new Color32((byte)(before.r / 3), (byte)(before.g / 3), (byte)(before.b / 3), (byte)Mathf.Max(48, before.a / 3));
+            }
+
+            diffPreviewTexture = new Texture2D(readableSourceImage.width, readableSourceImage.height, TextureFormat.RGBA32, false)
+            {
+                name = "PaletteVariantGenerator_DiffPreview",
+                filterMode = readableSourceImage.filterMode,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            diffPreviewTexture.SetPixels32(outputPixels);
+            diffPreviewTexture.Apply(false, false);
+            return diffPreviewTexture;
+        }
+
         private void DestroySplitPreviewTexture()
         {
             if (splitPreviewTexture == null)
@@ -1073,6 +1222,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DestroyImmediate(splitPreviewTexture);
             splitPreviewTexture = null;
             splitPreviewCacheKey = string.Empty;
+        }
+
+        private void DestroyDiffPreviewTexture()
+        {
+            if (diffPreviewTexture == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(diffPreviewTexture);
+            diffPreviewTexture = null;
+            diffPreviewKey = string.Empty;
         }
 
         private Texture2D GetDisplayPreviewTexture(Texture2D baseTexture, HighlightPreviewSlot slot)
@@ -1307,6 +1468,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             zoomedBeforePreviewKey = string.Empty;
             zoomedAfterPreviewKey = string.Empty;
             zoomedSplitPreviewKey = string.Empty;
+            DestroyDiffPreviewTexture();
         }
 
         private static void DestroyTexture(ref Texture2D texture)
@@ -2790,6 +2952,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void ExportPreview()
         {
+            if (!ConfirmExportReadiness(false))
+            {
+                return;
+            }
+
             if (afterPreview == null)
             {
                 reportMessage = "Preview is required before export.";
@@ -2824,6 +2991,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void ExportAllVariations()
         {
+            if (!ConfirmExportReadiness(true))
+            {
+                return;
+            }
+
             if (readableSourceImage == null)
             {
                 reportMessage = "Analyze a source image before batch export.";
@@ -3364,6 +3536,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal int EffectHighlightPixelCountForValidation =>
             (lastNoiseEffectHighlightIndices?.Count ?? 0) + (lastEdgeEffectHighlightIndices?.Count ?? 0);
 
+        internal bool HasCollapsedSettingsFoldoutsForValidation =>
+            rootVisualElement.Q<Foldout>("analyze-foldout") != null
+            && rootVisualElement.Q<Foldout>("group-foldout") != null
+            && rootVisualElement.Q<Foldout>("export-foldout") != null
+            && rootVisualElement.Q<Foldout>("preset-foldout") != null;
+
+        internal bool HasPreviewMiniToolbarForValidation =>
+            rootVisualElement.Q<VisualElement>("preview-mini-toolbar") != null;
+
+        internal bool IsDifferencePreviewTextureActiveForValidation =>
+            previewCompareMode == PreviewCompareMode.Difference
+            && diffPreviewTexture != null
+            && beforePreviewImage != null
+            && beforePreviewImage.image == diffPreviewTexture;
+
+        internal int UndoSnapshotCountForValidation => undoSnapshots.Count;
+
+        internal int RedoSnapshotCountForValidation => redoSnapshots.Count;
+
         internal bool IsPreviewRefreshQueuedForValidation => previewRefreshQueued;
 
         internal bool IsPreviewRefreshProcessingForValidation => previewRefreshProcessing;
@@ -3383,6 +3574,117 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
 
                 return string.Join(" | ", BuildSelectedColorInfoRows(entry).Select(row => $"{row.Key}: {row.Value}"));
+            }
+        }
+
+        private bool ConfirmExportReadiness(bool allVariations)
+        {
+            List<string> warnings = BuildExportReadinessWarnings(allVariations);
+            List<string> errors = BuildExportReadinessErrors(allVariations);
+            if (errors.Count > 0)
+            {
+                reportMessage = string.Join("\n", errors);
+                reportType = MessageType.Error;
+                return false;
+            }
+
+            if (warnings.Count == 0)
+            {
+                return true;
+            }
+
+            bool continueExport = EditorUtility.DisplayDialog(
+                "Export Check",
+                string.Join("\n", warnings) + "\n\nContinue export?",
+                "Continue",
+                "Cancel");
+            if (!continueExport)
+            {
+                reportMessage = "Export cancelled by pre-check.";
+                reportType = MessageType.Warning;
+            }
+
+            return continueExport;
+        }
+
+        internal List<string> BuildExportReadinessWarningsForValidation(bool allVariations)
+        {
+            return BuildExportReadinessWarnings(allVariations);
+        }
+
+        private List<string> BuildExportReadinessErrors(bool allVariations)
+        {
+            List<string> errors = new List<string>();
+            if (string.IsNullOrWhiteSpace(session.exportSettings.outputFolder))
+            {
+                errors.Add("Output folder is required.");
+            }
+
+            if (allVariations && !session.variations.Any(variation => variation != null && variation.exportEnabled))
+            {
+                errors.Add("No enabled variations are available for export.");
+            }
+
+            if (!allVariations && afterPreview == null)
+            {
+                errors.Add("Preview must be updated before export.");
+            }
+
+            return errors;
+        }
+
+        private List<string> BuildExportReadinessWarnings(bool allVariations)
+        {
+            List<string> warnings = new List<string>();
+            if (previewRefreshQueued || autoPreviewPending)
+            {
+                warnings.Add("Preview update is still pending.");
+            }
+
+            string outputFolder = ResolveOutputFolderForPanel(session.exportSettings.outputFolder);
+            if (!System.IO.Directory.Exists(outputFolder))
+            {
+                warnings.Add($"Output folder does not exist yet: {outputFolder}");
+            }
+
+            foreach (string fileName in BuildExpectedExportFileNames(allVariations))
+            {
+                string outputPath = System.IO.Path.Combine(outputFolder, fileName);
+                if (System.IO.File.Exists(outputPath))
+                {
+                    warnings.Add($"Output file already exists: {outputPath}");
+                }
+            }
+
+            if (session.colorRules.Any(rule => rule != null && rule.enabled && rule.targetColor.a == 0))
+            {
+                warnings.Add("Transparent color replacement is enabled.");
+            }
+
+            if (session.colorRules.Any(rule => rule != null && !rule.enabled))
+            {
+                warnings.Add("Disabled per-color rules exist.");
+            }
+
+            if (!session.exportSettings.refreshAssetDatabase)
+            {
+                warnings.Add("AssetDatabase refresh is disabled.");
+            }
+
+            return warnings;
+        }
+
+        private IEnumerable<string> BuildExpectedExportFileNames(bool allVariations)
+        {
+            if (!allVariations)
+            {
+                yield return BuildVariationOutputFileName(session.exportSettings, variationService.GetActiveVariation(session));
+                yield break;
+            }
+
+            foreach (IconVariation variation in session.variations.Where(variation => variation != null && variation.exportEnabled))
+            {
+                yield return BuildVariationOutputFileName(session.exportSettings, variation);
             }
         }
 
@@ -3447,10 +3749,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             RefreshUiToolkitContent();
         }
 
+        internal void SetPreviewCompareModeForValidation(PreviewCompareMode mode)
+        {
+            previewCompareMode = mode;
+            RefreshUiToolkitContent();
+        }
+
         internal void RefreshAfterPreviewForValidation()
         {
             RefreshAfterPreview();
             RefreshUiToolkitContent();
+        }
+
+        internal void UndoForValidation()
+        {
+            UndoSessionEdit();
+        }
+
+        internal void RedoForValidation()
+        {
+            RedoSessionEdit();
         }
 
         internal bool SetSelectedColorRuleTargetForValidation(Color32 targetColor)
@@ -3462,9 +3780,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             ColorReplacementRule rule = GetOrCreateColorRule(entry);
-            rule.targetColor = targetColor;
-            rule.enabled = true;
-            EnsureGroupSupportsColorRule(entry);
+            RecordSessionEdit(() =>
+            {
+                rule.targetColor = targetColor;
+                rule.enabled = true;
+                EnsureGroupSupportsColorRule(entry);
+            });
             return true;
         }
 
@@ -4094,7 +4415,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     internal enum PreviewCompareMode
     {
         SideBySide,
-        Split
+        Split,
+        Difference
     }
 
     internal enum PaletteVariantLanguageMode

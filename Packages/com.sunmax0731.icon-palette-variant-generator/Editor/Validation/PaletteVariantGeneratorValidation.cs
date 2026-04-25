@@ -66,6 +66,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue37SelectedColorInfoPanel();
             ValidateIssue38PaletteRuleStatusBadges();
             ValidateIssue39EffectHighlight();
+            ValidateIssue41CollapsibleSettings();
+            ValidateIssue42PreviewMiniToolbar();
+            ValidateIssue43UndoRedoHistory();
+            ValidateIssue44DifferencePreview();
+            ValidateIssue45ExportPrecheck();
+            ValidateIssue46BoundaryTrimCleanup();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -105,6 +111,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS");
             Debug.Log("ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS");
             Debug.Log("ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS");
+            Debug.Log("ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS");
+            Debug.Log("ISSUE42_PREVIEW_MINI_TOOLBAR_VALIDATION=PASS");
+            Debug.Log("ISSUE43_UNDO_REDO_VALIDATION=PASS");
+            Debug.Log("ISSUE44_DIFFERENCE_PREVIEW_VALIDATION=PASS");
+            Debug.Log("ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS");
+            Debug.Log("ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1497,6 +1509,153 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             window.Close();
+        }
+
+        private static void ValidateIssue41CollapsibleSettings()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null || !window.HasCollapsedSettingsFoldoutsForValidation)
+            {
+                throw new System.InvalidOperationException("Settings column does not expose collapsible foldout sections.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue42PreviewMiniToolbar()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null || !window.HasPreviewMiniToolbarForValidation)
+            {
+                throw new System.InvalidOperationException("Preview mini toolbar is missing.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue43UndoRedoHistory()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for undo validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), session);
+            window.TrySelectPaletteColorAtSourcePixel(1, 0, "Preview");
+            window.SetSelectedColorRuleTargetForValidation(new Color32(0, 255, 0, 255));
+            if (window.UndoSnapshotCountForValidation == 0)
+            {
+                throw new System.InvalidOperationException("Undo history did not record a color-rule edit.");
+            }
+
+            window.UndoForValidation();
+            if (window.RedoSnapshotCountForValidation == 0)
+            {
+                throw new System.InvalidOperationException("Redo history did not receive the undone edit.");
+            }
+
+            window.RedoForValidation();
+            if (window.UndoSnapshotCountForValidation == 0)
+            {
+                throw new System.InvalidOperationException("Undo history was not restored after redo.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue44DifferencePreview()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for difference preview validation.");
+            }
+
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), CreatePreviewPickValidationSession());
+            window.SetSelectionHighlightForValidation(false);
+            window.SetEffectHighlightForValidation(false);
+            window.TrySelectPaletteColorAtSourcePixel(1, 0, "Preview");
+            window.SetSelectedColorRuleTargetForValidation(new Color32(0, 255, 0, 0));
+            window.RefreshAfterPreviewForValidation();
+            window.SetPreviewCompareModeForValidation(PreviewCompareMode.Difference);
+            if (!window.IsDifferencePreviewTextureActiveForValidation)
+            {
+                throw new System.InvalidOperationException("Difference preview texture was not activated.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue45ExportPrecheck()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for export precheck validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            session.exportSettings.refreshAssetDatabase = false;
+            session.colorRules.Add(new ColorReplacementRule
+            {
+                id = "disabled",
+                colorEntryId = "red",
+                scope = ColorReplacementScope.ColorEntry,
+                enabled = false
+            });
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), session);
+            window.TrySelectPaletteColorAtSourcePixel(1, 0, "Preview");
+            window.SetSelectedColorRuleTargetForValidation(new Color32(0, 255, 0, 0));
+            System.Collections.Generic.List<string> warnings = window.BuildExportReadinessWarningsForValidation(false);
+            if (!warnings.Any(warning => warning.Contains("Transparent"))
+                || !warnings.Any(warning => warning.Contains("Disabled"))
+                || !warnings.Any(warning => warning.Contains("AssetDatabase")))
+            {
+                throw new System.InvalidOperationException("Export precheck did not report expected warning categories.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue46BoundaryTrimCleanup()
+        {
+            Color32 body = new Color32(255, 0, 0, 255);
+            Color32 outside = new Color32(255, 255, 255, 255);
+            Color32[] pixels =
+            {
+                outside, outside, outside, outside, outside,
+                outside, body,    body,    body,    outside,
+                outside, body,    body,    body,    outside,
+                outside, body,    body,    body,    outside,
+                outside, outside, outside, outside, outside
+            };
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 0, quantizeStep = 1 },
+                edgeOutsideCleanupSettings = new EdgeOutsideCleanupSettings
+                {
+                    enabled = true,
+                    mode = EdgeOutsideCleanupMode.BoundaryTrim,
+                    trimDistancePixels = 1
+                }
+            };
+            session.colorGroups.Add(new ColorGroup { id = "outside", representativeColor = outside, pixelRatio = 0.64f });
+            session.colorGroups.Add(new ColorGroup { id = "body", representativeColor = body, pixelRatio = 0.36f });
+            session.paletteColors.Add(new PaletteColorEntry { id = "outsideColor", color = outside, groupId = "outside" });
+            session.paletteColors.Add(new PaletteColorEntry { id = "bodyColor", color = body, groupId = "body" });
+
+            EdgeOutsideCleanupResult result = new EdgeOutsideCleanupService().Apply(pixels, 5, 5, session);
+            if (result.ClearedPixelCount != 8 || pixels[12].a == 0 || pixels[6].a != 0)
+            {
+                throw new System.InvalidOperationException("Boundary trim cleanup did not clear connected outer edge pixels while preserving the center.");
+            }
         }
 
         private static Texture2D CreatePreviewPickValidationTexture()
