@@ -23,3 +23,9 @@ Builds/
 *.opendb
 *.VC.db
 sysinfo.txt
+
+# Local Unity QA assets
+/Assets/9cA7K7cS_400x400.jpg
+/Assets/9cA7K7cS_400x400.jpg.meta
+/Assets/GeneratedIcons/
+/Assets/GeneratedIcons.meta
