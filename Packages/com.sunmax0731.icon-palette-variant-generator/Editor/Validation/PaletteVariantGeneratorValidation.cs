@@ -29,9 +29,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             window.Close();
             ValidateColorExtraction();
             ValidateColorGrouping();
+            ValidateColorReplacement();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
             Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
+            Debug.Log("ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS");
         }
 
         private static void ValidateColorExtraction()
@@ -83,6 +85,49 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (groups.Count != 2)
             {
                 throw new System.InvalidOperationException($"Expected 2 color groups, got {groups.Count}.");
+            }
+        }
+
+        private static void ValidateColorReplacement()
+        {
+            Texture2D source = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            source.SetPixels32(new[] { new Color32(255, 0, 0, 128) });
+            source.Apply();
+
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 8, quantizeStep = 1 },
+                groupSettings = new GroupSettings { preserveAlpha = true },
+                paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                {
+                    new PaletteColorEntry
+                    {
+                        id = "#FF0000",
+                        hex = "#FF0000",
+                        color = new Color32(255, 0, 0, 255),
+                        pixelCount = 1,
+                        groupId = "group_01"
+                    }
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        targetColor = new Color32(0, 0, 255, 255),
+                        blendRatio = 1f
+                    }
+                }
+            };
+
+            Texture2D output = new ColorReplacementService().Apply(source, session);
+            Color32 pixel = output.GetPixels32()[0];
+            Object.DestroyImmediate(source);
+            Object.DestroyImmediate(output);
+
+            if (pixel.b != 255 || pixel.a != 128)
+            {
+                throw new System.InvalidOperationException("Color replacement did not preserve expected preview color and alpha.");
             }
         }
     }

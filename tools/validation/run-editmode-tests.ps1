@@ -42,9 +42,14 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE3_COLOR_GROUPING_VALIDATIO
     throw "Unity color grouping validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS" -Quiet)) {
+    throw "Unity replacement preview validation did not emit pass marker. Log: $logPath"
+}
+
 Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE1_SCAFFOLD_VALIDATION=PASS",
     "ISSUE2_IMAGE_PALETTE_VALIDATION=PASS",
-    "ISSUE3_COLOR_GROUPING_VALIDATION=PASS"
+    "ISSUE3_COLOR_GROUPING_VALIDATION=PASS",
+    "ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"
