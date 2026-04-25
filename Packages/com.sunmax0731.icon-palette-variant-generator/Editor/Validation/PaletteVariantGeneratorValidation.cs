@@ -1,3 +1,4 @@
+using Sunmax0731.IconPaletteVariantGenerator.Editor.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Windows;
 using Sunmax0731.IconPaletteVariantGenerator.Models;
 using Sunmax0731.IconPaletteVariantGenerator.Services;
@@ -41,6 +42,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue18RulePresetWorkflow();
             ValidateIssue19ManualGroupEditing();
             ValidateIssue20ColorDistanceModes();
+            ValidateIssue21FolderBatchExport();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -57,6 +59,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE18_RULE_PRESET_VALIDATION=PASS");
             Debug.Log("ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS");
             Debug.Log("ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS");
+            Debug.Log("ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -676,6 +679,95 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("Lab grouping validation failed.");
             }
+        }
+
+        private static void ValidateIssue21FolderBatchExport()
+        {
+            string root = "Assets/PaletteVariantBatchValidation";
+            string sourceFolder = root + "/Sources";
+            string outputFolder = root + "/Generated";
+            if (AssetDatabase.IsValidFolder(root))
+            {
+                AssetDatabase.DeleteAsset(root);
+            }
+
+            AssetDatabase.CreateFolder("Assets", "PaletteVariantBatchValidation");
+            AssetDatabase.CreateFolder(root, "Sources");
+            try
+            {
+                WriteValidationPng(sourceFolder + "/source_a.png", new Color32(255, 0, 0, 255));
+                WriteValidationPng(sourceFolder + "/source_b.png", new Color32(240, 0, 0, 255));
+                AssetDatabase.Refresh();
+
+                PaletteVariantSession session = new PaletteVariantSession
+                {
+                    analyzeSettings = new AnalyzeSettings { alphaThreshold = 0, quantizeStep = 1, minimumPixelCount = 1 },
+                    groupSettings = new GroupSettings { targetGroupCount = 1, distanceMode = ColorDistanceMode.Rgb, maxColorDistance = 441f },
+                    exportSettings = new ExportSettings
+                    {
+                        outputFolder = outputFolder,
+                        filePrefix = "unused",
+                        fileSuffix = "blue",
+                        conflictMode = ExportConflictMode.Skip,
+                        refreshAssetDatabase = false
+                    },
+                    colorGroups = new System.Collections.Generic.List<ColorGroup>
+                    {
+                        new ColorGroup
+                        {
+                            id = "group_01",
+                            targetColor = new Color32(0, 0, 255, 255),
+                            blendRatio = 1f
+                        }
+                    },
+                    variations = new System.Collections.Generic.List<IconVariation>
+                    {
+                        new IconVariation
+                        {
+                            id = "variation_01",
+                            displayName = "Blue",
+                            fileSuffix = "blue",
+                            exportEnabled = true,
+                            colorGroups = new System.Collections.Generic.List<ColorGroup>
+                            {
+                                new ColorGroup
+                                {
+                                    id = "group_01",
+                                    targetColor = new Color32(0, 0, 255, 255),
+                                    blendRatio = 1f
+                                }
+                            }
+                        }
+                    },
+                    activeVariationId = "variation_01"
+                };
+
+                BatchSourceExportSummary summary = new BatchSourceExportService().ExportFolder(sourceFolder, session, System.IO.Directory.GetCurrentDirectory());
+                string outputA = outputFolder + "/source_a_blue.png";
+                string outputB = outputFolder + "/source_b_blue.png";
+                if (summary.ExportedCount != 2
+                    || summary.FailedCount != 0
+                    || !System.IO.File.Exists(outputA)
+                    || !System.IO.File.Exists(outputB))
+                {
+                    throw new System.InvalidOperationException("Folder batch export validation failed.");
+                }
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(root);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        private static void WriteValidationPng(string assetPath, Color32 color)
+        {
+            Texture2D texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            texture.SetPixels32(new[] { color });
+            texture.Apply();
+            System.IO.File.WriteAllBytes(assetPath, ImageConversion.EncodeToPNG(texture));
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(assetPath);
         }
 
         private static void ValidatePerColorHybridReplacement()

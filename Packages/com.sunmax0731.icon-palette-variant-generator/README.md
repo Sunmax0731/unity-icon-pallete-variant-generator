@@ -16,6 +16,7 @@ Tools > Palette Variant Generator > 開く
 - Before / After プレビューと選択色 overlay
 - Add / Duplicate / Remove による複数バリエーション管理
 - 単体出力と一括出力
+- フォルダ内 Texture2D への一括バリエーション出力
 - セッション JSON の保存 / 読み込み
 - Help、言語設定、Auto Preview
 

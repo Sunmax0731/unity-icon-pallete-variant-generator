@@ -46,6 +46,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly PngExportService pngExportService = new PngExportService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
         private readonly RulePresetJsonService rulePresetJsonService = new RulePresetJsonService();
+        private readonly BatchSourceExportService batchSourceExportService = new BatchSourceExportService();
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
@@ -55,8 +56,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Vector2 leftScroll;
         private Vector2 paletteScroll;
         private Vector2 variationScroll;
+        private Vector2 batchResultScroll;
         private Vector2 rightScroll;
         private string sourceAssetPath = string.Empty;
+        private string batchSourceFolder = "Assets";
+        private List<BatchSourceExportItem> batchResults = new List<BatchSourceExportItem>();
         private string reportMessage = "Select a project PNG or Texture2D asset, then click Analyze.";
         private MessageType reportType = MessageType.Info;
         private PaletteVariantLanguageMode languageMode = PaletteVariantLanguageMode.Auto;
@@ -268,6 +272,36 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
                 session.exportSettings.conflictMode = (ExportConflictMode)EditorGUILayout.EnumPopup(T("conflictMode", "Conflict Mode"), session.exportSettings.conflictMode);
                 session.exportSettings.refreshAssetDatabase = EditorGUILayout.Toggle(T("refreshAssetDatabase", "Refresh AssetDatabase"), session.exportSettings.refreshAssetDatabase);
+
+                DrawSectionSeparator();
+                DrawSectionHeader(T("batchExport", "Batch Export"));
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    batchSourceFolder = EditorGUILayout.TextField(T("sourceFolder", "Source Folder"), batchSourceFolder);
+                    if (GUILayout.Button("...", GUILayout.Width(28f)))
+                    {
+                        SelectBatchSourceFolder();
+                    }
+                }
+
+                using (new EditorGUI.DisabledScope(session.colorGroups.Count == 0 || session.variations.Count == 0))
+                {
+                    if (GUILayout.Button(T("exportFolder", "Export Folder")))
+                    {
+                        ExportBatchSourceFolder();
+                    }
+                }
+
+                if (batchResults.Count > 0)
+                {
+                    batchResultScroll = EditorGUILayout.BeginScrollView(batchResultScroll, GUILayout.Height(82f));
+                    foreach (BatchSourceExportItem item in batchResults.Take(20))
+                    {
+                        EditorGUILayout.LabelField($"{item.Status}: {System.IO.Path.GetFileNameWithoutExtension(item.AssetPath)} {item.VariationName}", EditorStyles.miniLabel);
+                    }
+
+                    EditorGUILayout.EndScrollView();
+                }
 
                 DrawSectionSeparator();
                 DrawSectionHeader(T("sourceInfo", "Source Info"));
@@ -1077,6 +1111,45 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.exportSettings.outputFolder = ToProjectRelativePath(selectedFolder);
         }
 
+        private void SelectBatchSourceFolder()
+        {
+            string currentFolder = ResolveOutputFolderForPanel(batchSourceFolder);
+            string selectedFolder = EditorUtility.OpenFolderPanel("Batch Source Folder", currentFolder, string.Empty);
+            if (string.IsNullOrWhiteSpace(selectedFolder))
+            {
+                return;
+            }
+
+            batchSourceFolder = ToProjectRelativePath(selectedFolder);
+        }
+
+        private void ExportBatchSourceFolder()
+        {
+            if (session.colorGroups.Count == 0)
+            {
+                reportMessage = "Create color groups before folder batch export.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            if (session.variations.Count == 0)
+            {
+                reportMessage = "Create at least one variation before folder batch export.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            variationService.SyncActiveVariation(session);
+            BatchSourceExportSummary summary = batchSourceExportService.ExportFolder(batchSourceFolder, session, GetProjectRoot());
+            batchResults = new List<BatchSourceExportItem>(summary.Items);
+            reportMessage = $"Folder batch export completed. Exported: {summary.ExportedCount}, Skipped: {summary.SkippedCount}, Failed: {summary.FailedCount}.";
+            reportType = summary.FailedCount > 0
+                ? MessageType.Error
+                : summary.SkippedCount > 0
+                    ? MessageType.Warning
+                    : MessageType.Info;
+        }
+
         private void DrawVariationList()
         {
             if (session.colorGroups.Count == 0 && session.variations.Count == 0)
@@ -1551,6 +1624,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "fileSuffix" => "ファイル接尾辞",
                 "conflictMode" => "競合時の処理",
                 "refreshAssetDatabase" => "AssetDatabase更新",
+                "batchExport" => "フォルダ一括処理",
+                "sourceFolder" => "ソースフォルダ",
+                "exportFolder" => "フォルダを書き出し",
                 "sourceInfo" => "ソース情報",
                 "assetPath" => "アセットパス",
                 "size" => "サイズ",

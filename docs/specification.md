@@ -332,6 +332,14 @@ ore_iron.png
 ore_mithril.png
 ```
 
+### フォルダ一括出力
+
+- `Source Folder` に指定した Unity プロジェクト内フォルダから `Texture2D` を検索する。
+- 各ソース画像を解析し、現在のグループ設定と有効な Variation を適用する。
+- 出力名は `{sourceFileName}_{variationSuffix}.png` とする。
+- 既定の競合モードは `Duplicate` のため、元画像は上書きしない。
+- 成功、スキップ、失敗はソースと Variation の組み合わせごとに記録する。
+
 ### Conflict Mode
 
 | Mode | 内容 |
