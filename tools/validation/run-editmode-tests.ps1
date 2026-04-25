@@ -154,6 +154,14 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM
     throw "Unity UI Toolkit preview zoom validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS" -Quiet)) {
+    throw "Unity UI Toolkit preview drag pan validation did not emit pass marker. Log: $logPath"
+}
+
+if (-not (Select-String -Path $logPath -Pattern "ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS" -Quiet)) {
+    throw "Unity preview display cache validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -190,6 +198,8 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE31_PREVIEW_COLOR_PICK_VALIDATION=PASS",
     "ISSUE32_SELECTION_HIGHLIGHT_VALIDATION=PASS",
     "ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS",
+    "ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS",
+    "ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

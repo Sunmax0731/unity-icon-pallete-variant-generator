@@ -66,6 +66,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D zoomedBeforePreviewTexture;
         private Texture2D zoomedAfterPreviewTexture;
         private Texture2D zoomedSplitPreviewTexture;
+        private string highlightedBeforePreviewKey = string.Empty;
+        private string highlightedAfterPreviewKey = string.Empty;
+        private string highlightedSplitPreviewKey = string.Empty;
+        private string zoomedBeforePreviewKey = string.Empty;
+        private string zoomedAfterPreviewKey = string.Empty;
+        private string zoomedSplitPreviewKey = string.Empty;
+        private string splitPreviewCacheKey = string.Empty;
         private Texture2D checkerboardTexture;
         private Texture2D selectionOverlayTexture;
         private string selectionOverlayCacheKey = string.Empty;
@@ -93,6 +100,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private float previewZoom = 1f;
         private float previewSplit = 0.5f;
         private Vector2 previewPan;
+        private bool previewDragActive;
+        private bool previewDragMoved;
+        private int previewDragPointerId = -1;
+        private Vector2 previewDragStartPosition;
+        private Vector2 previewDragStartPan;
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
         private Label reportLabel;
@@ -530,7 +542,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 sourcePaletteLabel.text = $"{T("paletteColors", "Palette Colors")}: {session.paletteColors.Count} / {T("groups", "Groups")}: {session.colorGroups.Count}";
             }
 
-            DestroyUiToolkitHighlightTextures();
             if (beforePreviewImage != null)
             {
                 if (previewCompareMode != PreviewCompareMode.Split)
@@ -862,18 +873,32 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             image.style.flexGrow = 1f;
             image.style.marginRight = 6f;
             image.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f);
-            image.RegisterCallback<PointerDownEvent>(evt => PickPaletteColorFromPreview(image, evt.localPosition));
+            image.RegisterCallback<PointerDownEvent>(evt => BeginPreviewDrag(image, evt));
+            image.RegisterCallback<PointerMoveEvent>(HandlePreviewDrag);
+            image.RegisterCallback<PointerUpEvent>(evt => EndPreviewDrag(image, evt));
+            image.RegisterCallback<PointerCancelEvent>(_ => CancelPreviewDrag());
             return image;
         }
 
         private Texture2D GetSplitPreviewTexture()
         {
-            DestroySplitPreviewTexture();
             if (readableSourceImage == null)
             {
                 return null;
             }
 
+            string cacheKey = string.Join(
+                "|",
+                readableSourceImage.GetInstanceID().ToString(),
+                afterPreview == null ? "before" : afterPreview.GetInstanceID().ToString(),
+                previewSplit.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture));
+            if (splitPreviewTexture != null && splitPreviewCacheKey == cacheKey)
+            {
+                return splitPreviewTexture;
+            }
+
+            DestroySplitPreviewTexture();
+            splitPreviewCacheKey = cacheKey;
             Texture2D rightTexture = afterPreview != null ? afterPreview : readableSourceImage;
             int width = readableSourceImage.width;
             int height = readableSourceImage.height;
@@ -913,6 +938,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(splitPreviewTexture);
             splitPreviewTexture = null;
+            splitPreviewCacheKey = string.Empty;
         }
 
         private Texture2D GetDisplayPreviewTexture(Texture2D baseTexture, HighlightPreviewSlot slot)
@@ -929,6 +955,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             if (!applyHighlight && !applyZoom)
             {
                 return baseTexture;
+            }
+
+            string cacheKey = BuildDisplayPreviewCacheKey(baseTexture, slot, applyHighlight, applyZoom, selectedKeys);
+            Texture2D cached = GetCachedDisplayPreviewTexture(slot, applyHighlight, cacheKey);
+            if (cached != null)
+            {
+                return cached;
             }
 
             Color32[] basePixels = baseTexture.GetPixels32();
@@ -987,42 +1020,96 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             };
             texture.SetPixels32(outputPixels);
             texture.Apply(false, true);
-            SetDisplayPreviewTexture(slot, texture, applyHighlight);
+            SetDisplayPreviewTexture(slot, texture, applyHighlight, cacheKey);
             return texture;
         }
 
-        private void SetDisplayPreviewTexture(HighlightPreviewSlot slot, Texture2D texture, bool highlighted)
+        private string BuildDisplayPreviewCacheKey(Texture2D baseTexture, HighlightPreviewSlot slot, bool highlighted, bool zoomed, HashSet<uint> selectedKeys)
+        {
+            return string.Join(
+                "|",
+                slot.ToString(),
+                baseTexture.GetInstanceID().ToString(),
+                readableSourceImage.GetInstanceID().ToString(),
+                highlighted ? "highlight" : "plain",
+                zoomed ? "zoom" : "nozoom",
+                previewZoom.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture),
+                previewPan.x.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture),
+                previewPan.y.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture),
+                previewSplit.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture),
+                selectionHighlightEnabled.ToString(),
+                selectedGroupId,
+                selectedColorEntryId,
+                session.analyzeSettings.alphaThreshold.ToString(),
+                session.analyzeSettings.quantizeStep.ToString(),
+                string.Join(",", selectedKeys.OrderBy(key => key)));
+        }
+
+        private Texture2D GetCachedDisplayPreviewTexture(HighlightPreviewSlot slot, bool highlighted, string cacheKey)
+        {
+            switch (slot)
+            {
+                case HighlightPreviewSlot.Before:
+                    return highlighted
+                        ? highlightedBeforePreviewKey == cacheKey ? highlightedBeforePreviewTexture : null
+                        : zoomedBeforePreviewKey == cacheKey ? zoomedBeforePreviewTexture : null;
+                case HighlightPreviewSlot.After:
+                    return highlighted
+                        ? highlightedAfterPreviewKey == cacheKey ? highlightedAfterPreviewTexture : null
+                        : zoomedAfterPreviewKey == cacheKey ? zoomedAfterPreviewTexture : null;
+                case HighlightPreviewSlot.Split:
+                    return highlighted
+                        ? highlightedSplitPreviewKey == cacheKey ? highlightedSplitPreviewTexture : null
+                        : zoomedSplitPreviewKey == cacheKey ? zoomedSplitPreviewTexture : null;
+                default:
+                    return null;
+            }
+        }
+
+        private void SetDisplayPreviewTexture(HighlightPreviewSlot slot, Texture2D texture, bool highlighted, string cacheKey)
         {
             switch (slot)
             {
                 case HighlightPreviewSlot.Before:
                     if (highlighted)
                     {
+                        DestroyTexture(ref highlightedBeforePreviewTexture);
                         highlightedBeforePreviewTexture = texture;
+                        highlightedBeforePreviewKey = cacheKey;
                     }
                     else
                     {
+                        DestroyTexture(ref zoomedBeforePreviewTexture);
                         zoomedBeforePreviewTexture = texture;
+                        zoomedBeforePreviewKey = cacheKey;
                     }
                     break;
                 case HighlightPreviewSlot.After:
                     if (highlighted)
                     {
+                        DestroyTexture(ref highlightedAfterPreviewTexture);
                         highlightedAfterPreviewTexture = texture;
+                        highlightedAfterPreviewKey = cacheKey;
                     }
                     else
                     {
+                        DestroyTexture(ref zoomedAfterPreviewTexture);
                         zoomedAfterPreviewTexture = texture;
+                        zoomedAfterPreviewKey = cacheKey;
                     }
                     break;
                 case HighlightPreviewSlot.Split:
                     if (highlighted)
                     {
+                        DestroyTexture(ref highlightedSplitPreviewTexture);
                         highlightedSplitPreviewTexture = texture;
+                        highlightedSplitPreviewKey = cacheKey;
                     }
                     else
                     {
+                        DestroyTexture(ref zoomedSplitPreviewTexture);
                         zoomedSplitPreviewTexture = texture;
+                        zoomedSplitPreviewKey = cacheKey;
                     }
                     break;
             }
@@ -1046,6 +1133,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DestroyTexture(ref zoomedBeforePreviewTexture);
             DestroyTexture(ref zoomedAfterPreviewTexture);
             DestroyTexture(ref zoomedSplitPreviewTexture);
+            highlightedBeforePreviewKey = string.Empty;
+            highlightedAfterPreviewKey = string.Empty;
+            highlightedSplitPreviewKey = string.Empty;
+            zoomedBeforePreviewKey = string.Empty;
+            zoomedAfterPreviewKey = string.Empty;
+            zoomedSplitPreviewKey = string.Empty;
         }
 
         private static void DestroyTexture(ref Texture2D texture)
@@ -1057,6 +1150,86 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(texture);
             texture = null;
+        }
+
+        private void BeginPreviewDrag(Image image, PointerDownEvent evt)
+        {
+            if (evt.button != 0)
+            {
+                return;
+            }
+
+            previewDragActive = true;
+            previewDragMoved = false;
+            previewDragPointerId = evt.pointerId;
+            previewDragStartPosition = evt.localPosition;
+            previewDragStartPan = previewPan;
+            image.CapturePointer(evt.pointerId);
+            evt.StopPropagation();
+        }
+
+        private void HandlePreviewDrag(PointerMoveEvent evt)
+        {
+            if (!previewDragActive || evt.pointerId != previewDragPointerId || previewZoom <= MinPreviewZoom)
+            {
+                return;
+            }
+
+            if (!(evt.currentTarget is Image image))
+            {
+                return;
+            }
+
+            Vector2 currentPosition = new Vector2(evt.localPosition.x, evt.localPosition.y);
+            Vector2 delta = currentPosition - previewDragStartPosition;
+            if (delta.sqrMagnitude < 9f)
+            {
+                return;
+            }
+
+            previewDragMoved = true;
+            ApplyPreviewPanDrag(delta, image.resolvedStyle.width, image.resolvedStyle.height);
+            RefreshUiToolkitContent();
+            evt.StopPropagation();
+        }
+
+        private void EndPreviewDrag(Image image, PointerUpEvent evt)
+        {
+            if (!previewDragActive || evt.pointerId != previewDragPointerId)
+            {
+                return;
+            }
+
+            bool shouldPick = !previewDragMoved;
+            CancelPreviewDrag();
+            image.ReleasePointer(evt.pointerId);
+            if (shouldPick)
+            {
+                PickPaletteColorFromPreview(image, evt.localPosition);
+            }
+
+            evt.StopPropagation();
+        }
+
+        private void CancelPreviewDrag()
+        {
+            previewDragActive = false;
+            previewDragMoved = false;
+            previewDragPointerId = -1;
+        }
+
+        private void ApplyPreviewPanDrag(Vector2 delta, float previewWidth, float previewHeight)
+        {
+            if (previewZoom <= MinPreviewZoom || previewWidth <= 0f || previewHeight <= 0f)
+            {
+                previewPan = Vector2.zero;
+                return;
+            }
+
+            previewPan = previewDragStartPan + new Vector2(
+                -delta.x / previewWidth / previewZoom,
+                delta.y / previewHeight / previewZoom);
+            ClampPreviewPan();
         }
 
         private void PickPaletteColorFromPreview(Image image, Vector2 localPosition)
@@ -2839,6 +3012,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             previewZoom = Mathf.Clamp(zoom, MinPreviewZoom, MaxPreviewZoom);
             previewPan = pan;
             ClampPreviewPan();
+            RefreshUiToolkitContent();
+        }
+
+        internal Vector2 PreviewPanForValidation => previewPan;
+
+        internal int DisplayPreviewTextureCountForValidation =>
+            (highlightedBeforePreviewTexture == null ? 0 : 1)
+            + (highlightedAfterPreviewTexture == null ? 0 : 1)
+            + (highlightedSplitPreviewTexture == null ? 0 : 1)
+            + (zoomedBeforePreviewTexture == null ? 0 : 1)
+            + (zoomedAfterPreviewTexture == null ? 0 : 1)
+            + (zoomedSplitPreviewTexture == null ? 0 : 1);
+
+        internal void ApplyPreviewPanDragForValidation(Vector2 delta, float previewWidth, float previewHeight)
+        {
+            previewDragStartPan = previewPan;
+            ApplyPreviewPanDrag(delta, previewWidth, previewHeight);
             RefreshUiToolkitContent();
         }
 

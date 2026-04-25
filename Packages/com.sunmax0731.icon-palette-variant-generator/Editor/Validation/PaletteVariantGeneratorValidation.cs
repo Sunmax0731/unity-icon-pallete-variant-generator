@@ -59,6 +59,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue31PreviewColorPick();
             ValidateIssue32SelectionHighlightToggle();
             ValidateIssue33UiToolkitPreviewZoom();
+            ValidateIssue34UiToolkitPreviewDragPan();
+            ValidateIssue35PreviewDisplayTextureCache();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -92,6 +94,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE31_PREVIEW_COLOR_PICK_VALIDATION=PASS");
             Debug.Log("ISSUE32_SELECTION_HIGHLIGHT_VALIDATION=PASS");
             Debug.Log("ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS");
+            Debug.Log("ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS");
+            Debug.Log("ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1283,6 +1287,56 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (!Mathf.Approximately(texCoords.width, 0.5f) || !Mathf.Approximately(texCoords.height, 0.5f))
             {
                 throw new System.InvalidOperationException("UI Toolkit preview zoom texcoord validation failed.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue34UiToolkitPreviewDragPan()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for UI Toolkit preview drag pan validation.");
+            }
+
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), CreatePreviewPickValidationSession());
+            window.SetSelectionHighlightForValidation(false);
+            window.SetPreviewZoomForValidation(4f, Vector2.zero);
+            window.ApplyPreviewPanDragForValidation(new Vector2(-80f, 40f), 320f, 160f);
+            if (window.PreviewPanForValidation == Vector2.zero)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview drag did not update preview pan.");
+            }
+
+            Rect texCoords = PaletteVariantGeneratorWindow.GetPreviewTexCoords(4f, window.PreviewPanForValidation);
+            if (texCoords.xMin < 0f || texCoords.yMin < 0f || texCoords.xMax > 1f || texCoords.yMax > 1f)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview drag pan was not clamped.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue35PreviewDisplayTextureCache()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for preview display cache validation.");
+            }
+
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), CreatePreviewPickValidationSession());
+            window.SetSelectionHighlightForValidation(false);
+            window.SetPreviewZoomForValidation(2f, Vector2.zero);
+            int firstCount = window.DisplayPreviewTextureCountForValidation;
+            window.SetPreviewZoomForValidation(2f, Vector2.zero);
+            int secondCount = window.DisplayPreviewTextureCountForValidation;
+            if (firstCount <= 0 || firstCount != secondCount)
+            {
+                throw new System.InvalidOperationException("Preview display texture cache did not reuse stable display textures.");
             }
 
             window.Close();
