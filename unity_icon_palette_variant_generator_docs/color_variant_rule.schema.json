@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/unity-icon-palette-variant-generator-session.schema.json",
+  "title": "Unity Icon Palette Variant Generator Session",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "sourceImageAssetPath",
+    "analyzeSettings",
+    "groupSettings",
+    "exportSettings",
+    "paletteColors",
+    "colorGroups",
+    "variations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Session schema version. Example: 1.0.0"
+    },
+    "sourceImageAssetPath": {
+      "type": "string",
+      "description": "Unity asset path of the source image. Example: Assets/Icons/ore_base.png"
+    },
+    "activeVariationId": {
+      "type": "string"
+    },
+    "analyzeSettings": {
+      "type": "object",
+      "required": ["alphaThreshold", "minimumPixelCount", "quantizeStep", "maxPaletteColors"],
+      "properties": {
+        "alphaThreshold": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "minimumPixelCount": { "type": "integer", "minimum": 1 },
+        "quantizeStep": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "maxPaletteColors": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "groupSettings": {
+      "type": "object",
+      "required": ["targetGroupCount", "distanceMode", "preserveDarkOutline", "preserveAlpha"],
+      "properties": {
+        "targetGroupCount": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "distanceMode": { "type": "string", "enum": ["Rgb", "Hsv", "Lab"] },
+        "preserveDarkOutline": { "type": "boolean" },
+        "preserveAlpha": { "type": "boolean" }
+      }
+    },
+    "exportSettings": {
+      "type": "object",
+      "required": ["outputFolder", "filePrefix", "conflictMode", "refreshAssetDatabase"],
+      "properties": {
+        "outputFolder": { "type": "string" },
+        "filePrefix": { "type": "string" },
+        "fileSuffix": { "type": "string" },
+        "conflictMode": { "type": "string", "enum": ["Overwrite", "Skip", "Duplicate"] },
+        "refreshAssetDatabase": { "type": "boolean" }
+      }
+    },
+    "paletteColors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/paletteColorEntry" }
+    },
+    "colorGroups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/colorGroup" }
+    },
+    "variations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/iconVariation" }
+    }
+  },
+  "$defs": {
+    "color32": {
+      "type": "object",
+      "required": ["r", "g", "b", "a"],
+      "properties": {
+        "r": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "g": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "b": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "a": { "type": "integer", "minimum": 0, "maximum": 255 }
+      }
+    },
+    "paletteColorEntry": {
+      "type": "object",
+      "required": ["id", "color", "hex", "pixelCount", "pixelRatio", "groupId", "lockedGroup", "ignored"],
+      "properties": {
+        "id": { "type": "string" },
+        "color": { "$ref": "#/$defs/color32" },
+        "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "pixelCount": { "type": "integer", "minimum": 0 },
+        "pixelRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "groupId": { "type": "string" },
+        "lockedGroup": { "type": "boolean" },
+        "ignored": { "type": "boolean" }
+      }
+    },
+    "colorGroup": {
+      "type": "object",
+      "required": ["id", "displayName", "representativeColor", "colorEntryIds", "replacementMode", "targetColor", "blendRatio", "lockedGroup"],
+      "properties": {
+        "id": { "type": "string" },
+        "displayName": { "type": "string" },
+        "representativeColor": { "$ref": "#/$defs/color32" },
+        "colorEntryIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "replacementMode": { "type": "string", "enum": ["GroupUniform", "PerColor", "Hybrid"] },
+        "targetColor": { "$ref": "#/$defs/color32" },
+        "blendRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "lockedGroup": { "type": "boolean" }
+      }
+    },
+    "iconVariation": {
+      "type": "object",
+      "required": ["id", "displayName", "fileSuffix", "replacementRules", "exportEnabled"],
+      "properties": {
+        "id": { "type": "string" },
+        "displayName": { "type": "string" },
+        "fileSuffix": { "type": "string" },
+        "replacementRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/colorReplacementRule" }
+        },
+        "exportEnabled": { "type": "boolean" }
+      }
+    },
+    "colorReplacementRule": {
+      "type": "object",
+      "required": ["id", "scope", "targetColor", "blendRatio", "enabled"],
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "colorEntryId": { "type": "string" },
+        "scope": { "type": "string", "enum": ["Group", "ColorEntry"] },
+        "targetColor": { "$ref": "#/$defs/color32" },
+        "blendRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "enabled": { "type": "boolean" }
+      }
+    }
+  }
+}
