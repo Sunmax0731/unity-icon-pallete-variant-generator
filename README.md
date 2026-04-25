@@ -6,6 +6,12 @@ Unity Editor extension for generating palette-based color variants from icon ima
 
 - Unity 6000.4.0f1
 
+## Package
+
+- Package: `com.sunmax0731.icon-palette-variant-generator`
+- Version: `1.0.0`
+- Distribution: UPM package ZIP
+
 ## Current Scope
 
 The current implementation covers the MVP editor workflow:
@@ -52,6 +58,23 @@ ISSUE10_UI_POLISH_VALIDATION=PASS
 ## Documentation
 
 Project planning and product documentation live under `docs/`.
+
+- Manual: `docs/manual.md`
+- Terms: `docs/terms.md`
+- Release notes: `docs/release-notes-v1.0.0.md`
+- BOOTH copy draft: `docs/booth-copy.md`
+
+## Release Build
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.0
+```
+
+Output:
+
+```text
+ReleaseBuilds/PaletteVariantGenerator_v1.0.0.zip
+```
 
 ## Samples
 
