@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Sunmax0731.IconPaletteVariantGenerator.Models
 {
@@ -13,6 +14,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
         public AnalyzeSettings analyzeSettings = new AnalyzeSettings();
         public GroupSettings groupSettings = new GroupSettings();
         public ExportSettings exportSettings = new ExportSettings();
+        public List<PaletteColorEntry> paletteColors = new List<PaletteColorEntry>();
         public string activeVariationId = string.Empty;
     }
 }

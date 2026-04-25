@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using Sunmax0731.IconPaletteVariantGenerator.Editor.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Models;
+using Sunmax0731.IconPaletteVariantGenerator.Services;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,8 +13,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     public sealed class PaletteVariantGeneratorWindow : EditorWindow
     {
         private readonly PaletteVariantSession session = new PaletteVariantSession();
+        private readonly TextureAssetLoader textureAssetLoader = new TextureAssetLoader();
+        private readonly ColorExtractionService colorExtractionService = new ColorExtractionService();
         private Texture2D sourceImage;
+        private Texture2D readableSourceImage;
         private Vector2 scrollPosition;
+        private string sourceAssetPath = string.Empty;
+        private string reportMessage = "Select a project PNG or Texture2D asset, then click Analyze.";
 
         [MenuItem("Tools/Icon Tools/Palette Variant Generator")]
         public static void Open()
@@ -40,9 +48,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             {
                 sourceImage = (Texture2D)EditorGUILayout.ObjectField(sourceImage, typeof(Texture2D), false, GUILayout.MinWidth(220f));
 
+                using (new EditorGUI.DisabledScope(sourceImage == null))
+                {
+                    if (GUILayout.Button("Analyze", EditorStyles.toolbarButton))
+                    {
+                        AnalyzeSourceImage();
+                    }
+                }
+
                 using (new EditorGUI.DisabledScope(true))
                 {
-                    GUILayout.Button("Analyze", EditorStyles.toolbarButton);
                     GUILayout.Button("Auto Group", EditorStyles.toolbarButton);
                     GUILayout.Button("Preview", EditorStyles.toolbarButton);
                     GUILayout.Button("Export", EditorStyles.toolbarButton);
@@ -54,26 +69,95 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void DrawCurrentScaffoldState()
         {
-            EditorGUILayout.LabelField("Phase 0 Scaffold", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Source Image", EditorStyles.boldLabel);
+            if (readableSourceImage != null)
+            {
+                Rect previewRect = GUILayoutUtility.GetRect(128f, 128f, GUILayout.ExpandWidth(false));
+                EditorGUI.DrawPreviewTexture(previewRect, readableSourceImage, null, ScaleMode.ScaleToFit);
+                EditorGUILayout.LabelField("Asset Path", sourceAssetPath);
+                EditorGUILayout.LabelField("Size", $"{readableSourceImage.width} x {readableSourceImage.height}");
+                EditorGUILayout.LabelField("Palette Colors", session.paletteColors.Count.ToString());
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("No source image has been analyzed yet.", MessageType.None);
+            }
+
             EditorGUILayout.HelpBox(
-                "The package scaffold is active. Image analysis, grouping, preview, export, and session IO are intentionally disabled until their implementation issues are completed.",
-                MessageType.Info);
+                reportMessage,
+                string.IsNullOrEmpty(reportMessage) ? MessageType.None : MessageType.Info);
         }
 
         private void DrawSessionBaseline()
         {
-            EditorGUILayout.LabelField("Default Session Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Analyze Settings", EditorStyles.boldLabel);
 
-            using (new EditorGUI.DisabledScope(true))
+            session.analyzeSettings.alphaThreshold = EditorGUILayout.IntSlider("Alpha Threshold", session.analyzeSettings.alphaThreshold, 0, 255);
+            session.analyzeSettings.minimumPixelCount = Mathf.Max(1, EditorGUILayout.IntField("Minimum Pixel Count", session.analyzeSettings.minimumPixelCount));
+            session.analyzeSettings.quantizeStep = EditorGUILayout.IntSlider("Quantize Step", session.analyzeSettings.quantizeStep, 1, 64);
+            session.analyzeSettings.maxPaletteColors = Mathf.Max(1, EditorGUILayout.IntField("Max Palette Colors", session.analyzeSettings.maxPaletteColors));
+
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Palette", EditorStyles.boldLabel);
+
+            if (session.paletteColors.Count == 0)
             {
-                EditorGUILayout.TextField("Schema Version", session.schemaVersion);
-                EditorGUILayout.IntField("Alpha Threshold", session.analyzeSettings.alphaThreshold);
-                EditorGUILayout.IntField("Quantize Step", session.analyzeSettings.quantizeStep);
-                EditorGUILayout.IntField("Target Group Count", session.groupSettings.targetGroupCount);
-                EditorGUILayout.EnumPopup("Distance Mode", session.groupSettings.distanceMode);
-                EditorGUILayout.TextField("Output Folder", session.exportSettings.outputFolder);
-                EditorGUILayout.EnumPopup("Conflict Mode", session.exportSettings.conflictMode);
+                EditorGUILayout.HelpBox("Palette colors will appear here after analysis.", MessageType.None);
+                return;
             }
+
+            DrawPaletteList(session.paletteColors);
+        }
+
+        private void DrawPaletteList(IReadOnlyList<PaletteColorEntry> paletteColors)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                foreach (PaletteColorEntry entry in paletteColors)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        Rect swatchRect = GUILayoutUtility.GetRect(22f, 18f, GUILayout.Width(22f));
+                        EditorGUI.DrawRect(swatchRect, entry.color);
+                        EditorGUILayout.LabelField(entry.hex, GUILayout.Width(80f));
+                        EditorGUILayout.LabelField($"{entry.color.r},{entry.color.g},{entry.color.b},{entry.color.a}", GUILayout.Width(120f));
+                        EditorGUILayout.LabelField(entry.pixelCount.ToString(), GUILayout.Width(64f));
+                        EditorGUILayout.LabelField($"{entry.pixelRatio:P1}", GUILayout.Width(64f));
+                    }
+                }
+            }
+        }
+
+        private void AnalyzeSourceImage()
+        {
+            if (!textureAssetLoader.TryLoadReadableTexture(sourceImage, out Texture2D loadedTexture, out string assetPath, out string error))
+            {
+                reportMessage = error;
+                return;
+            }
+
+            DestroyReadableSourceImage();
+            readableSourceImage = loadedTexture;
+            sourceAssetPath = assetPath;
+            session.sourceImageAssetPath = assetPath;
+            session.paletteColors = new List<PaletteColorEntry>(colorExtractionService.Extract(readableSourceImage, session.analyzeSettings));
+            reportMessage = $"Analyzed {session.paletteColors.Count} palette colors from {assetPath}.";
+        }
+
+        private void OnDisable()
+        {
+            DestroyReadableSourceImage();
+        }
+
+        private void DestroyReadableSourceImage()
+        {
+            if (readableSourceImage == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(readableSourceImage);
+            readableSourceImage = null;
         }
     }
 }

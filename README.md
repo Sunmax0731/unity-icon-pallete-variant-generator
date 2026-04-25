@@ -33,6 +33,7 @@ Expected marker:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
+ISSUE2_IMAGE_PALETTE_VALIDATION=PASS
 ```
 
 ## Planning Docs

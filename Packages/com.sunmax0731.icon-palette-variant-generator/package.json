@@ -11,6 +11,9 @@
     "color",
     "variant"
   ],
+  "dependencies": {
+    "com.unity.modules.imageconversion": "1.0.0"
+  },
   "author": {
     "name": "Sunmax0731",
     "url": "https://github.com/Sunmax0731"
