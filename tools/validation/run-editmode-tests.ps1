@@ -166,6 +166,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE36_DELAYED_PREVIEW_REFRESH
     throw "Unity delayed preview refresh validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS" -Quiet)) {
+    throw "Unity selected color info validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -205,6 +209,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS",
     "ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS",
     "ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS",
+    "ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

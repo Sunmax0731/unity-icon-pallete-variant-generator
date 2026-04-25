@@ -122,6 +122,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private ScrollView variationListElement;
         private VisualElement replacementRuleContainer;
         private VisualElement colorRuleContainer;
+        private VisualElement selectedColorInfoContainer;
         private bool isRefreshingUiToolkit;
 
         [MenuItem("Tools/Palette Variant Generator/開く")]
@@ -470,6 +471,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             row.Add(beforePreviewImage);
             row.Add(afterPreviewImage);
             section.Add(row);
+            selectedColorInfoContainer = CreateSelectedColorInfoPanel();
+            section.Add(selectedColorInfoContainer);
             section.Add(new Button(() =>
             {
                 previewZoom = 1f;
@@ -567,6 +570,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     : DisplayStyle.Flex;
             }
 
+            RefreshSelectedColorInfoElement();
             RefreshPaletteListElement();
             RefreshVariationListElement();
             RefreshReplacementRuleElement();
@@ -604,6 +608,68 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         break;
                 }
             }
+        }
+
+        private void RefreshSelectedColorInfoElement()
+        {
+            if (selectedColorInfoContainer == null)
+            {
+                return;
+            }
+
+            selectedColorInfoContainer.Clear();
+            selectedColorInfoContainer.Add(CreateUiSubHeader(T("selectedColorInfo", "Selected Color Info")));
+
+            PaletteColorEntry entry = GetSelectedPaletteEntry();
+            if (entry == null)
+            {
+                selectedColorInfoContainer.Add(CreateWrappingLabel(T("noSelectedColor", "No palette color selected.")));
+                return;
+            }
+
+            foreach (KeyValuePair<string, string> row in BuildSelectedColorInfoRows(entry))
+            {
+                selectedColorInfoContainer.Add(CreateInfoRow(row.Key, row.Value));
+            }
+        }
+
+        private List<KeyValuePair<string, string>> BuildSelectedColorInfoRows(PaletteColorEntry entry)
+        {
+            List<KeyValuePair<string, string>> rows = new List<KeyValuePair<string, string>>();
+            if (entry == null)
+            {
+                return rows;
+            }
+
+            int totalPixels = Mathf.Max(1, session.paletteColors.Sum(candidate => candidate == null ? 0 : candidate.pixelCount));
+            ColorGroup group = session.colorGroups.FirstOrDefault(candidate => candidate != null && candidate.id == entry.groupId);
+            ColorReplacementRule rule = FindColorRule(entry);
+            bool ruleEnabled = rule != null && rule.enabled;
+            bool canUseColorRule = group != null
+                && (group.replacementMode == ColorReplacementMode.PerColor || group.replacementMode == ColorReplacementMode.Hybrid);
+            bool usesColorRule = ruleEnabled && canUseColorRule;
+            Color32 replacementColor = usesColorRule
+                ? rule.targetColor
+                : group?.targetColor ?? entry.color;
+            float blendRatio = usesColorRule
+                ? rule.blendRatio
+                : group?.blendRatio ?? 1f;
+            string ruleState = ruleEnabled
+                ? T("enabled", "Enabled")
+                : T("disabled", "Disabled");
+            if (ruleEnabled && !canUseColorRule)
+            {
+                ruleState = $"{ruleState} ({T("notAppliedByMode", "not applied in current mode")})";
+            }
+
+            rows.Add(new KeyValuePair<string, string>("HEX", FormatHexWithAlpha(entry.color)));
+            rows.Add(new KeyValuePair<string, string>("RGBA", $"R {entry.color.r} / G {entry.color.g} / B {entry.color.b} / A {entry.color.a}"));
+            rows.Add(new KeyValuePair<string, string>(T("group", "Group"), group == null ? "-" : group.displayName));
+            rows.Add(new KeyValuePair<string, string>(T("pixelCount", "Pixel Count"), $"{entry.pixelCount} px / {(entry.pixelCount / (float)totalPixels):P1}"));
+            rows.Add(new KeyValuePair<string, string>(T("replacementColor", "Replacement Color"), $"{FormatHexWithAlpha(replacementColor)} / {T("blendRatio", "Blend Ratio")} {blendRatio:0.##}"));
+            rows.Add(new KeyValuePair<string, string>(T("colorRuleState", "Color Rule"), ruleState));
+            rows.Add(new KeyValuePair<string, string>(T("transparentReplacement", "Transparent Replacement"), replacementColor.a == 0 ? T("yes", "Yes") : T("no", "No")));
+            return rows;
         }
 
         private void RefreshPaletteListElement()
@@ -866,6 +932,51 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private static Label CreateWrappingLabel()
         {
             return CreateWrappingLabel(string.Empty);
+        }
+
+        private VisualElement CreateSelectedColorInfoPanel()
+        {
+            VisualElement panel = new VisualElement { name = "selected-color-info-panel" };
+            panel.style.borderTopWidth = 1f;
+            panel.style.borderRightWidth = 1f;
+            panel.style.borderBottomWidth = 1f;
+            panel.style.borderLeftWidth = 1f;
+            panel.style.borderTopColor = SeparatorColor;
+            panel.style.borderRightColor = SeparatorColor;
+            panel.style.borderBottomColor = SeparatorColor;
+            panel.style.borderLeftColor = SeparatorColor;
+            panel.style.borderTopLeftRadius = 4f;
+            panel.style.borderTopRightRadius = 4f;
+            panel.style.borderBottomLeftRadius = 4f;
+            panel.style.borderBottomRightRadius = 4f;
+            panel.style.paddingLeft = 6f;
+            panel.style.paddingRight = 6f;
+            panel.style.paddingTop = 5f;
+            panel.style.paddingBottom = 5f;
+            panel.style.marginTop = 6f;
+            panel.style.marginBottom = 6f;
+            panel.style.minWidth = 0f;
+            return panel;
+        }
+
+        private VisualElement CreateInfoRow(string labelText, string valueText)
+        {
+            VisualElement row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.minWidth = 0f;
+
+            Label label = CreateWrappingLabel(labelText);
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            label.style.minWidth = 92f;
+            label.style.marginRight = 6f;
+            row.Add(label);
+
+            Label value = CreateWrappingLabel(valueText);
+            value.style.flexGrow = 1f;
+            value.style.minWidth = 0f;
+            row.Add(value);
+            return row;
         }
 
         private Image CreatePreviewImage(string name)
@@ -3012,13 +3123,34 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 : fileName + ".png";
         }
 
-        private ColorReplacementRule GetOrCreateColorRule(PaletteColorEntry entry)
+        private PaletteColorEntry GetSelectedPaletteEntry()
         {
+            return session.paletteColors.FirstOrDefault(candidate => candidate != null && candidate.id == selectedColorEntryId);
+        }
+
+        private ColorReplacementRule FindColorRule(PaletteColorEntry entry)
+        {
+            if (entry == null)
+            {
+                return null;
+            }
+
             session.colorRules ??= new List<ColorReplacementRule>();
-            ColorReplacementRule rule = session.colorRules.FirstOrDefault(candidate =>
+            return session.colorRules.FirstOrDefault(candidate =>
                 candidate != null
                 && candidate.scope == ColorReplacementScope.ColorEntry
                 && candidate.colorEntryId == entry.id);
+        }
+
+        private static string FormatHexWithAlpha(Color32 color)
+        {
+            return $"{ColorCodeUtility.ToHex(color)}{color.a:X2}";
+        }
+
+        private ColorReplacementRule GetOrCreateColorRule(PaletteColorEntry entry)
+        {
+            session.colorRules ??= new List<ColorReplacementRule>();
+            ColorReplacementRule rule = FindColorRule(entry);
 
             if (rule != null)
             {
@@ -3088,6 +3220,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal int PreviewRefreshRequestVersionForValidation => previewRefreshRequestVersion;
 
         internal bool HasAfterPreviewForValidation => afterPreview != null;
+
+        internal string SelectedColorInfoTextForValidation
+        {
+            get
+            {
+                PaletteColorEntry entry = GetSelectedPaletteEntry();
+                if (entry == null)
+                {
+                    return T("noSelectedColor", "No palette color selected.");
+                }
+
+                return string.Join(" | ", BuildSelectedColorInfoRows(entry).Select(row => $"{row.Key}: {row.Value}"));
+            }
+        }
 
         internal void RequestPreviewRefreshForValidation(string queuedMessage)
         {
@@ -3520,6 +3666,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "blendRatio" => "ブレンド率",
                 "mode" => "モード",
                 "colorRules" => "色別ルール",
+                "selectedColorInfo" => "選択色情報",
+                "noSelectedColor" => "パレット色が選択されていません。",
+                "group" => "グループ",
+                "pixelCount" => "ピクセル数",
+                "replacementColor" => "置換後色",
+                "colorRuleState" => "色別ルール",
+                "transparentReplacement" => "透明置換",
+                "disabled" => "無効",
+                "notAppliedByMode" => "現在のモードでは未適用",
+                "yes" => "はい",
+                "no" => "いいえ",
                 "enabled" => "有効",
                 "helpOverview" => "画像を解析し、近い色をグループ化して、置換色のプレビューとPNG書き出しを行います。",
                 "helpAnalysis" => "透明度しきい値、最小ピクセル数、量子化ステップで抽出するパレット色を調整します。",

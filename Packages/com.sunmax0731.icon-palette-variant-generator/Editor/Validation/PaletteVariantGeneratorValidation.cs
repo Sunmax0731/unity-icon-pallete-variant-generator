@@ -62,6 +62,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue34UiToolkitPreviewDragPan();
             ValidateIssue35PreviewDisplayTextureCache();
             ValidateIssue36DelayedPreviewRefresh();
+            ValidateIssue37SelectedColorInfoPanel();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -98,6 +99,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS");
             Debug.Log("ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS");
             Debug.Log("ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS");
+            Debug.Log("ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1381,6 +1383,44 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (!window.HasAfterPreviewForValidation)
             {
                 throw new System.InvalidOperationException("Delayed preview refresh did not generate the after preview.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue37SelectedColorInfoPanel()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for selected color info validation.");
+            }
+
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), CreatePreviewPickValidationSession());
+            string emptyInfo = window.SelectedColorInfoTextForValidation;
+            if (!emptyInfo.Contains("No palette color selected.") && !emptyInfo.Contains("選択されていません"))
+            {
+                throw new System.InvalidOperationException("Selected color info panel did not expose the unselected state.");
+            }
+
+            if (!window.TrySelectPaletteColorAtSourcePixel(1, 0, "Preview"))
+            {
+                throw new System.InvalidOperationException("Selected color info validation could not select the preview color.");
+            }
+
+            if (!window.SetSelectedColorRuleTargetForValidation(new Color32(0, 255, 0, 0)))
+            {
+                throw new System.InvalidOperationException("Selected color info validation could not configure a transparent replacement.");
+            }
+
+            string selectedInfo = window.SelectedColorInfoTextForValidation;
+            if (!selectedInfo.Contains("#0000FFFF")
+                || !selectedInfo.Contains("Blue")
+                || !selectedInfo.Contains("#00FF0000")
+                || (!selectedInfo.Contains("Yes") && !selectedInfo.Contains("はい")))
+            {
+                throw new System.InvalidOperationException("Selected color info panel did not include HEX, group, replacement, and transparent state.");
             }
 
             window.Close();
