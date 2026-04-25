@@ -10,7 +10,7 @@ Unity `6000.4.0f1` での自動検証、EditMode テスト、手動 QA を管理
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-必須 marker:
+必要 marker:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
@@ -29,11 +29,12 @@ ISSUE10_UI_POLISH_VALIDATION=PASS
 - 中核ロジックは `Tests/Editor` の EditMode テストで確認する。
 - UI は headless validation と手動 QA の両方で確認する。
 - 新しい Issue marker を追加したら README と validation script も更新する。
+- 検証結果を Issue に残す場合は日本語で記載する。
 
 ## 手動 QA 観点
 
-- 64x64 透過 PNG
-- 128x128 透過 PNG
+- 64x64 透明 PNG
+- 128x128 透明 PNG
 - アンチエイリアスありのアイコン
 - ドット絵アイコン
 - 透明部分が透明のまま出力される
@@ -47,5 +48,5 @@ ISSUE10_UI_POLISH_VALIDATION=PASS
 ## 生成物の扱い
 
 - `Logs/`, `Validation/`, `Library/`, `UserSettings/` はコミットしない。
-- QA 用にユーザーが置いた `Assets/` 配下の画像は、Issue #8 でサンプルとして採用する場合だけコミットする。
-- Release 用生成物は #9 の作業範囲で扱う。
+- QA 用にユーザーが置いた `Assets/` 配下の画像は、Issue でサンプルとして採用する場合だけコミットする。
+- Release 用生成物は release packaging の作業範囲で扱う。

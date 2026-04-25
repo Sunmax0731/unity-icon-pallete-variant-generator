@@ -2,11 +2,12 @@
 
 ## 目的
 
-初回配布に向けたドキュメント、パッケージ、GitHub Release、BOOTH copy を整える工程の Skill。
+配布に向けたドキュメント、パッケージ、GitHub Release、BOOTH copy を整える工程の Skill。
 
 ## 開始条件
 
 - Release 前 blocker が open Issue として分離されている。
+- 中核機能と検証が完了している。
 
 ## 整備対象
 
@@ -16,7 +17,7 @@
 - Terms
 - Release Notes
 - BOOTH 商品説明文
-- GitHub Release `v1.0.0`
+- GitHub Release
 - 配布 ZIP または unitypackage
 
 ## 配布物の条件
@@ -25,6 +26,7 @@
 - Samples / Manual / Terms / README / CHANGELOG を含む。
 - Unity `6000.4.0f1` でクリーン導入確認済みである。
 - 既知の制限と検証結果が Release Notes に記載されている。
+- Release notes、Issue コメント、配布説明は日本語を基本にする。
 
 ## BOOTH Copy
 

@@ -4,7 +4,7 @@
 
 このファイルは、AI Agent / Codex が `Unity Icon Palette Variant Generator` の実装を進めるための指示書である。
 
-本ツールは Unity Editor 上で画像の色を解析し、近傍色グルーピングと色置換により、単一アイコンから複数の色違いパターンを生成するエディタ拡張である。
+本ツールは Unity Editor 上で画像の色を解析し、近傍色のグルーピングと色置換により、単一アイコンから複数の色違いパターンを生成するエディタ拡張である。
 
 ## 2. 実装対象
 
@@ -16,24 +16,26 @@
 
 ```text
 Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator
 ```
 
 ## 3. 参照すべきドキュメント
 
-実装前に以下を読むこと。
+実装前に以下を確認する。
 
 1. `docs/requirements.md`
 2. `docs/specification.md`
 3. `docs/architecture.md`
 4. `docs/development_plan.md`
 5. `docs/color_variant_rule.schema.json`
-6. `SKILL.md`
+6. `Skill.md`
 7. 作業工程に対応する `docs/skills/*.md`
 
 ## 4. 実装原則
 
 - GitHub Issue を確認し、Issue 起点で作業する。
-- 実装 Issue ごとに作業範囲を絞る。
+- Issue は日本語で作成・更新する。タイトル、本文、コメント、完了報告も日本語を基本とする。
+- 実装 Issue ごとに作業範囲を区切る。
 - Unity `6000.4.0f1` で検証してから commit / close する。
 - 検証用にユーザーが追加した `Assets/` 配下の画像は、タスクで明示されない限りコミットしない。
 - EditorWindow に全ロジックを詰め込まない。
@@ -42,7 +44,7 @@ Tools > Icon Tools > Palette Variant Generator
 - Dictionary をそのまま保存形式に使わない。
 - 元画像を直接変更しない。
 - 出力画像は別ファイルとして保存する。
-- 一時生成した Texture2D の破棄漏れに注意する。
+- 一時生成した `Texture2D` の破棄漏れに注意する。
 - Editor 専用コードは `Editor` フォルダ配下に配置する。
 
 ## 5. 推奨実装順
@@ -61,10 +63,11 @@ Tools > Icon Tools > Palette Variant Generator
 ## 6. コードスタイル
 
 - C# の public class には概要コメントを付ける。
-- public method には目的・引数・戻り値をコメントする。
+- public method には目的、引数、戻り値が分かるコメントを付ける。
 - null チェックを省略しない。
 - ファイル IO は例外処理を入れる。
 - UI 表示文言は分かりやすく短くする。
+- ユーザー向け UI 文言は日本語を基本とする。
 - 命名は役割が分かるようにする。
 
 例:
@@ -82,7 +85,7 @@ public sealed class ColorExtractionService
 }
 ```
 
-## 7. UI 実装指針
+## 7. UI 実装方針
 
 MVP は IMGUI でよい。
 
@@ -111,7 +114,7 @@ Alpha Threshold 以下のピクセルは無視する。
 output = Lerp(original, target, ratio)
 ```
 
-ratio は 0.0 ～ 1.0。
+ratio は 0.0 から 1.0。
 
 ### 8.3 優先順位
 
@@ -127,7 +130,7 @@ ratio は 0.0 ～ 1.0。
 - 元画像と同じ幅・高さで出力する。
 - アルファを維持する。
 - 既存ファイルがある場合は Conflict Mode に従う。
-- 出力後に AssetDatabase.Refresh を行う。
+- 出力後に `AssetDatabase.Refresh` を行う。
 
 ## 9. テスト対象
 
@@ -145,8 +148,8 @@ ratio は 0.0 ～ 1.0。
 - EditorWindow 内に重い処理をベタ書きしない。
 - `Resources` フォルダ前提の実装にしない。
 - `Application.dataPath` と `Assets/` 相対パスを混同しない。
-- JSON に UnityEngine.Object 参照を直接保存しない。
-- 画像解析時に毎フレーム処理を走らせない。
+- JSON に `UnityEngine.Object` 参照を直接保存しない。
+- 画像解析時に毎フレーム重い処理を走らせない。
 
 ## 11. 完了時の確認
 
@@ -167,7 +170,7 @@ ratio は 0.0 ～ 1.0。
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-現時点の必須マーカー:
+現時点の主要マーカー:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
@@ -181,8 +184,6 @@ ISSUE8_SAMPLE_QA_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ```
 
-## 12. 残タスク順
+## 12. 残タスク方針
 
-1. `#9` Release packaging と GitHub Release `v1.0.0`
-
-Release 作業は #8 の完了後に行う。
+GitHub Issue の open 状態を確認し、優先度と実行可能性が高いものから進める。

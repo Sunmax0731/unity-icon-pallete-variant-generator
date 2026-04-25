@@ -1,26 +1,26 @@
-# Terms
+# 利用条件
 
-## License And Use
+## ライセンスと利用条件
 
-This package is provided as a Unity Editor extension for project asset production workflows.
+本パッケージは、Unity Editor 拡張としてプロジェクト内のアセット制作を支援する目的で提供されます。
 
-You may:
+利用者は以下を行えます。
 
-- Use the tool in personal and commercial Unity projects.
-- Generate and distribute PNG assets created with the tool.
-- Modify the package for your own projects.
+- 個人・商用の Unity プロジェクトで本ツールを利用する。
+- 本ツールで生成した PNG アセットを利用・配布する。
+- 自身のプロジェクト向けに本パッケージを改変する。
 
-You may not:
+以下は禁止します。
 
-- Redistribute this package as a competing standalone product without permission.
-- Claim the original package as your own work.
+- 許可なく本パッケージを競合する単体製品として再配布する。
+- 元のパッケージを自身の著作物として主張する。
 
-## Warranty
+## 免責事項
 
-The package is provided as-is. The author is not responsible for project data loss, production delays, or other damages caused by use of the package.
+本パッケージは現状有姿で提供されます。本パッケージの利用により発生したプロジェクトデータの消失、制作遅延、その他の損害について、作者は責任を負いません。
 
-Always keep backups of source assets and project data.
+元画像とプロジェクトデータは必ずバックアップしてください。
 
-## Source Assets
+## 元画像の扱い
 
-The tool is designed not to overwrite source images. Users are responsible for confirming export destinations and file conflict settings.
+本ツールは元画像を上書きしない設計です。出力先とファイル競合時の設定は、利用者が確認してください。

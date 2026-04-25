@@ -51,7 +51,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
         {
             PaletteVariantGeneratorWindow.OpenVersionInfo();
             PaletteVariantInfoWindow infoWindow = EditorWindow.GetWindow<PaletteVariantInfoWindow>();
-            if (infoWindow == null || infoWindow.titleContent == null || infoWindow.titleContent.text != "Palette Variant Info")
+            if (infoWindow == null || infoWindow.titleContent == null || infoWindow.titleContent.text != "バージョン情報")
             {
                 throw new System.InvalidOperationException("Version info window could not be created.");
             }
@@ -60,7 +60,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
 
             PaletteVariantGeneratorWindow.OpenLicense();
             PaletteVariantInfoWindow licenseWindow = EditorWindow.GetWindow<PaletteVariantInfoWindow>();
-            if (licenseWindow == null || licenseWindow.titleContent == null || licenseWindow.titleContent.text != "Palette Variant License")
+            if (licenseWindow == null || licenseWindow.titleContent == null || licenseWindow.titleContent.text != "ライセンス")
             {
                 throw new System.InvalidOperationException("License window could not be created.");
             }

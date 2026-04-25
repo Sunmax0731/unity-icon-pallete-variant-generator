@@ -64,7 +64,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             OpenWindow();
         }
 
-        [MenuItem("Tools/Palette Variant Generator/Open")]
+        [MenuItem("Tools/Palette Variant Generator/開く")]
         public static void OpenFromRootMenu()
         {
             OpenWindow();
@@ -78,13 +78,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             window.Show();
         }
 
-        [MenuItem("Tools/Palette Variant Generator/Version Info")]
+        [MenuItem("Tools/Palette Variant Generator/バージョン情報")]
         public static void OpenVersionInfo()
         {
             PaletteVariantInfoWindow.OpenInfo();
         }
 
-        [MenuItem("Tools/Palette Variant Generator/License")]
+        [MenuItem("Tools/Palette Variant Generator/ライセンス")]
         public static void OpenLicense()
         {
             PaletteVariantInfoWindow.OpenLicense();
@@ -1354,7 +1354,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         public static void OpenInfo()
         {
-            PaletteVariantInfoWindow window = GetWindow<PaletteVariantInfoWindow>("Palette Variant Info");
+            PaletteVariantInfoWindow window = GetWindow<PaletteVariantInfoWindow>("バージョン情報");
             window.mode = InfoMode.Version;
             window.minSize = new Vector2(460f, 320f);
             window.Show();
@@ -1363,7 +1363,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         public static void OpenLicense()
         {
-            PaletteVariantInfoWindow window = GetWindow<PaletteVariantInfoWindow>("Palette Variant License");
+            PaletteVariantInfoWindow window = GetWindow<PaletteVariantInfoWindow>("ライセンス");
             window.mode = InfoMode.License;
             window.minSize = new Vector2(520f, 420f);
             window.Show();
@@ -1389,38 +1389,38 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             EditorGUILayout.LabelField(PaletteVariantGeneratorWindow.ProductName, EditorStyles.boldLabel);
             EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Package", PaletteVariantGeneratorWindow.PackageName);
-            EditorGUILayout.LabelField("Version", PaletteVariantGeneratorWindow.PackageVersion);
-            EditorGUILayout.LabelField("Validated Unity", PaletteVariantGeneratorWindow.ValidatedUnityVersion);
-            EditorGUILayout.LabelField("Menu", "Tools > Palette Variant Generator");
+            EditorGUILayout.LabelField("パッケージ", PaletteVariantGeneratorWindow.PackageName);
+            EditorGUILayout.LabelField("バージョン", PaletteVariantGeneratorWindow.PackageVersion);
+            EditorGUILayout.LabelField("検証済み Unity", PaletteVariantGeneratorWindow.ValidatedUnityVersion);
+            EditorGUILayout.LabelField("メニュー", "Tools > Palette Variant Generator");
             EditorGUILayout.Space(8f);
-            EditorGUILayout.TextField("Release", PaletteVariantGeneratorWindow.ReleaseUrl);
+            EditorGUILayout.TextField("リリース", PaletteVariantGeneratorWindow.ReleaseUrl);
             EditorGUILayout.Space(8f);
             EditorGUILayout.HelpBox(
-                "This editor extension extracts icon palettes, groups nearby colors, previews replacements, and exports PNG color variants without modifying the source image.",
+                "このエディタ拡張は、元画像を変更せずにアイコンのパレット抽出、近傍色グループ化、色置換プレビュー、PNG バリエーション出力を行います。",
                 MessageType.None);
         }
 
         private static void DrawLicense()
         {
-            EditorGUILayout.LabelField("License And Use", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("ライセンスと利用条件", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "You may use this tool in personal and commercial Unity projects, generate and distribute PNG assets created with the tool, and modify the package for your own projects.",
+                "個人・商用の Unity プロジェクトで本ツールを利用できます。本ツールで生成した PNG アセットは配布できます。また、自身のプロジェクト向けにパッケージを改変できます。",
                 MessageType.None);
             EditorGUILayout.HelpBox(
-                "You may not redistribute this package as a competing standalone product without permission, or claim the original package as your own work.",
+                "許可なく本パッケージを競合する単体製品として再配布したり、元のパッケージを自身の著作物として主張したりすることはできません。",
                 MessageType.Warning);
 
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Warranty", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("免責事項", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "The package is provided as-is. The author is not responsible for project data loss, production delays, or other damages caused by use of the package. Always keep backups of source assets and project data.",
+                "本パッケージは現状有姿で提供されます。本パッケージの利用により発生したプロジェクトデータの消失、制作遅延、その他の損害について、作者は責任を負いません。元画像とプロジェクトデータは必ずバックアップしてください。",
                 MessageType.None);
 
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Source Assets", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("元画像の扱い", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "The tool is designed not to overwrite source images. Users are responsible for confirming export destinations and file conflict settings.",
+                "本ツールは元画像を上書きしない設計です。出力先とファイル競合時の設定は、利用者が確認してください。",
                 MessageType.Info);
         }
 

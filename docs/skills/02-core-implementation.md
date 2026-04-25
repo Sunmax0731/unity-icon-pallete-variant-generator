@@ -2,7 +2,7 @@
 
 ## 目的
 
-画像解析、色抽出、グルーピング、置換、PNG 出力、JSON 保存などの中核処理を実装する工程の Skill。
+画像解析、色抽出、グルーピング、色置換、PNG 出力、JSON 保存などの中核処理を実装する工程の Skill。
 
 ## 配置ルール
 
@@ -18,12 +18,13 @@
 - Model は `[Serializable]` を基本にし、`JsonUtility` で保存しやすい List 中心の構造にする。
 - Dictionary や `UnityEngine.Object` 参照を保存形式にしない。
 - 一時生成した `Texture2D` は破棄責任を明確にする。
+- Issue や検証ログに残す説明は日本語で記載する。
 
 ## 機能仕様
 
 ### 色抽出
 
-- `Alpha Threshold` 以下のピクセルは解析対象外。
+- `Alpha Threshold` 以下のピクセルは解析対象外にする。
 - `Quantize Step` でアンチエイリアス由来の近似色をまとめる。
 - 出現数と出現率を保持する。
 
@@ -31,7 +32,7 @@
 
 - 初期実装は RGB 距離と簡易 K-Means を基本にする。
 - `Max Color Distance` で代表色から遠い色を別グループへ分離する。
-- グループ ID と PaletteColorEntry の `groupId` を同期する。
+- グループ ID と `PaletteColorEntry.groupId` を同期する。
 
 ### 色置換
 
@@ -48,4 +49,4 @@ output = Lerp(original, target, blendRatio)
 
 - Service ごとに focused EditMode test を追加または更新する。
 - `PaletteVariantGeneratorValidation` に headless marker を追加する。
-- `tools/validation/run-editmode-tests.ps1` の marker チェックを更新する。
+- 必要に応じて `tools/validation/run-editmode-tests.ps1` の marker チェックを更新する。
