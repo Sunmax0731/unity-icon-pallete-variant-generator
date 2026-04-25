@@ -52,5 +52,5 @@ The planning baseline is under `unity_icon_palette_variant_generator_docs/`.
 
 ## Agent Docs
 
-- `Agents.md`
-- `Skill.md`
+- `unity_icon_palette_variant_generator_docs/AGENTS.md`
+- `unity_icon_palette_variant_generator_docs/SKILL.md`

@@ -31,6 +31,10 @@ Tools > Icon Tools > Palette Variant Generator
 
 ## 4. 実装原則
 
+- GitHub Issue を確認し、Issue 起点で作業する。
+- 実装 Issue ごとに作業範囲を絞る。
+- Unity `6000.4.0f1` で検証してから commit / close する。
+- 検証用にユーザーが追加した `Assets/` 配下の画像は、タスクで明示されない限りコミットしない。
 - EditorWindow に全ロジックを詰め込まない。
 - 画像解析、色抽出、グルーピング、置換、出力、JSON 保存は Service として分離する。
 - Model は `[Serializable]` を基本とし、Unity の `JsonUtility` で保存しやすい構造にする。
@@ -81,13 +85,14 @@ public sealed class ColorExtractionService
 
 MVP は IMGUI でよい。
 
-ただし、以下のパネル分割を意識すること。
+現行 UI は以下のパネル分割を基本にする。
 
-- 上部: ツールバー
-- 左: 画像情報 / 解析設定 / 出力設定
-- 中央: Before / After プレビュー
-- 右: パレット / グループ / バリエーション
-- 下部: バリデーション / ログ
+- 上部: Source / Analyze / Auto Group / Preview / Export / Session / Help / Language
+- 左: 解析設定 / グループ設定 / 出力設定 / 画像情報
+- 中央: Before / After プレビュー / スクロール可能な Palette
+- 右: グループ置換ルール / 色別置換ルール / バリエーション
+
+選択中のグループまたは色は、プレビュー上の overlay と連動させる。
 
 ## 8. 重要な仕様
 
@@ -111,9 +116,10 @@ ratio は 0.0 ～ 1.0。
 
 色置換ルールの優先順位は以下。
 
-1. 個別カラーコードルール
-2. グループルール
-3. 変換なし
+1. `GroupUniform`: グループルールを適用する。
+2. `PerColor`: 有効な個別カラーコードルールのみ適用する。
+3. `Hybrid`: 有効な個別カラーコードルールを優先し、未設定色はグループルールへフォールバックする。
+4. 該当ルールがない場合は変換しない。
 
 ### 8.4 PNG 出力
 
@@ -154,3 +160,28 @@ ratio は 0.0 ～ 1.0。
 - JSON 保存 / 読み込みできる。
 - 元画像が変更されていない。
 
+標準検証コマンド:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
+```
+
+現時点の必須マーカー:
+
+```text
+ISSUE1_SCAFFOLD_VALIDATION=PASS
+ISSUE2_IMAGE_PALETTE_VALIDATION=PASS
+ISSUE3_COLOR_GROUPING_VALIDATION=PASS
+ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
+ISSUE5_PNG_EXPORT_VALIDATION=PASS
+ISSUE6_SESSION_JSON_VALIDATION=PASS
+ISSUE10_UI_POLISH_VALIDATION=PASS
+```
+
+## 12. 残タスク順
+
+1. `#7` 複数バリエーション管理と一括出力
+2. `#8` 手動 QA、サンプル、検証チェックリスト
+3. `#9` Release packaging と GitHub Release `v1.0.0`
+
+Release 作業は #7 と #8 の完了後に行う。

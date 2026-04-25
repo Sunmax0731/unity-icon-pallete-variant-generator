@@ -16,6 +16,8 @@
 - Service 単位でテストしやすい設計にする。
 - JSON 保存時は UnityEngine.Object 参照を保存しない。
 - Unity 相対パス `Assets/...` と OS 絶対パスを混同しない。
+- GitHub Issue の優先順位を確認してから実装に入る。
+- ユーザーが検証用に追加した未追跡アセットは、明示されない限りコミットしない。
 
 ## 3. 推奨アーキテクチャ
 
@@ -53,6 +55,16 @@ MVP では IMGUI でよい。
 
 Unity の `JsonUtility` で扱いやすいよう、List 中心の構造にする。
 
+### 置換モード
+
+- `GroupUniform`: グループの Target Color / Blend Ratio をグループ内の全色に適用する。
+- `PerColor`: 有効な個別色ルールだけを適用し、未設定色は変更しない。
+- `Hybrid`: 有効な個別色ルールを優先し、未設定色はグループ設定へフォールバックする。
+
+### 近傍色しきい値
+
+`Max Color Distance` は、自動グルーピング後に代表色から遠い色を別グループへ分離するために使う。
+
 ## 5. 品質チェック
 
 実装・修正後は以下を確認する。
@@ -64,6 +76,16 @@ Unity の `JsonUtility` で扱いやすいよう、List 中心の構造にする
 - グループ数指定が反映される。
 - セッション JSON の保存と読み込みができる。
 - 画像出力後に Project ビューへ反映される。
+- 言語メニューと Help window が開く。
+- Palette がスクロールできる。
+- `Max Color Distance` の変更でグループ結果が変わる。
+- `GroupUniform` / `PerColor` / `Hybrid` の置換優先順位が崩れていない。
+
+標準検証:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
+```
 
 ## 6. エラー対応方針
 
@@ -91,3 +113,8 @@ Unity の `JsonUtility` で扱いやすいよう、List 中心の構造にする
 - Preset ScriptableObject
 - UI Toolkit 化
 
+## 9. Release 前の必須順序
+
+1. `#7` 複数バリエーション管理と一括出力を完了する。
+2. `#8` 手動 QA、サンプル、検証チェックリストを完了する。
+3. `#9` README / CHANGELOG / Manual / Terms / BOOTH copy / GitHub Release を整備する。
