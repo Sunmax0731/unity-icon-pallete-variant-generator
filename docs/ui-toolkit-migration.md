@@ -18,6 +18,7 @@
 - 本番作業は引き続き IMGUI 版の `Tools > Palette Variant Generator > 開く` を使う。
 - preview window はソース情報、解析設定、グループ設定、出力設定、プリセット、プレビュー、パレット、バリエーション、置換ルール、色別ルールの主要セクション構成を UI Toolkit で検証する。
 - `ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS` で、window の生成、タイトル、最小サイズ、主要セクションの存在を headless validation する。
+- `ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS` で、ObjectField、ColorField、PopupField、ScrollView、Slider、プレビューの pan / wheel zoom / split compare の入力受け口を headless validation する。
 
 ## compact layout
 
