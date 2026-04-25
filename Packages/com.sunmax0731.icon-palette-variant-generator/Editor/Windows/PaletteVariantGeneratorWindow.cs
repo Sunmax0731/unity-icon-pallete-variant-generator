@@ -428,10 +428,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             paletteListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             paletteListElement.style.height = PaletteListHeight;
             section.Add(paletteListElement);
-            groupListElement = new ScrollView(ScrollViewMode.Vertical) { name = "group-scroll-view" };
-            groupListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            groupListElement.style.maxHeight = 220f;
-            section.Add(groupListElement);
             return section;
         }
 
@@ -504,7 +500,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             RefreshPaletteListElement();
-            RefreshGroupListElement();
             RefreshVariationListElement();
             RefreshReplacementRuleElement();
             RefreshColorRuleElement();
@@ -663,6 +658,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             replacementRuleContainer.Clear();
             replacementRuleContainer.Add(CreateUiSubHeader(T("replacementRules", "Replacement Rules")));
+            groupListElement = new ScrollView(ScrollViewMode.Vertical) { name = "group-scroll-view" };
+            groupListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            groupListElement.style.maxHeight = 220f;
+            replacementRuleContainer.Add(groupListElement);
+            RefreshGroupListElement();
+
             ColorGroup group = session.colorGroups.FirstOrDefault(candidate => candidate != null && candidate.id == selectedGroupId)
                 ?? session.colorGroups.FirstOrDefault();
             if (group == null)
