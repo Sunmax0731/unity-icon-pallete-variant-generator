@@ -47,6 +47,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
         private readonly RulePresetJsonService rulePresetJsonService = new RulePresetJsonService();
         private readonly BatchSourceExportService batchSourceExportService = new BatchSourceExportService();
+        private readonly RulePresetAssetService rulePresetAssetService = new RulePresetAssetService();
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
@@ -61,6 +62,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private string sourceAssetPath = string.Empty;
         private string batchSourceFolder = "Assets";
         private List<BatchSourceExportItem> batchResults = new List<BatchSourceExportItem>();
+        private PaletteVariantRulePresetAsset presetAsset;
         private string reportMessage = "Select a project PNG or Texture2D asset, then click Analyze.";
         private MessageType reportType = MessageType.Info;
         private PaletteVariantLanguageMode languageMode = PaletteVariantLanguageMode.Auto;
@@ -301,6 +303,36 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
 
                     EditorGUILayout.EndScrollView();
+                }
+
+                DrawSectionSeparator();
+                DrawSectionHeader(T("presetAsset", "Preset Asset"));
+                presetAsset = (PaletteVariantRulePresetAsset)EditorGUILayout.ObjectField(T("presetAsset", "Preset Asset"), presetAsset, typeof(PaletteVariantRulePresetAsset), false);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(session.colorGroups.Count == 0))
+                    {
+                        if (GUILayout.Button(T("createPresetAsset", "Create Asset")))
+                        {
+                            CreateRulePresetAsset();
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(presetAsset == null || session.colorGroups.Count == 0))
+                    {
+                        if (GUILayout.Button(T("updatePresetAsset", "Update Asset")))
+                        {
+                            UpdateRulePresetAsset();
+                        }
+                    }
+                }
+
+                using (new EditorGUI.DisabledScope(presetAsset == null))
+                {
+                    if (GUILayout.Button(T("loadPresetAsset", "Load Asset")))
+                    {
+                        LoadRulePresetAsset();
+                    }
                 }
 
                 DrawSectionSeparator();
@@ -1099,6 +1131,47 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             reportType = warnings.Count == 0 ? MessageType.Info : MessageType.Warning;
         }
 
+        private void CreateRulePresetAsset()
+        {
+            string path = EditorUtility.SaveFilePanelInProject(
+                "Create Rule Preset Asset",
+                "PaletteVariantRulePreset",
+                "asset",
+                "Create a ScriptableObject rule preset asset.");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            variationService.SyncActiveVariation(session);
+            presetAsset = rulePresetAssetService.CreateAsset(path, session, "Rule Preset");
+            reportMessage = $"Rule preset asset created: {AssetDatabase.GetAssetPath(presetAsset)}";
+            reportType = MessageType.Info;
+        }
+
+        private void UpdateRulePresetAsset()
+        {
+            variationService.SyncActiveVariation(session);
+            rulePresetAssetService.UpdateAsset(presetAsset, session, string.IsNullOrWhiteSpace(presetAsset.preset.displayName) ? "Rule Preset" : presetAsset.preset.displayName);
+            reportMessage = $"Rule preset asset updated: {AssetDatabase.GetAssetPath(presetAsset)}";
+            reportType = MessageType.Info;
+        }
+
+        private void LoadRulePresetAsset()
+        {
+            IReadOnlyList<string> warnings = rulePresetAssetService.ApplyToSession(presetAsset, session);
+            variationService.SyncActiveVariation(session);
+            if (afterPreview != null)
+            {
+                RefreshAfterPreview();
+            }
+
+            reportMessage = warnings.Count == 0
+                ? $"Rule preset asset loaded: {AssetDatabase.GetAssetPath(presetAsset)}"
+                : $"Rule preset asset loaded with warnings:\n{string.Join("\n", warnings)}";
+            reportType = warnings.Count == 0 ? MessageType.Info : MessageType.Warning;
+        }
+
         private void SelectOutputFolder()
         {
             string currentFolder = ResolveOutputFolderForPanel(session.exportSettings.outputFolder);
@@ -1627,6 +1700,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "batchExport" => "フォルダ一括処理",
                 "sourceFolder" => "ソースフォルダ",
                 "exportFolder" => "フォルダを書き出し",
+                "presetAsset" => "プリセットアセット",
+                "createPresetAsset" => "アセット作成",
+                "updatePresetAsset" => "アセット更新",
+                "loadPresetAsset" => "アセット読込",
                 "sourceInfo" => "ソース情報",
                 "assetPath" => "アセットパス",
                 "size" => "サイズ",

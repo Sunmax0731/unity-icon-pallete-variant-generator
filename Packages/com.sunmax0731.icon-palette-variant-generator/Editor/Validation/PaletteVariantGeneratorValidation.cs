@@ -43,6 +43,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue19ManualGroupEditing();
             ValidateIssue20ColorDistanceModes();
             ValidateIssue21FolderBatchExport();
+            ValidateIssue22ScriptableObjectPresetAsset();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -60,6 +61,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS");
             Debug.Log("ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS");
             Debug.Log("ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS");
+            Debug.Log("ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -758,6 +760,76 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 AssetDatabase.DeleteAsset(root);
                 AssetDatabase.Refresh();
             }
+        }
+
+        private static void ValidateIssue22ScriptableObjectPresetAsset()
+        {
+            string root = "Assets/PaletteVariantPresetAssetValidation";
+            if (AssetDatabase.IsValidFolder(root))
+            {
+                AssetDatabase.DeleteAsset(root);
+            }
+
+            AssetDatabase.CreateFolder("Assets", "PaletteVariantPresetAssetValidation");
+            try
+            {
+                PaletteVariantSession sourceSession = CreatePresetValidationSession(new Color32(0, 0, 255, 255));
+                RulePresetAssetService service = new RulePresetAssetService();
+                PaletteVariantRulePresetAsset asset = service.CreateAsset(root + "/SharedRulePreset.asset", sourceSession, "Shared Rule Preset");
+                string assetPath = AssetDatabase.GetAssetPath(asset);
+                if (string.IsNullOrWhiteSpace(assetPath))
+                {
+                    throw new System.InvalidOperationException("Preset asset was not created.");
+                }
+
+                PaletteVariantSession targetSession = CreatePresetValidationSession(new Color32(255, 0, 0, 255));
+                var warnings = service.ApplyToSession(asset, targetSession);
+                if (warnings.Count != 0 || targetSession.colorGroups[0].targetColor.b != 255)
+                {
+                    throw new System.InvalidOperationException("Preset asset apply validation failed.");
+                }
+
+                sourceSession.colorGroups[0].targetColor = new Color32(0, 255, 0, 255);
+                service.UpdateAsset(asset, sourceSession, "Updated Shared Rule Preset");
+                PaletteVariantRulePresetAsset reloaded = AssetDatabase.LoadAssetAtPath<PaletteVariantRulePresetAsset>(assetPath);
+                if (reloaded == null || reloaded.preset.colorGroups[0].targetColor.g != 255)
+                {
+                    throw new System.InvalidOperationException("Preset asset update validation failed.");
+                }
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(root);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        private static PaletteVariantSession CreatePresetValidationSession(Color32 targetColor)
+        {
+            return new PaletteVariantSession
+            {
+                paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                {
+                    new PaletteColorEntry
+                    {
+                        id = "#FF0000",
+                        hex = "#FF0000",
+                        color = new Color32(255, 0, 0, 255),
+                        pixelCount = 1,
+                        groupId = "group_01"
+                    }
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        targetColor = targetColor,
+                        blendRatio = 1f,
+                        colorEntryIds = new System.Collections.Generic.List<string> { "#FF0000" }
+                    }
+                }
+            };
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

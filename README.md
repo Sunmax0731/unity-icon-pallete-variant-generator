@@ -25,7 +25,7 @@
 - スクロール可能なパレット一覧
 - PNG 出力
 - セッション JSON の保存 / 読み込み
-- 置換ルールプリセット JSON の export / import
+- 置換ルールプリセット JSON の export / import と ScriptableObject プリセットアセット
 - 複数バリエーション管理と一括出力
 - フォルダ内の複数 Texture2D に対する一括バリエーション出力
 - Help、言語設定、Auto Preview
@@ -63,6 +63,7 @@ ISSUE18_RULE_PRESET_VALIDATION=PASS
 ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS
 ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS
 ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS
+ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS
 ```
 
 ## ドキュメント

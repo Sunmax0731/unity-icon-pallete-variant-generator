@@ -38,6 +38,8 @@ Tools > Palette Variant Generator > 開く
 
 - `Export Preset`: 現在のグループ置換設定と色別ルールを JSON として保存します。
 - `Import Preset`: 保存済みプリセットを現在のセッションへ適用します。
+- `Preset Asset`: チームで共有したい置換ルールを ScriptableObject `.asset` として作成、更新、読み込みできます。
+- プリセットアセットは `Assets/PaletteVariantPresets` など、source control に含めるフォルダへ保存してください。
 - 現在のセッションに存在しない group がプリセットに含まれる場合、その項目はスキップされ、report panel に warning が表示されます。
 
 ## 置換モード

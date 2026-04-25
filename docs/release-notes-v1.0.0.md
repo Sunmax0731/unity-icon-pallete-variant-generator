@@ -45,5 +45,6 @@ ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
 - UI は IMGUI ベースです。
 - 色距離は RGB / HSV / Lab から選択できます。
 - フォルダ内 Texture2D に対する一括バリエーション出力に対応しました。
+- チーム共有向けの ScriptableObject プリセットアセットを作成、更新、読み込みできるようにしました。
 - SpriteAtlas の直接編集は含みません。
 - フォルダ単位の一括処理は含みません。

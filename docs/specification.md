@@ -398,5 +398,11 @@ Iron      | #7A6A5F | #4A403A | #C0B8AE | true
 
 ### 10.4 ScriptableObject Preset
 
-JSON に加えて ScriptableObject としてプリセット保存できるようにする。
+JSON に加えて ScriptableObject としてプリセット保存できる。
+
+- 型: `PaletteVariantRulePresetAsset`
+- 保存内容: `PaletteVariantRulePreset`
+- 用途: チーム共通の置換ルールを `.asset` として source control に含める
+- UI: `Preset Asset` セクションから作成、更新、読み込みを行う
+- JSON セッション / JSON プリセットの運用は置き換えず、共有用の追加手段として扱う
 
