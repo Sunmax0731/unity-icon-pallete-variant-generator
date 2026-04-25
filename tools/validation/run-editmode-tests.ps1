@@ -74,6 +74,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE13_AUTO_PREVIEW_DEBOUNCE_V
     throw "Unity auto preview debounce validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS" -Quiet)) {
+    throw "Unity preview navigation validation did not emit pass marker. Log: $logPath"
+}
+
 Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE1_SCAFFOLD_VALIDATION=PASS",
     "ISSUE2_IMAGE_PALETTE_VALIDATION=PASS",
@@ -85,6 +89,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE8_SAMPLE_QA_VALIDATION=PASS",
     "ISSUE10_UI_POLISH_VALIDATION=PASS",
     "ISSUE12_VARIATION_UX_VALIDATION=PASS",
-    "ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS"
+    "ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS",
+    "ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

@@ -37,6 +37,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue7Variations();
             ValidateIssue12VariationUx();
             ValidateIssue13AutoPreviewDebounce();
+            ValidateIssue17PreviewNavigation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -49,6 +50,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
             Debug.Log("ISSUE12_VARIATION_UX_VALIDATION=PASS");
             Debug.Log("ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS");
+            Debug.Log("ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -424,6 +426,30 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 Object.DestroyImmediate(smallTexture);
                 Object.DestroyImmediate(largeTexture);
+            }
+        }
+
+        private static void ValidateIssue17PreviewNavigation()
+        {
+            Rect defaultCoords = PaletteVariantGeneratorWindow.GetPreviewTexCoords(1f, Vector2.zero);
+            Rect zoomedCoords = PaletteVariantGeneratorWindow.GetPreviewTexCoords(4f, new Vector2(1f, -1f));
+
+            if (!Mathf.Approximately(defaultCoords.xMin, 0f)
+                || !Mathf.Approximately(defaultCoords.yMin, 0f)
+                || !Mathf.Approximately(defaultCoords.xMax, 1f)
+                || !Mathf.Approximately(defaultCoords.yMax, 1f))
+            {
+                throw new System.InvalidOperationException("Default preview texcoord validation failed.");
+            }
+
+            if (zoomedCoords.width >= 1f
+                || zoomedCoords.height >= 1f
+                || zoomedCoords.xMin < 0f
+                || zoomedCoords.yMin < 0f
+                || zoomedCoords.xMax > 1f
+                || zoomedCoords.yMax > 1f)
+            {
+                throw new System.InvalidOperationException("Zoomed preview texcoord validation failed.");
             }
         }
 

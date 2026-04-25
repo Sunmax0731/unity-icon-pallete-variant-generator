@@ -54,6 +54,9 @@ Tools > Palette Variant Generator > 開く
 - `Preview`: 手動で生成結果を更新します。
 - `Auto Preview`: 色、ブレンド率、置換モードの変更後、短い debounce を挟んで自動更新します。
 - 大きい画像では、編集中の再計算が増えすぎないよう Auto Preview の待機時間が長くなります。
+- `Compare`: `SideBySide` では Before / After を左右に並べ、`Split` では1つのプレビュー内で比較します。
+- `Zoom`: プレビューを拡大します。拡大中はプレビュー上をドラッグして表示位置を動かせます。
+- `表示リセット`: ズーム、パン、split 位置を初期状態に戻します。
 
 ## サンプル
 

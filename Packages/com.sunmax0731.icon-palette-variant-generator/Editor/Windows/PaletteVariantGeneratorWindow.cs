@@ -18,6 +18,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float RightPaneWidth = 420f;
         private const float PaneGap = 14f;
         private const float MinPreviewHeight = 260f;
+        private const float MinPreviewZoom = 1f;
+        private const float MaxPreviewZoom = 8f;
         private const float PaletteListHeight = 170f;
         private const float VariationListHeight = 126f;
         private const double AutoPreviewDebounceSeconds = 0.25d;
@@ -62,6 +64,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private bool autoPreviewEnabled = true;
         private bool autoPreviewPending;
         private double autoPreviewScheduledTime;
+        private PreviewCompareMode previewCompareMode = PreviewCompareMode.SideBySide;
+        private float previewZoom = 1f;
+        private float previewSplit = 0.5f;
+        private Vector2 previewPan;
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
 
@@ -271,10 +277,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             using (new EditorGUILayout.VerticalScope(GUILayout.MinWidth(360f), GUILayout.ExpandWidth(true)))
             {
                 DrawSectionHeader(T("preview", "Preview"));
-                using (new EditorGUILayout.HorizontalScope())
+                DrawPreviewControls();
+                if (previewCompareMode == PreviewCompareMode.Split)
                 {
-                    DrawPreviewPanel(T("before", "Before"), readableSourceImage);
-                    DrawPreviewPanel(T("after", "After"), afterPreview);
+                    DrawSplitPreviewPanel();
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawPreviewPanel(T("before", "Before"), readableSourceImage);
+                        DrawPreviewPanel(T("after", "After"), afterPreview);
+                    }
                 }
 
                 DrawSectionSeparator();
@@ -286,6 +300,35 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
 
                 DrawPaletteList(session.paletteColors);
+            }
+        }
+
+        private void DrawPreviewControls()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                previewCompareMode = (PreviewCompareMode)EditorGUILayout.EnumPopup(
+                    T("compareMode", "Compare"),
+                    previewCompareMode,
+                    GUILayout.MaxWidth(220f));
+
+                EditorGUI.BeginChangeCheck();
+                previewZoom = EditorGUILayout.Slider(T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    previewZoom = Mathf.Clamp(previewZoom, MinPreviewZoom, MaxPreviewZoom);
+                    ClampPreviewPan();
+                }
+
+                if (GUILayout.Button(T("resetView", "Reset View"), GUILayout.Width(92f)))
+                {
+                    ResetPreviewView();
+                }
+            }
+
+            if (previewCompareMode == PreviewCompareMode.Split)
+            {
+                previewSplit = EditorGUILayout.Slider(T("split", "Split"), previewSplit, 0.05f, 0.95f);
             }
         }
 
@@ -319,6 +362,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 Rect previewRect = GUILayoutUtility.GetRect(10f, 10000f, MinPreviewHeight, MinPreviewHeight, GUILayout.ExpandWidth(true));
                 EditorGUI.DrawRect(previewRect, new Color(0.13f, 0.13f, 0.13f));
                 DrawCheckerboard(previewRect);
+                HandlePreviewPan(previewRect);
 
                 if (texture == null)
                 {
@@ -327,9 +371,68 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
 
                 Rect imageRect = FitRect(previewRect, texture.width, texture.height);
-                GUI.DrawTexture(imageRect, texture, ScaleMode.StretchToFill, true);
-                DrawSelectionOverlay(imageRect);
+                Rect texCoords = GetPreviewTexCoords();
+                GUI.DrawTextureWithTexCoords(imageRect, texture, texCoords, true);
+                DrawSelectionOverlay(imageRect, texCoords);
             }
+        }
+
+        private void DrawSplitPreviewPanel()
+        {
+            Rect previewRect = GUILayoutUtility.GetRect(10f, 10000f, MinPreviewHeight, MinPreviewHeight, GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(previewRect, new Color(0.13f, 0.13f, 0.13f));
+            DrawCheckerboard(previewRect);
+            HandlePreviewPan(previewRect);
+
+            Texture2D basisTexture = readableSourceImage != null ? readableSourceImage : afterPreview;
+            if (basisTexture == null)
+            {
+                DrawCenteredLabel(previewRect, T("noPreview", "No preview"));
+                return;
+            }
+
+            Rect imageRect = FitRect(previewRect, basisTexture.width, basisTexture.height);
+            Rect texCoords = GetPreviewTexCoords();
+            float splitX = Mathf.Lerp(imageRect.x, imageRect.xMax, previewSplit);
+
+            DrawSplitTexture(readableSourceImage, imageRect, texCoords, new Rect(imageRect.x, imageRect.y, splitX - imageRect.x, imageRect.height));
+            DrawSplitTexture(afterPreview, imageRect, texCoords, new Rect(splitX, imageRect.y, imageRect.xMax - splitX, imageRect.height));
+            DrawSelectionOverlay(imageRect, texCoords);
+
+            EditorGUI.DrawRect(new Rect(splitX - 1f, imageRect.y, 2f, imageRect.height), Color.white);
+            GUI.Label(new Rect(imageRect.x + 6f, imageRect.y + 4f, 80f, 18f), T("before", "Before"), EditorStyles.miniBoldLabel);
+            GUI.Label(new Rect(imageRect.xMax - 58f, imageRect.y + 4f, 54f, 18f), T("after", "After"), EditorStyles.miniBoldLabel);
+        }
+
+        private static void DrawSplitTexture(Texture2D texture, Rect imageRect, Rect texCoords, Rect visibleRect)
+        {
+            if (texture == null || visibleRect.width <= 0f || visibleRect.height <= 0f)
+            {
+                return;
+            }
+
+            Rect clippedRect = Rect.MinMaxRect(
+                Mathf.Max(imageRect.x, visibleRect.x),
+                Mathf.Max(imageRect.y, visibleRect.y),
+                Mathf.Min(imageRect.xMax, visibleRect.xMax),
+                Mathf.Min(imageRect.yMax, visibleRect.yMax));
+
+            if (clippedRect.width <= 0f || clippedRect.height <= 0f)
+            {
+                return;
+            }
+
+            float xMin = Mathf.InverseLerp(imageRect.x, imageRect.xMax, clippedRect.x);
+            float xMax = Mathf.InverseLerp(imageRect.x, imageRect.xMax, clippedRect.xMax);
+            float yMin = Mathf.InverseLerp(imageRect.y, imageRect.yMax, clippedRect.y);
+            float yMax = Mathf.InverseLerp(imageRect.y, imageRect.yMax, clippedRect.yMax);
+            Rect clippedTexCoords = Rect.MinMaxRect(
+                Mathf.Lerp(texCoords.xMin, texCoords.xMax, xMin),
+                Mathf.Lerp(texCoords.yMin, texCoords.yMax, yMin),
+                Mathf.Lerp(texCoords.xMin, texCoords.xMax, xMax),
+                Mathf.Lerp(texCoords.yMin, texCoords.yMax, yMax));
+
+            GUI.DrawTextureWithTexCoords(clippedRect, texture, clippedTexCoords, true);
         }
 
         private void DrawPaletteList(IReadOnlyList<PaletteColorEntry> paletteColors)
@@ -615,9 +718,64 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 : AutoPreviewDebounceSeconds;
         }
 
+        internal static Rect GetPreviewTexCoords(float zoom, Vector2 pan)
+        {
+            float safeZoom = Mathf.Clamp(zoom, MinPreviewZoom, MaxPreviewZoom);
+            float size = 1f / safeZoom;
+            float maxOffset = (1f - size) * 0.5f;
+            float centerX = 0.5f + Mathf.Clamp(pan.x, -maxOffset, maxOffset);
+            float centerY = 0.5f + Mathf.Clamp(pan.y, -maxOffset, maxOffset);
+            return Rect.MinMaxRect(
+                centerX - (size * 0.5f),
+                centerY - (size * 0.5f),
+                centerX + (size * 0.5f),
+                centerY + (size * 0.5f));
+        }
+
         private static bool IsLargeAutoPreviewSource(Texture2D texture)
         {
             return texture != null && texture.width * texture.height >= LargeImageAutoPreviewPixelCount;
+        }
+
+        private Rect GetPreviewTexCoords()
+        {
+            return GetPreviewTexCoords(previewZoom, previewPan);
+        }
+
+        private void HandlePreviewPan(Rect previewRect)
+        {
+            Event current = Event.current;
+            if (previewZoom <= MinPreviewZoom || !previewRect.Contains(current.mousePosition))
+            {
+                return;
+            }
+
+            if (current.type == EventType.MouseDrag && current.button == 0)
+            {
+                previewPan += new Vector2(
+                    -current.delta.x / previewRect.width / previewZoom,
+                    -current.delta.y / previewRect.height / previewZoom);
+                ClampPreviewPan();
+                current.Use();
+                Repaint();
+            }
+        }
+
+        private void ClampPreviewPan()
+        {
+            float safeZoom = Mathf.Clamp(previewZoom, MinPreviewZoom, MaxPreviewZoom);
+            float size = 1f / safeZoom;
+            float maxOffset = (1f - size) * 0.5f;
+            previewPan = new Vector2(
+                Mathf.Clamp(previewPan.x, -maxOffset, maxOffset),
+                Mathf.Clamp(previewPan.y, -maxOffset, maxOffset));
+        }
+
+        private void ResetPreviewView()
+        {
+            previewZoom = MinPreviewZoom;
+            previewPan = Vector2.zero;
+            previewSplit = 0.5f;
         }
 
         private void ExportPreview()
@@ -987,7 +1145,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return rule;
         }
 
-        private void DrawSelectionOverlay(Rect imageRect)
+        private void DrawSelectionOverlay(Rect imageRect, Rect texCoords)
         {
             if (Event.current.type != EventType.Repaint || readableSourceImage == null)
             {
@@ -1000,7 +1158,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
-            GUI.DrawTexture(imageRect, selectionOverlayTexture, ScaleMode.StretchToFill, true);
+            GUI.DrawTextureWithTexCoords(imageRect, selectionOverlayTexture, texCoords, true);
             EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, imageRect.width, 1f), OverlayBorderColor);
             EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.yMax - 1f, imageRect.width, 1f), OverlayBorderColor);
             EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
@@ -1202,6 +1360,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "loadSession" => "Load Session",
                 "preview" => "Preview",
                 "autoPreview" => "Auto Preview",
+                "compareMode" => "比較",
+                "zoom" => "ズーム",
+                "resetView" => "表示リセット",
+                "split" => "分割位置",
                 "help" => "Help",
                 "analyzeSettings" => "解析設定",
                 "alphaThreshold" => "透明度しきい値",
@@ -1417,6 +1579,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             Selection.activeObject = asset;
             EditorGUIUtility.PingObject(asset);
         }
+    }
+
+    internal enum PreviewCompareMode
+    {
+        SideBySide,
+        Split
     }
 
     internal enum PaletteVariantLanguageMode

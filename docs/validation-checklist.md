@@ -55,6 +55,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | Variation Add / Duplicate / Remove | PASS | variation service validation で検証。 |
 | Variation Active / Export state display | PASS | issue 12 variation UX validation で検証。目視確認を推奨。 |
 | Auto Preview debounce | PASS | issue 13 debounce validation で検証。目視確認を推奨。 |
+| プレビューのズーム / パン / split 比較 | PASS | issue 17 preview navigation validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |
 
 ## リリース blocker
