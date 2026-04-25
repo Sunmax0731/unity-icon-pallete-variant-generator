@@ -30,10 +30,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateColorExtraction();
             ValidateColorGrouping();
             ValidateColorReplacement();
+            ValidatePngExport();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
             Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
             Debug.Log("ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS");
+            Debug.Log("ISSUE5_PNG_EXPORT_VALIDATION=PASS");
         }
 
         private static void ValidateColorExtraction()
@@ -128,6 +130,42 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (pixel.b != 255 || pixel.a != 128)
             {
                 throw new System.InvalidOperationException("Color replacement did not preserve expected preview color and alpha.");
+            }
+        }
+
+        private static void ValidatePngExport()
+        {
+            string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IconPaletteVariantGeneratorValidation", System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(tempRoot);
+            Texture2D texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            texture.SetPixels32(new[] { new Color32(0, 0, 255, 255) });
+            texture.Apply();
+
+            try
+            {
+                PngExportResult result = new PngExportService().Export(
+                    texture,
+                    new ExportSettings
+                    {
+                        outputFolder = "Generated",
+                        filePrefix = "preview",
+                        fileSuffix = "validation",
+                        conflictMode = ExportConflictMode.Duplicate
+                    },
+                    tempRoot);
+
+                if (result.Status != PngExportStatus.Exported || !System.IO.File.Exists(result.OutputPath))
+                {
+                    throw new System.InvalidOperationException("PNG export validation did not produce an output file.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+                if (System.IO.Directory.Exists(tempRoot))
+                {
+                    System.IO.Directory.Delete(tempRoot, true);
+                }
             }
         }
     }

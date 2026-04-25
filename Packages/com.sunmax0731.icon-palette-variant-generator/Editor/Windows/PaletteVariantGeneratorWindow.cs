@@ -23,6 +23,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly ColorExtractionService colorExtractionService = new ColorExtractionService();
         private readonly ColorGroupingService colorGroupingService = new ColorGroupingService();
         private readonly ColorReplacementService colorReplacementService = new ColorReplacementService();
+        private readonly PngExportService pngExportService = new PngExportService();
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
@@ -86,9 +87,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
                 }
 
+                using (new EditorGUI.DisabledScope(afterPreview == null))
+                {
+                    if (GUILayout.Button("Export", EditorStyles.toolbarButton, GUILayout.Width(78f)))
+                    {
+                        ExportPreview();
+                    }
+                }
+
                 using (new EditorGUI.DisabledScope(true))
                 {
-                    GUILayout.Button("Export", EditorStyles.toolbarButton);
                     GUILayout.Button("Save Session", EditorStyles.toolbarButton);
                     GUILayout.Button("Load Session", EditorStyles.toolbarButton);
                 }
@@ -123,6 +131,22 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 session.groupSettings.distanceMode = (ColorDistanceMode)EditorGUILayout.EnumPopup("Distance Mode", session.groupSettings.distanceMode);
                 session.groupSettings.preserveDarkOutline = EditorGUILayout.Toggle("Preserve Dark Outline", session.groupSettings.preserveDarkOutline);
                 session.groupSettings.preserveAlpha = EditorGUILayout.Toggle("Preserve Alpha", session.groupSettings.preserveAlpha);
+
+                DrawSectionSeparator();
+                DrawSectionHeader("Export Settings");
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    session.exportSettings.outputFolder = EditorGUILayout.TextField("Output Folder", session.exportSettings.outputFolder);
+                    if (GUILayout.Button("...", GUILayout.Width(28f)))
+                    {
+                        SelectOutputFolder();
+                    }
+                }
+
+                session.exportSettings.filePrefix = EditorGUILayout.TextField("File Prefix", session.exportSettings.filePrefix);
+                session.exportSettings.fileSuffix = EditorGUILayout.TextField("File Suffix", session.exportSettings.fileSuffix);
+                session.exportSettings.conflictMode = (ExportConflictMode)EditorGUILayout.EnumPopup("Conflict Mode", session.exportSettings.conflictMode);
+                session.exportSettings.refreshAssetDatabase = EditorGUILayout.Toggle("Refresh AssetDatabase", session.exportSettings.refreshAssetDatabase);
 
                 DrawSectionSeparator();
                 DrawSectionHeader("Source Info");
@@ -309,6 +333,51 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             reportType = MessageType.Info;
         }
 
+        private void ExportPreview()
+        {
+            if (afterPreview == null)
+            {
+                reportMessage = "Preview is required before export.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            PngExportResult result = pngExportService.Export(afterPreview, session.exportSettings, GetProjectRoot());
+            if (session.exportSettings.refreshAssetDatabase)
+            {
+                AssetDatabase.Refresh();
+            }
+
+            if (result.Status == PngExportStatus.Exported)
+            {
+                SelectOutputAsset(result.OutputPath);
+                reportMessage = result.Message;
+                reportType = MessageType.Info;
+            }
+            else if (result.Status == PngExportStatus.Skipped)
+            {
+                reportMessage = result.Message;
+                reportType = MessageType.Warning;
+            }
+            else
+            {
+                reportMessage = result.Message;
+                reportType = MessageType.Error;
+            }
+        }
+
+        private void SelectOutputFolder()
+        {
+            string currentFolder = ResolveOutputFolderForPanel(session.exportSettings.outputFolder);
+            string selectedFolder = EditorUtility.OpenFolderPanel("Output Folder", currentFolder, string.Empty);
+            if (string.IsNullOrWhiteSpace(selectedFolder))
+            {
+                return;
+            }
+
+            session.exportSettings.outputFolder = ToProjectRelativePath(selectedFolder);
+        }
+
         private void OnDisable()
         {
             DestroyReadableSourceImage();
@@ -412,6 +481,59 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             texture.Apply();
             return texture;
+        }
+
+        private static string GetProjectRoot()
+        {
+            return System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, ".."));
+        }
+
+        private static string ResolveOutputFolderForPanel(string outputFolder)
+        {
+            if (string.IsNullOrWhiteSpace(outputFolder))
+            {
+                return Application.dataPath;
+            }
+
+            if (System.IO.Path.IsPathRooted(outputFolder))
+            {
+                return outputFolder;
+            }
+
+            return System.IO.Path.GetFullPath(System.IO.Path.Combine(GetProjectRoot(), outputFolder));
+        }
+
+        private static string ToProjectRelativePath(string folderPath)
+        {
+            string projectRoot = GetProjectRoot();
+            string fullFolderPath = System.IO.Path.GetFullPath(folderPath);
+            string relativePath = System.IO.Path.GetRelativePath(projectRoot, fullFolderPath);
+            if (!relativePath.StartsWith("..", System.StringComparison.Ordinal) && !System.IO.Path.IsPathRooted(relativePath))
+            {
+                return relativePath.Replace('\\', '/');
+            }
+
+            return fullFolderPath;
+        }
+
+        private static void SelectOutputAsset(string outputPath)
+        {
+            string projectRoot = GetProjectRoot();
+            string fullOutputPath = System.IO.Path.GetFullPath(outputPath);
+            if (!fullOutputPath.StartsWith(projectRoot, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            string assetPath = System.IO.Path.GetRelativePath(projectRoot, fullOutputPath).Replace('\\', '/');
+            Object asset = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
+            if (asset == null)
+            {
+                return;
+            }
+
+            Selection.activeObject = asset;
+            EditorGUIUtility.PingObject(asset);
         }
     }
 }
