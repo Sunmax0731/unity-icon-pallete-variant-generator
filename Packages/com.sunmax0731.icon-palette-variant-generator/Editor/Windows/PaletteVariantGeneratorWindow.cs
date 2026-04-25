@@ -105,6 +105,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private int previewDragPointerId = -1;
         private Vector2 previewDragStartPosition;
         private Vector2 previewDragStartPan;
+        private bool previewRefreshQueued;
+        private bool previewRefreshProcessing;
+        private int previewRefreshRequestVersion;
+        private int scheduledPreviewRefreshVersion;
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
         private Label reportLabel;
@@ -257,7 +261,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             toolbar.Add(sourceField);
             toolbar.Add(CreateToolbarButton(T("analyze", "Analyze"), () => AnalyzeSourceImage(), () => sourceImage != null));
             toolbar.Add(CreateToolbarButton(T("autoGroup", "Auto Group"), () => AutoGroupPalette(), () => session.paletteColors.Count > 0));
-            toolbar.Add(CreateToolbarButton(T("preview", "Preview"), () => RefreshAfterPreview(), () => readableSourceImage != null && session.colorGroups.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("preview", "Preview"), () => RequestPreviewRefresh("Preview update queued."), () => readableSourceImage != null && session.colorGroups.Count > 0));
             toolbar.Add(CreateToolbarButton(T("export", "Export"), () => OpenExportSettingsWindow(), () => true));
             toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => OpenExportSettingsWindow(), () => true));
             toolbar.Add(CreateToolbarButton(T("saveSession", "Save Session"), () => SaveSession(), () => true));
@@ -1575,7 +1579,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     if (GUILayout.Button(T("preview", "Preview"), EditorStyles.toolbarButton, GUILayout.Width(78f)))
                     {
                         CancelScheduledAutoPreview();
-                        RefreshAfterPreview();
+                        RequestPreviewRefresh("Preview update queued.");
                     }
                 }
 
@@ -1639,7 +1643,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         if (GUILayout.Button(T("preview", "Preview"), EditorStyles.toolbarButton))
                         {
                             CancelScheduledAutoPreview();
-                            RefreshAfterPreview();
+                            RequestPreviewRefresh("Preview update queued.");
                         }
                     }
 
@@ -2278,7 +2282,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             InvalidateSelectionOverlay();
             reportMessage = $"Created {session.colorGroups.Count} color groups.";
             reportType = session.colorGroups.Count == 0 ? MessageType.Warning : MessageType.Info;
-            RefreshAfterPreview();
+            RequestPreviewRefresh("Preview update queued after grouping.");
         }
 
         private void RefreshAfterPreview()
@@ -2318,6 +2322,69 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             reportType = MessageType.Info;
         }
 
+        private void RequestPreviewRefresh(string queuedMessage)
+        {
+            if (readableSourceImage == null)
+            {
+                reportMessage = "Analyze a source image before preview.";
+                reportType = MessageType.Warning;
+                RefreshUiToolkitContent();
+                return;
+            }
+
+            if (session.colorGroups.Count == 0)
+            {
+                reportMessage = "Create color groups before preview.";
+                reportType = MessageType.Warning;
+                RefreshUiToolkitContent();
+                return;
+            }
+
+            previewRefreshRequestVersion++;
+            scheduledPreviewRefreshVersion = previewRefreshRequestVersion;
+            previewRefreshQueued = true;
+            reportMessage = IsLargeAutoPreviewSource(readableSourceImage)
+                ? $"{queuedMessage} Large image detected; the latest request will run shortly."
+                : queuedMessage;
+            reportType = MessageType.Info;
+            EditorApplication.delayCall -= ProcessDelayedPreviewRefresh;
+            EditorApplication.delayCall += ProcessDelayedPreviewRefresh;
+            RefreshUiToolkitContent();
+            Repaint();
+        }
+
+        private void ProcessDelayedPreviewRefresh()
+        {
+            if (!previewRefreshQueued)
+            {
+                return;
+            }
+
+            int requestedVersion = scheduledPreviewRefreshVersion;
+            previewRefreshQueued = false;
+            if (requestedVersion != previewRefreshRequestVersion)
+            {
+                return;
+            }
+
+            previewRefreshProcessing = true;
+            reportMessage = "Preview updating...";
+            reportType = MessageType.Info;
+            RefreshUiToolkitContent();
+            Repaint();
+
+            try
+            {
+                RefreshAfterPreview();
+            }
+            finally
+            {
+                previewRefreshProcessing = false;
+                RefreshUiToolkitContent();
+                Repaint();
+            }
+        }
+
         private void HandlePreviewSettingChanged()
         {
             variationService.SyncActiveVariation(session);
@@ -2328,6 +2395,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             CancelScheduledAutoPreview();
+            CancelQueuedPreviewRefresh();
             reportMessage = "Preview settings changed. Click Preview to update.";
             reportType = MessageType.Info;
         }
@@ -2367,7 +2435,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             CancelScheduledAutoPreview();
-            RefreshAfterPreview();
+            RequestPreviewRefresh("Auto Preview update queued.");
             Repaint();
         }
 
@@ -2375,6 +2443,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             autoPreviewPending = false;
             EditorApplication.update -= ProcessScheduledAutoPreview;
+        }
+
+        private void CancelQueuedPreviewRefresh()
+        {
+            previewRefreshQueued = false;
+            EditorApplication.delayCall -= ProcessDelayedPreviewRefresh;
         }
 
         internal static double GetAutoPreviewDebounceSeconds(Texture2D texture)
@@ -3007,6 +3081,24 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal bool IsBeforePreviewUsingZoomTextureForValidation =>
             zoomedBeforePreviewTexture != null && beforePreviewImage != null && beforePreviewImage.image == zoomedBeforePreviewTexture;
 
+        internal bool IsPreviewRefreshQueuedForValidation => previewRefreshQueued;
+
+        internal bool IsPreviewRefreshProcessingForValidation => previewRefreshProcessing;
+
+        internal int PreviewRefreshRequestVersionForValidation => previewRefreshRequestVersion;
+
+        internal bool HasAfterPreviewForValidation => afterPreview != null;
+
+        internal void RequestPreviewRefreshForValidation(string queuedMessage)
+        {
+            RequestPreviewRefresh(queuedMessage);
+        }
+
+        internal void ProcessDelayedPreviewRefreshForValidation()
+        {
+            ProcessDelayedPreviewRefresh();
+        }
+
         internal void SetPreviewZoomForValidation(float zoom, Vector2 pan)
         {
             previewZoom = Mathf.Clamp(zoom, MinPreviewZoom, MaxPreviewZoom);
@@ -3034,6 +3126,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         internal void SetValidationSession(Texture2D texture, PaletteVariantSession validationSession)
         {
+            CancelScheduledAutoPreview();
+            CancelQueuedPreviewRefresh();
+            DestroyAfterPreview();
             DestroyReadableSourceImage();
             readableSourceImage = texture;
             sourceImage = texture;
@@ -3440,6 +3535,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private void OnDisable()
         {
             CancelScheduledAutoPreview();
+            CancelQueuedPreviewRefresh();
             DestroyReadableSourceImage();
             DestroyAfterPreview();
             DestroySplitPreviewTexture();

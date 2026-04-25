@@ -72,6 +72,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | UI Toolkit Preview Zoom | PASS | issue 33 UI Toolkit preview zoom validation で、Zoom表示用テクスチャ生成とtexcoord計算を検証。 |
 | UI Toolkit Preview Drag Pan | PASS | issue 34 UI Toolkit preview drag pan validation で、ズーム時のドラッグpanと範囲クランプを検証。 |
 | Preview表示キャッシュ | PASS | issue 35 preview display cache validation で、同一表示状態の表示用テクスチャ再利用を検証。 |
+| Preview更新の遅延実行 | PASS | issue 36 delayed preview refresh validation で、Preview更新がキュー化され、遅延処理後にAfter Previewが生成されることを検証。 |
 | Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
 | パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |

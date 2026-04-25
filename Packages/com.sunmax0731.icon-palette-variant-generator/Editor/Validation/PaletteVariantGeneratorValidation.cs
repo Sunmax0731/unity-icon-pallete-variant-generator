@@ -61,6 +61,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue33UiToolkitPreviewZoom();
             ValidateIssue34UiToolkitPreviewDragPan();
             ValidateIssue35PreviewDisplayTextureCache();
+            ValidateIssue36DelayedPreviewRefresh();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -96,6 +97,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS");
             Debug.Log("ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS");
             Debug.Log("ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS");
+            Debug.Log("ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1337,6 +1339,48 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (firstCount <= 0 || firstCount != secondCount)
             {
                 throw new System.InvalidOperationException("Preview display texture cache did not reuse stable display textures.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue36DelayedPreviewRefresh()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for delayed preview refresh validation.");
+            }
+
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), CreatePreviewPickValidationSession());
+            int initialVersion = window.PreviewRefreshRequestVersionForValidation;
+            window.RequestPreviewRefreshForValidation("Validation preview queued.");
+            window.RequestPreviewRefreshForValidation("Validation preview queued again.");
+            if (!window.IsPreviewRefreshQueuedForValidation)
+            {
+                throw new System.InvalidOperationException("Delayed preview refresh was not queued.");
+            }
+
+            if (window.PreviewRefreshRequestVersionForValidation <= initialVersion)
+            {
+                throw new System.InvalidOperationException("Delayed preview refresh version was not updated.");
+            }
+
+            if (window.HasAfterPreviewForValidation)
+            {
+                throw new System.InvalidOperationException("Delayed preview refresh ran synchronously before delay processing.");
+            }
+
+            window.ProcessDelayedPreviewRefreshForValidation();
+            if (window.IsPreviewRefreshQueuedForValidation || window.IsPreviewRefreshProcessingForValidation)
+            {
+                throw new System.InvalidOperationException("Delayed preview refresh did not complete cleanly.");
+            }
+
+            if (!window.HasAfterPreviewForValidation)
+            {
+                throw new System.InvalidOperationException("Delayed preview refresh did not generate the after preview.");
             }
 
             window.Close();
