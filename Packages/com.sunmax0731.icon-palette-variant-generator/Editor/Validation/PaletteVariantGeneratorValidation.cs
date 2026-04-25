@@ -44,6 +44,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue20ColorDistanceModes();
             ValidateIssue21FolderBatchExport();
             ValidateIssue22ScriptableObjectPresetAsset();
+            ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -62,6 +63,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS");
             Debug.Log("ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS");
+            Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -830,6 +832,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                     }
                 }
             };
+        }
+
+        private static void ValidateIssue24ReleaseAutomation()
+        {
+            string root = System.IO.Directory.GetCurrentDirectory();
+            string[] requiredFiles =
+            {
+                ".github/workflows/release-package.yml",
+                "tools/release/build-release.ps1",
+                "tools/release/test-release-package.ps1",
+                "docs/release-checklist.md"
+            };
+
+            foreach (string path in requiredFiles)
+            {
+                if (!System.IO.File.Exists(System.IO.Path.Combine(root, path)))
+                {
+                    throw new System.InvalidOperationException($"Release automation file is missing: {path}");
+                }
+            }
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

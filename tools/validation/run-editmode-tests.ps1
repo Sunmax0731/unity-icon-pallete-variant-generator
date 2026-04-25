@@ -98,6 +98,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE22_SCRIPTABLE_OBJECT_PRESE
     throw "Unity ScriptableObject preset validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
+    throw "Unity release automation validation did not emit pass marker. Log: $logPath"
+}
+
 Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE1_SCAFFOLD_VALIDATION=PASS",
     "ISSUE2_IMAGE_PALETTE_VALIDATION=PASS",
@@ -115,6 +119,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS",
     "ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS",
     "ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS",
-    "ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS"
+    "ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS",
+    "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"
