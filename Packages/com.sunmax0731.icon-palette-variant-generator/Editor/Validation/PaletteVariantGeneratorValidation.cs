@@ -56,6 +56,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue28ExportUiDisclosure();
             ValidateIssue29OpaqueEdgeOutsideCleanup();
             ValidateIssue30ExportSettingsWindow();
+            ValidateIssue31PreviewColorPick();
+            ValidateIssue32SelectionHighlightToggle();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -86,6 +88,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS");
             Debug.Log("ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS");
             Debug.Log("ISSUE30_EXPORT_SETTINGS_WINDOW_VALIDATION=PASS");
+            Debug.Log("ISSUE31_PREVIEW_COLOR_PICK_VALIDATION=PASS");
+            Debug.Log("ISSUE32_SELECTION_HIGHLIGHT_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1187,6 +1191,129 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
 
             exportWindow.Close();
             owner.Close();
+        }
+
+        private static void ValidateIssue31PreviewColorPick()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for preview color pick validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            Texture2D texture = CreatePreviewPickValidationTexture();
+            window.SetValidationSession(texture, session);
+            if (!window.TrySelectPaletteColorAtSourcePixel(1, 0, "Preview"))
+            {
+                throw new System.InvalidOperationException("Preview color pick did not select a palette color.");
+            }
+
+            if (window.SelectedColorEntryIdForValidation != "blue")
+            {
+                throw new System.InvalidOperationException("Preview color pick selected the wrong palette entry.");
+            }
+
+            if (!window.SetSelectedColorRuleTargetForValidation(new Color32(0, 255, 0, 255)))
+            {
+                throw new System.InvalidOperationException("Selected palette color could not be connected to a color rule.");
+            }
+
+            ColorGroup blueGroup = session.colorGroups.Find(group => group.id == "blueGroup");
+            ColorReplacementRule blueRule = session.colorRules.Find(rule => rule.colorEntryId == "blue");
+            if (blueGroup == null || blueGroup.replacementMode != ColorReplacementMode.Hybrid || blueRule == null || !blueRule.enabled)
+            {
+                throw new System.InvalidOperationException("Preview color pick did not prepare an editable per-color replacement rule.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue32SelectionHighlightToggle()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for selection highlight validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            Texture2D texture = CreatePreviewPickValidationTexture();
+            window.SetValidationSession(texture, session);
+            window.SetSelectionHighlightForValidation(true);
+            window.TrySelectPaletteColorAtSourcePixel(0, 0, "Preview");
+            if (!window.IsSelectionHighlightEnabledForValidation || !window.IsBeforePreviewUsingHighlightTextureForValidation)
+            {
+                throw new System.InvalidOperationException("Selection highlight did not create a highlighted preview texture.");
+            }
+
+            window.SetSelectionHighlightForValidation(false);
+            if (window.IsBeforePreviewUsingHighlightTextureForValidation)
+            {
+                throw new System.InvalidOperationException("Selection highlight stayed active after disabling it.");
+            }
+
+            window.Close();
+        }
+
+        private static Texture2D CreatePreviewPickValidationTexture()
+        {
+            Texture2D texture = new Texture2D(2, 1, TextureFormat.RGBA32, false)
+            {
+                name = "PreviewPickValidation"
+            };
+            texture.SetPixels32(new[]
+            {
+                new Color32(255, 0, 0, 255),
+                new Color32(0, 0, 255, 255)
+            });
+            texture.Apply();
+            return texture;
+        }
+
+        private static PaletteVariantSession CreatePreviewPickValidationSession()
+        {
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 0, quantizeStep = 1 }
+            };
+            session.paletteColors.Add(new PaletteColorEntry
+            {
+                id = "red",
+                color = new Color32(255, 0, 0, 255),
+                hex = "#FF0000",
+                pixelCount = 1,
+                groupId = "redGroup"
+            });
+            session.paletteColors.Add(new PaletteColorEntry
+            {
+                id = "blue",
+                color = new Color32(0, 0, 255, 255),
+                hex = "#0000FF",
+                pixelCount = 1,
+                groupId = "blueGroup"
+            });
+            session.colorGroups.Add(new ColorGroup
+            {
+                id = "redGroup",
+                displayName = "Red",
+                representativeColor = new Color32(255, 0, 0, 255),
+                targetColor = new Color32(255, 0, 0, 255),
+                replacementMode = ColorReplacementMode.GroupUniform,
+                colorEntryIds = new System.Collections.Generic.List<string> { "red" }
+            });
+            session.colorGroups.Add(new ColorGroup
+            {
+                id = "blueGroup",
+                displayName = "Blue",
+                representativeColor = new Color32(0, 0, 255, 255),
+                targetColor = new Color32(0, 0, 255, 255),
+                replacementMode = ColorReplacementMode.GroupUniform,
+                colorEntryIds = new System.Collections.Generic.List<string> { "blue" }
+            });
+            return session;
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

@@ -67,6 +67,8 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | ノイズ削除 | PASS | issue 26 noise removal validation で、小さな色領域を同一グループ内の近傍色で補正できることを検証。 |
 | エッジ外側クリーンアップ | PASS | issue 27 edge outside cleanup validation で、本体外側近傍の小領域を透明化できることを検証。 |
 | Export 詳細設定の必要時表示 | PASS | issue 28 export UI disclosure validation で、書き出し関連の詳細設定が初期状態で折りたたまれることを検証。 |
+| Previewクリック色ピック | PASS | issue 31 preview color pick validation で、Preview座標からパレット色を選択し、色別ルール編集へ接続できることを検証。 |
+| 選択色ハイライト | PASS | issue 32 selection highlight validation で、選択色のハイライト表示ON/OFFを検証。 |
 | Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
 | パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |

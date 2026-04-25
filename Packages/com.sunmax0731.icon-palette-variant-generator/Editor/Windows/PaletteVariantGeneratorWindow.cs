@@ -32,13 +32,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const int LargeImageAutoPreviewPixelCount = 1024 * 1024;
         internal const string ProductName = "Unity Icon Palette Variant Generator";
         internal const string PackageName = "com.sunmax0731.icon-palette-variant-generator";
-        internal const string PackageVersion = "1.0.1";
+        internal const string PackageVersion = "1.0.2";
         internal const string ValidatedUnityVersion = "6000.4.0f1";
-        internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.1";
+        internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.2";
         internal const string MainWindowRootName = "palette-variant-main-root";
         internal const string MainWindowScrollName = "palette-variant-main-scroll";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private const string AutoPreviewPrefsKey = "Sunmax.IconPaletteVariantGenerator.AutoPreview";
+        private const string SelectionHighlightPrefsKey = "Sunmax.IconPaletteVariantGenerator.SelectionHighlight";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
         private static readonly Color OverlayBorderColor = new Color(0.1f, 0.65f, 1f, 0.85f);
@@ -59,6 +60,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
         private Texture2D splitPreviewTexture;
+        private Texture2D highlightedBeforePreviewTexture;
+        private Texture2D highlightedAfterPreviewTexture;
+        private Texture2D highlightedSplitPreviewTexture;
         private Texture2D checkerboardTexture;
         private Texture2D selectionOverlayTexture;
         private string selectionOverlayCacheKey = string.Empty;
@@ -78,6 +82,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private PaletteVariantDisplayLanguage displayLanguage = PaletteVariantDisplayLanguage.English;
         private ParameterHelpWindow parameterHelpWindow;
         private bool autoPreviewEnabled = true;
+        private bool selectionHighlightEnabled = true;
         private bool showExportOptions;
         private bool autoPreviewPending;
         private double autoPreviewScheduledTime;
@@ -130,6 +135,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             checkerboardTexture = CreateCheckerboardTexture();
             autoPreviewEnabled = EditorPrefs.GetBool(AutoPreviewPrefsKey, true);
+            selectionHighlightEnabled = EditorPrefs.GetBool(SelectionHighlightPrefsKey, true);
             LoadLanguageMode();
         }
 
@@ -423,6 +429,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 previewSplit = value;
                 RefreshUiToolkitContent();
             }));
+            section.Add(CreateToggle("selection-highlight-toggle", T("selectionHighlight", "Selection Highlight"), selectionHighlightEnabled, value =>
+            {
+                selectionHighlightEnabled = value;
+                EditorPrefs.SetBool(SelectionHighlightPrefsKey, selectionHighlightEnabled);
+                InvalidateSelectionOverlay();
+                RefreshUiToolkitContent();
+            }));
 
             VisualElement row = new VisualElement { name = "preview-image-row" };
             row.style.flexDirection = FlexDirection.Row;
@@ -509,6 +522,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 sourcePaletteLabel.text = $"{T("paletteColors", "Palette Colors")}: {session.paletteColors.Count} / {T("groups", "Groups")}: {session.colorGroups.Count}";
             }
 
+            DestroyUiToolkitHighlightTextures();
             if (beforePreviewImage != null)
             {
                 if (previewCompareMode != PreviewCompareMode.Split)
@@ -517,14 +531,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
 
                 beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Split
-                    ? GetSplitPreviewTexture()
-                    : readableSourceImage;
+                    ? GetHighlightedPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
+                    : GetHighlightedPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
                 beforePreviewImage.style.display = DisplayStyle.Flex;
             }
 
             if (afterPreviewImage != null)
             {
-                afterPreviewImage.image = afterPreview;
+                afterPreviewImage.image = GetHighlightedPreviewTexture(afterPreview, HighlightPreviewSlot.After);
                 afterPreviewImage.style.display = previewCompareMode == PreviewCompareMode.Split || afterPreview == null
                     ? DisplayStyle.None
                     : DisplayStyle.Flex;
@@ -596,9 +610,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 row.Add(CreateWrappingLabel($"{entry.hex}  {entry.pixelCount} px  {(entry.pixelCount / (float)totalPixels):P1}"));
                 row.RegisterCallback<PointerDownEvent>(_ =>
                 {
-                    selectedColorEntryId = entry.id;
-                    selectedGroupId = entry.groupId;
-                    RefreshUiToolkitContent();
+                    SelectPaletteEntry(entry, "Palette");
                 });
                 paletteListElement.Add(row);
             }
@@ -750,6 +762,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             colorRuleContainer.Add(CreateColorField("color-rule-color-field", T("targetColor", "Target Color"), rule.targetColor, value =>
             {
                 rule.targetColor = ToColor32(value);
+                rule.enabled = true;
+                EnsureGroupSupportsColorRule(entry);
                 HandlePreviewSettingChanged();
             }));
             colorRuleContainer.Add(CreateSlider("color-rule-blend-slider", T("blendRatio", "Blend Ratio"), rule.blendRatio, 0f, 1f, value =>
@@ -760,6 +774,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             colorRuleContainer.Add(CreateToggle("color-rule-enabled-toggle", T("enabled", "Enabled"), rule.enabled, value =>
             {
                 rule.enabled = value;
+                if (value)
+                {
+                    EnsureGroupSupportsColorRule(entry);
+                }
+
                 HandlePreviewSettingChanged();
             }));
         }
@@ -826,7 +845,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return CreateWrappingLabel(string.Empty);
         }
 
-        private static Image CreatePreviewImage(string name)
+        private Image CreatePreviewImage(string name)
         {
             Image image = new Image { name = name, scaleMode = ScaleMode.ScaleToFit };
             image.style.height = MinPreviewHeight;
@@ -835,6 +854,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             image.style.flexGrow = 1f;
             image.style.marginRight = 6f;
             image.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f);
+            image.RegisterCallback<PointerDownEvent>(evt => PickPaletteColorFromPreview(image, evt.localPosition));
             return image;
         }
 
@@ -885,6 +905,198 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(splitPreviewTexture);
             splitPreviewTexture = null;
+        }
+
+        private Texture2D GetHighlightedPreviewTexture(Texture2D baseTexture, HighlightPreviewSlot slot)
+        {
+            if (baseTexture == null || !selectionHighlightEnabled || readableSourceImage == null)
+            {
+                return baseTexture;
+            }
+
+            HashSet<uint> selectedKeys = GetSelectedColorKeys();
+            if (selectedKeys.Count == 0)
+            {
+                return baseTexture;
+            }
+
+            Color32[] basePixels = baseTexture.GetPixels32();
+            Color32[] sourcePixels = readableSourceImage.GetPixels32();
+            if (basePixels.Length != sourcePixels.Length)
+            {
+                return baseTexture;
+            }
+
+            Color32[] outputPixels = new Color32[basePixels.Length];
+            System.Array.Copy(basePixels, outputPixels, basePixels.Length);
+            int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
+            int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
+
+            for (int index = 0; index < sourcePixels.Length; index++)
+            {
+                Color32 sourcePixel = sourcePixels[index];
+                if (sourcePixel.a <= alphaThreshold)
+                {
+                    continue;
+                }
+
+                uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
+                if (!selectedKeys.Contains(key))
+                {
+                    continue;
+                }
+
+                outputPixels[index] = BlendHighlight(outputPixels[index], OverlayColor);
+            }
+
+            Texture2D highlighted = new Texture2D(baseTexture.width, baseTexture.height, TextureFormat.RGBA32, false)
+            {
+                name = $"{baseTexture.name}_SelectionHighlight",
+                filterMode = baseTexture.filterMode,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            highlighted.SetPixels32(outputPixels);
+            highlighted.Apply(false, true);
+            SetHighlightedPreviewTexture(slot, highlighted);
+            return highlighted;
+        }
+
+        private void SetHighlightedPreviewTexture(HighlightPreviewSlot slot, Texture2D texture)
+        {
+            switch (slot)
+            {
+                case HighlightPreviewSlot.Before:
+                    highlightedBeforePreviewTexture = texture;
+                    break;
+                case HighlightPreviewSlot.After:
+                    highlightedAfterPreviewTexture = texture;
+                    break;
+                case HighlightPreviewSlot.Split:
+                    highlightedSplitPreviewTexture = texture;
+                    break;
+            }
+        }
+
+        private static Color32 BlendHighlight(Color32 baseColor, Color overlay)
+        {
+            float ratio = Mathf.Clamp01(overlay.a);
+            byte r = (byte)Mathf.RoundToInt(Mathf.Lerp(baseColor.r, overlay.r * 255f, ratio));
+            byte g = (byte)Mathf.RoundToInt(Mathf.Lerp(baseColor.g, overlay.g * 255f, ratio));
+            byte b = (byte)Mathf.RoundToInt(Mathf.Lerp(baseColor.b, overlay.b * 255f, ratio));
+            byte a = (byte)Mathf.Max(baseColor.a, Mathf.RoundToInt(overlay.a * 255f));
+            return new Color32(r, g, b, a);
+        }
+
+        private void DestroyUiToolkitHighlightTextures()
+        {
+            DestroyTexture(ref highlightedBeforePreviewTexture);
+            DestroyTexture(ref highlightedAfterPreviewTexture);
+            DestroyTexture(ref highlightedSplitPreviewTexture);
+        }
+
+        private static void DestroyTexture(ref Texture2D texture)
+        {
+            if (texture == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(texture);
+            texture = null;
+        }
+
+        private void PickPaletteColorFromPreview(Image image, Vector2 localPosition)
+        {
+            if (readableSourceImage == null || session.paletteColors.Count == 0)
+            {
+                return;
+            }
+
+            if (!TryGetPreviewPixelCoordinate(image, localPosition, readableSourceImage, out int x, out int y))
+            {
+                return;
+            }
+
+            TrySelectPaletteColorAtSourcePixel(x, y, "Preview");
+        }
+
+        internal bool TrySelectPaletteColorAtSourcePixel(int x, int y, string source)
+        {
+            if (readableSourceImage == null || session.paletteColors.Count == 0)
+            {
+                return false;
+            }
+
+            if (x < 0 || y < 0 || x >= readableSourceImage.width || y >= readableSourceImage.height)
+            {
+                return false;
+            }
+
+            Color32 sourcePixel = readableSourceImage.GetPixel(x, y);
+            int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
+            if (sourcePixel.a <= alphaThreshold)
+            {
+                reportMessage = "Transparent preview pixel does not map to a palette color.";
+                reportType = MessageType.Warning;
+                RefreshUiToolkitContent();
+                return false;
+            }
+
+            int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
+            uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
+            PaletteColorEntry entry = session.paletteColors.FirstOrDefault(candidate =>
+                candidate != null && ColorCodeUtility.ToRgbKey(candidate.color) == key);
+            if (entry == null)
+            {
+                reportMessage = $"Preview pixel {x}, {y} does not match an extracted palette color.";
+                reportType = MessageType.Warning;
+                RefreshUiToolkitContent();
+                return false;
+            }
+
+            SelectPaletteEntry(entry, source);
+            return true;
+        }
+
+        internal static bool TryGetPreviewPixelCoordinate(Image image, Vector2 localPosition, Texture2D texture, out int x, out int y)
+        {
+            x = 0;
+            y = 0;
+            if (image == null || texture == null)
+            {
+                return false;
+            }
+
+            float elementWidth = image.resolvedStyle.width;
+            float elementHeight = image.resolvedStyle.height;
+            if (elementWidth <= 0f || elementHeight <= 0f)
+            {
+                Rect contentRect = image.contentRect;
+                elementWidth = contentRect.width;
+                elementHeight = contentRect.height;
+            }
+
+            if (elementWidth <= 0f || elementHeight <= 0f)
+            {
+                return false;
+            }
+
+            float scale = Mathf.Min(elementWidth / texture.width, elementHeight / texture.height);
+            float drawnWidth = texture.width * scale;
+            float drawnHeight = texture.height * scale;
+            float offsetX = (elementWidth - drawnWidth) * 0.5f;
+            float offsetY = (elementHeight - drawnHeight) * 0.5f;
+            float px = (localPosition.x - offsetX) / scale;
+            float py = (localPosition.y - offsetY) / scale;
+            if (px < 0f || py < 0f || px >= texture.width || py >= texture.height)
+            {
+                return false;
+            }
+
+            x = Mathf.Clamp(Mathf.FloorToInt(px), 0, texture.width - 1);
+            y = Mathf.Clamp(texture.height - 1 - Mathf.FloorToInt(py), 0, texture.height - 1);
+            return true;
         }
 
         private static VisualElement CreateSelectableRow(bool selected)
@@ -2517,6 +2729,76 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return rule;
         }
 
+        private void SelectPaletteEntry(PaletteColorEntry entry, string source)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            selectedColorEntryId = entry.id;
+            selectedGroupId = entry.groupId;
+            GetOrCreateColorRule(entry);
+            InvalidateSelectionOverlay();
+            reportMessage = $"{source} selected {entry.hex}. Edit the color rule to replace only this palette color.";
+            reportType = MessageType.Info;
+            RefreshUiToolkitContent();
+        }
+
+        private void EnsureGroupSupportsColorRule(PaletteColorEntry entry)
+        {
+            if (entry == null || string.IsNullOrEmpty(entry.groupId))
+            {
+                return;
+            }
+
+            ColorGroup group = session.colorGroups.FirstOrDefault(candidate => candidate != null && candidate.id == entry.groupId);
+            if (group == null || group.replacementMode != ColorReplacementMode.GroupUniform)
+            {
+                return;
+            }
+
+            group.replacementMode = ColorReplacementMode.Hybrid;
+        }
+
+        internal string SelectedColorEntryIdForValidation => selectedColorEntryId;
+
+        internal bool IsSelectionHighlightEnabledForValidation => selectionHighlightEnabled;
+
+        internal bool IsBeforePreviewUsingHighlightTextureForValidation =>
+            highlightedBeforePreviewTexture != null && beforePreviewImage != null && beforePreviewImage.image == highlightedBeforePreviewTexture;
+
+        internal void SetValidationSession(Texture2D texture, PaletteVariantSession validationSession)
+        {
+            DestroyReadableSourceImage();
+            readableSourceImage = texture;
+            sourceImage = texture;
+            session = validationSession ?? new PaletteVariantSession();
+            RefreshUiToolkitContent();
+        }
+
+        internal void SetSelectionHighlightForValidation(bool enabled)
+        {
+            selectionHighlightEnabled = enabled;
+            InvalidateSelectionOverlay();
+            RefreshUiToolkitContent();
+        }
+
+        internal bool SetSelectedColorRuleTargetForValidation(Color32 targetColor)
+        {
+            PaletteColorEntry entry = session.paletteColors.FirstOrDefault(candidate => candidate != null && candidate.id == selectedColorEntryId);
+            if (entry == null)
+            {
+                return false;
+            }
+
+            ColorReplacementRule rule = GetOrCreateColorRule(entry);
+            rule.targetColor = targetColor;
+            rule.enabled = true;
+            EnsureGroupSupportsColorRule(entry);
+            return true;
+        }
+
         private void MovePaletteEntryToGroup(PaletteColorEntry entry, string targetGroupId)
         {
             if (entry == null || string.IsNullOrWhiteSpace(targetGroupId) || entry.groupId == targetGroupId)
@@ -2589,7 +2871,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void DrawSelectionOverlay(Rect imageRect, Rect texCoords)
         {
-            if (Event.current.type != EventType.Repaint || readableSourceImage == null)
+            if (!selectionHighlightEnabled || Event.current.type != EventType.Repaint || readableSourceImage == null)
             {
                 return;
             }
@@ -2670,6 +2952,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private string BuildSelectionOverlayCacheKey()
         {
             if (readableSourceImage == null)
+            {
+                return string.Empty;
+            }
+
+            if (!selectionHighlightEnabled)
             {
                 return string.Empty;
             }
@@ -2808,6 +3095,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "zoom" => "ズーム",
                 "resetView" => "表示リセット",
                 "split" => "分割位置",
+                "selectionHighlight" => "選択色をハイライト",
                 "help" => "Help",
                 "analyzeSettings" => "解析設定",
                 "alphaThreshold" => "透明度しきい値",
@@ -2892,6 +3180,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DestroyAfterPreview();
             DestroySplitPreviewTexture();
             DestroySelectionOverlayTexture();
+            DestroyUiToolkitHighlightTextures();
             if (checkerboardTexture != null)
             {
                 DestroyImmediate(checkerboardTexture);
@@ -2909,6 +3198,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DestroyImmediate(readableSourceImage);
             readableSourceImage = null;
             DestroySplitPreviewTexture();
+            DestroyUiToolkitHighlightTextures();
             InvalidateSelectionOverlay();
         }
 
@@ -2922,6 +3212,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DestroyImmediate(afterPreview);
             afterPreview = null;
             DestroySplitPreviewTexture();
+            DestroyUiToolkitHighlightTextures();
         }
 
         private void DrawSectionHeader(string title)
@@ -3121,6 +3412,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     {
         English,
         Japanese
+    }
+
+    internal enum HighlightPreviewSlot
+    {
+        Before,
+        After,
+        Split
     }
 
     internal sealed class PaletteVariantExportSettingsWindow : EditorWindow
