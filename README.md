@@ -32,7 +32,7 @@ The current implementation covers the MVP editor workflow:
 In Unity:
 
 ```text
-Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator > 開く
 ```
 
 ## Validation

@@ -22,7 +22,7 @@ MMORPG / RPG / アイテム制作向けに、鉱石、木材、薬草、料理�
 ## 想定メニュー
 
 ```text
-Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator > 開く
 ```
 
 ## 最小 MVP

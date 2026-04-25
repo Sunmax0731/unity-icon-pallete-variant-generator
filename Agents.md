@@ -15,7 +15,7 @@
 推奨メニュー:
 
 ```text
-Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator > 開く
 Tools > Palette Variant Generator
 ```
 

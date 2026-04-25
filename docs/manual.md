@@ -19,7 +19,7 @@ Download `PaletteVariantGenerator_v1.0.0.zip` from GitHub Releases, extract it, 
 ## Open The Tool
 
 ```text
-Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator > 開く
 ```
 
 ## Basic Workflow

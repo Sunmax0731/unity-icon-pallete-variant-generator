@@ -58,14 +58,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private string selectedGroupId = string.Empty;
         private string selectedColorEntryId = string.Empty;
 
-        [MenuItem("Tools/Icon Tools/Palette Variant Generator")]
-        public static void Open()
-        {
-            OpenWindow();
-        }
-
         [MenuItem("Tools/Palette Variant Generator/開く")]
-        public static void OpenFromRootMenu()
+        public static void Open()
         {
             OpenWindow();
         }

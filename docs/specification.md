@@ -7,7 +7,7 @@
 想定メニュー:
 
 ```text
-Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator > 開く
 ```
 
 ## 2. 基本操作フロー

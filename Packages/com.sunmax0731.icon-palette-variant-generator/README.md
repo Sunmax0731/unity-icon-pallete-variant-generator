@@ -5,7 +5,7 @@ Unity Editor extension for extracting icon palettes and generating multiple colo
 ## Open
 
 ```text
-Tools > Icon Tools > Palette Variant Generator
+Tools > Palette Variant Generator > 開く
 ```
 
 ## Main Features

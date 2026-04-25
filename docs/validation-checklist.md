@@ -44,7 +44,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 
 | Workflow | Result | Notes |
 |---|---|---|
-| Open `Tools > Icon Tools > Palette Variant Generator` | PASS | Covered by headless EditorWindow creation; visual check recommended before release. |
+| Open `Tools > Palette Variant Generator > 開く` | PASS | Covered by headless EditorWindow creation; visual check recommended before release. |
 | Analyze sample PNG | PASS | Covered by sample extraction validation. |
 | Auto Group | PASS | Covered by grouping validation. |
 | Preview replacement | PASS | Covered by replacement validation. |
