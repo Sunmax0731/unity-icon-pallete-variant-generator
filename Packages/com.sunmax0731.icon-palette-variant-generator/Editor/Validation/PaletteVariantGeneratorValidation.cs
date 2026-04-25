@@ -40,6 +40,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue17PreviewNavigation();
             ValidateIssue18RulePresetWorkflow();
             ValidateIssue19ManualGroupEditing();
+            ValidateIssue20ColorDistanceModes();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -55,6 +56,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS");
             Debug.Log("ISSUE18_RULE_PRESET_VALIDATION=PASS");
             Debug.Log("ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS");
+            Debug.Log("ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -628,6 +630,51 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (broadGroups.Count != 1 || strictGroups.Count != 2)
             {
                 throw new System.InvalidOperationException("Max color distance validation failed.");
+            }
+        }
+
+        private static void ValidateIssue20ColorDistanceModes()
+        {
+            ColorDistanceService distanceService = new ColorDistanceService();
+            Color32 red = new Color32(255, 0, 0, 255);
+            Color32 nearRed = new Color32(240, 0, 0, 255);
+            Color32 blue = new Color32(0, 0, 255, 255);
+
+            float labSame = distanceService.Calculate(red, red, ColorDistanceMode.Lab);
+            float labNear = distanceService.Calculate(red, nearRed, ColorDistanceMode.Lab);
+            float labFar = distanceService.Calculate(red, blue, ColorDistanceMode.Lab);
+            float rgbFar = distanceService.Calculate(red, blue, ColorDistanceMode.Rgb);
+            float hsvFar = distanceService.Calculate(red, blue, ColorDistanceMode.Hsv);
+
+            if (labSame > 0.0001f || labNear <= 0f || labFar <= labNear)
+            {
+                throw new System.InvalidOperationException("Lab color distance validation failed.");
+            }
+
+            if (Mathf.Abs(labFar - rgbFar) <= 0.0001f || hsvFar <= 0f)
+            {
+                throw new System.InvalidOperationException("Color distance mode selection validation failed.");
+            }
+
+            var colors = new[]
+            {
+                new PaletteColorEntry { id = "#FF0000", hex = "#FF0000", color = red, pixelCount = 4 },
+                new PaletteColorEntry { id = "#F00000", hex = "#F00000", color = nearRed, pixelCount = 2 },
+                new PaletteColorEntry { id = "#0000FF", hex = "#0000FF", color = blue, pixelCount = 1 }
+            };
+
+            var groups = new ColorGroupingService().CreateGroups(
+                colors,
+                new GroupSettings
+                {
+                    targetGroupCount = 2,
+                    distanceMode = ColorDistanceMode.Lab,
+                    maxColorDistance = 441f
+                });
+
+            if (groups.Count != 2)
+            {
+                throw new System.InvalidOperationException("Lab grouping validation failed.");
             }
         }
 

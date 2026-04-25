@@ -216,9 +216,9 @@ representative.b = sum(color.b * count) / sum(count)
 
 ## 4.4 近傍色グルーピング
 
-### MVP 実装
+### 実装
 
-MVP では RGB 距離を使った簡易 K-Means または階層クラスタリングで実装する。
+距離計算は `Distance Mode` で RGB / HSV / Lab を切り替えられる。初期値は RGB とし、既存の安定した結果を維持する。
 
 RGB 距離:
 
@@ -226,7 +226,7 @@ RGB 距離:
 distance = sqrt((r1-r2)^2 + (g1-g2)^2 + (b1-b2)^2)
 ```
 
-### 推奨実装
+### Lab 距離
 
 色の見た目に近いグルーピングにするため、将来的には CIE Lab 変換後の距離を使用する。
 

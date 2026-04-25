@@ -11,7 +11,7 @@ Tools > Palette Variant Generator > 開く
 ## 主な機能
 
 - PNG / Texture2D アセットからのパレット抽出
-- 近傍色の自動グルーピングと距離しきい値の調整
+- RGB / HSV / Lab 色距離による近傍色の自動グルーピングと距離しきい値の調整
 - グループ単位、色単位、Hybrid の置換ルール
 - Before / After プレビューと選択色 overlay
 - Add / Duplicate / Remove による複数バリエーション管理

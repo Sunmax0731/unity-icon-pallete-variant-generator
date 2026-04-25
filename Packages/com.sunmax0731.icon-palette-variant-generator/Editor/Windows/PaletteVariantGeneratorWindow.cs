@@ -237,6 +237,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 DrawSectionHeader(T("groupSettings", "Group Settings"));
                 session.groupSettings.targetGroupCount = EditorGUILayout.IntSlider(T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64);
                 session.groupSettings.distanceMode = (ColorDistanceMode)EditorGUILayout.EnumPopup(T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode);
+                EditorGUILayout.HelpBox(T("distanceModeHint", "RGB is fast and stable. HSV keeps hue relationships. Lab groups colors closer to human perception."), MessageType.None);
                 session.groupSettings.maxColorDistance = EditorGUILayout.Slider(T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f);
                 session.groupSettings.preserveDarkOutline = EditorGUILayout.Toggle(T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline);
                 session.groupSettings.preserveAlpha = EditorGUILayout.Toggle(T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha);
@@ -1540,6 +1541,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "groupSettings" => "グループ設定",
                 "targetGroupCount" => "目標グループ数",
                 "distanceMode" => "距離計算",
+                "distanceModeHint" => "RGB は高速で安定、HSV は色相の関係を保ちやすく、Lab は人の見た目に近い近傍色判定に向いています。",
                 "maxColorDistance" => "近傍色しきい値",
                 "preserveDarkOutline" => "暗色輪郭を保持",
                 "preserveAlpha" => "アルファを保持",

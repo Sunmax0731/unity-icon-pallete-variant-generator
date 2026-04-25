@@ -86,6 +86,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE19_MANUAL_GROUP_EDITING_VA
     throw "Unity manual group editing validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS" -Quiet)) {
+    throw "Unity color distance mode validation did not emit pass marker. Log: $logPath"
+}
+
 Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE1_SCAFFOLD_VALIDATION=PASS",
     "ISSUE2_IMAGE_PALETTE_VALIDATION=PASS",
@@ -100,6 +104,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS",
     "ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS",
     "ISSUE18_RULE_PRESET_VALIDATION=PASS",
-    "ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS"
+    "ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS",
+    "ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

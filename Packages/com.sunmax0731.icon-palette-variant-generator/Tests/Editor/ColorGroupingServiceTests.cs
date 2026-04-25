@@ -44,6 +44,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
+        public void ColorDistanceSupportsPerceptualLabMode()
+        {
+            Color32 red = new Color32(255, 0, 0, 255);
+            Color32 nearRed = new Color32(240, 0, 0, 255);
+            Color32 blue = new Color32(0, 0, 255, 255);
+            ColorDistanceService service = new ColorDistanceService();
+
+            float sameDistance = service.Calculate(red, red, ColorDistanceMode.Lab);
+            float nearDistance = service.Calculate(red, nearRed, ColorDistanceMode.Lab);
+            float farDistance = service.Calculate(red, blue, ColorDistanceMode.Lab);
+            float rgbDistance = service.Calculate(red, blue, ColorDistanceMode.Rgb);
+
+            Assert.That(sameDistance, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(nearDistance, Is.GreaterThan(0f));
+            Assert.That(farDistance, Is.GreaterThan(nearDistance));
+            Assert.That(farDistance, Is.Not.EqualTo(rgbDistance).Within(0.0001f));
+        }
+
+        [Test]
         public void CreateGroupsSplitsOutliersWhenMaxColorDistanceIsStrict()
         {
             PaletteColorEntry[] colors =

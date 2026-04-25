@@ -43,6 +43,6 @@ ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
 ## 既知の制限
 
 - UI は IMGUI ベースです。
-- 色距離は RGB ベースです。
+- 色距離は RGB / HSV / Lab から選択できます。
 - SpriteAtlas の直接編集は含みません。
 - フォルダ単位の一括処理は含みません。
