@@ -405,7 +405,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             VisualElement row = new VisualElement { name = "preview-image-row" };
             row.style.flexDirection = FlexDirection.Row;
-            row.style.flexWrap = Wrap.Wrap;
+            row.style.flexWrap = Wrap.NoWrap;
+            row.style.alignItems = Align.Stretch;
             beforePreviewImage = CreatePreviewImage("before-preview-image");
             afterPreviewImage = CreatePreviewImage("after-preview-image");
             row.Add(beforePreviewImage);
@@ -799,7 +800,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             Image image = new Image { name = name, scaleMode = ScaleMode.ScaleToFit };
             image.style.height = MinPreviewHeight;
-            image.style.minWidth = 180f;
+            image.style.minWidth = 0f;
+            image.style.flexBasis = 0f;
             image.style.flexGrow = 1f;
             image.style.marginRight = 6f;
             image.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f);

@@ -100,6 +100,24 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
+        public void ApplyUsesTransparentTargetAlphaEvenWhenPreserveAlphaIsEnabled()
+        {
+            Texture2D source = CreateSinglePixelTexture(new Color32(255, 0, 0, 255));
+            PaletteVariantSession session = CreateSingleColorSession(ColorReplacementMode.GroupUniform);
+            session.groupSettings.preserveAlpha = true;
+            session.colorGroups[0].targetColor = new Color32(0, 0, 0, 0);
+            session.colorGroups[0].blendRatio = 1f;
+
+            Texture2D output = new ColorReplacementService().Apply(source, session);
+            Color32 pixel = output.GetPixels32()[0];
+
+            Assert.That(pixel.a, Is.EqualTo(0));
+
+            Object.DestroyImmediate(source);
+            Object.DestroyImmediate(output);
+        }
+
+        [Test]
         public void ApplyLetsHybridColorRuleOverrideGroupFallback()
         {
             Texture2D source = CreateSinglePixelTexture(new Color32(255, 0, 0, 255));

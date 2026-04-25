@@ -195,6 +195,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("Color replacement did not preserve expected preview color and alpha.");
             }
+
+            Texture2D transparentSource = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            transparentSource.SetPixels32(new[] { new Color32(255, 0, 0, 255) });
+            transparentSource.Apply();
+            session.colorGroups[0].targetColor = new Color32(0, 0, 0, 0);
+            Texture2D transparentOutput = new ColorReplacementService().Apply(transparentSource, session);
+            Color32 transparentPixel = transparentOutput.GetPixels32()[0];
+            Object.DestroyImmediate(transparentSource);
+            Object.DestroyImmediate(transparentOutput);
+
+            if (transparentPixel.a != 0)
+            {
+                throw new System.InvalidOperationException("Color replacement did not apply transparent target alpha.");
+            }
         }
 
         private static void ValidatePngExport()

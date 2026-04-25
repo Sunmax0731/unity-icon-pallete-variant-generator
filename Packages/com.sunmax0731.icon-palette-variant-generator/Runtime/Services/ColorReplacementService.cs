@@ -78,7 +78,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
                 float ratio = Mathf.Clamp01(replacementTarget.BlendRatio);
                 Color32 replacement = Lerp(pixel, replacementTarget.TargetColor, ratio);
-                replacement.a = session.groupSettings.preserveAlpha ? pixel.a : replacementTarget.TargetColor.a;
+                if (session.groupSettings.preserveAlpha && replacementTarget.TargetColor.a == 255)
+                {
+                    replacement.a = pixel.a;
+                }
+                else if (!session.groupSettings.preserveAlpha)
+                {
+                    replacement.a = replacementTarget.TargetColor.a;
+                }
+
                 outputPixels[index] = replacement;
             }
 
