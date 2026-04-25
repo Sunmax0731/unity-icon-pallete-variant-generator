@@ -15,8 +15,8 @@ MMORPG / RPG / アイテム制作向けに、鉱石、木材、薬草、料理�
 | `architecture.md` | 設計書。MVP 構成、主要クラス、データモデル、サービス分割、フォルダ構成を整理。 |
 | `development_plan.md` | 開発計画。実装フェーズ、タスク、優先度、テスト観点、リリース準備を整理。 |
 | `color_variant_rule.schema.json` | セッション / プリセット保存用 JSON スキーマ草案。 |
-| `AGENTS.md` | AI Agent / Codex に実装を依頼するための作業指示書。 |
-| `SKILL.md` | このエディタ拡張開発に特化した作業ルール。 |
+| `../Agents.md` | AI Agent / Codex に実装を依頼するための作業指示書。 |
+| `../Skill.md` | このエディタ拡張開発に特化した作業ルール。 |
 
 ## 想定メニュー
 
@@ -33,4 +33,3 @@ Tools > Icon Tools > Palette Variant Generator
 5. 変換後プレビューを表示する
 6. PNG として別名出力する
 7. 設定を JSON として保存 / 読み込みできる
-

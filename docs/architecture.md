@@ -14,47 +14,56 @@
 ## 2. 推奨フォルダ構成
 
 ```text
-Assets/
-  Tools/
-    IconPaletteVariantGenerator/
+Agents.md
+Skill.md
+README.md
+docs/
+  README.md
+  requirements.md
+  specification.md
+  architecture.md
+  development_plan.md
+  color_variant_rule.schema.json
+tools/
+  validation/
+    run-editmode-tests.ps1
+Packages/
+  com.sunmax0731.icon-palette-variant-generator/
+    package.json
+    README.md
+    Runtime/
+      Models/
+        PaletteVariantSession.cs
+        PaletteColorEntry.cs
+        ColorGroup.cs
+        ColorReplacementRule.cs
+        IconVariation.cs
+        AnalyzeSettings.cs
+        GroupSettings.cs
+        ExportSettings.cs
+      Services/
+        ColorExtractionService.cs
+        ColorQuantizationService.cs
+        ColorDistanceService.cs
+        ColorGroupingService.cs
+        ColorReplacementService.cs
+        PngExportService.cs
+        SessionJsonService.cs
+      Utilities/
+        ColorCodeUtility.cs
+    Editor/
+      Services/
+        TextureAssetLoader.cs
+      Validation/
+        PaletteVariantGeneratorValidation.cs
+      Windows/
+        PaletteVariantGeneratorWindow.cs
+    Tests/
       Editor/
-        Windows/
-          PaletteVariantGeneratorWindow.cs
-        Presenters/
-          PaletteVariantGeneratorPresenter.cs
-        Views/
-          IPaletteVariantGeneratorView.cs
-          PaletteVariantGeneratorViewState.cs
-        Models/
-          PaletteVariantSession.cs
-          PaletteColorEntry.cs
-          ColorGroup.cs
-          ColorReplacementRule.cs
-          IconVariation.cs
-          AnalyzeSettings.cs
-          GroupSettings.cs
-          ExportSettings.cs
-        Services/
-          TextureAssetLoader.cs
-          ColorExtractionService.cs
-          ColorQuantizationService.cs
-          ColorDistanceService.cs
-          ColorGroupingService.cs
-          ColorReplacementService.cs
-          PreviewTextureService.cs
-          PngExportService.cs
-          SessionJsonService.cs
-          ValidationService.cs
-        Utilities/
-          ColorCodeUtility.cs
-          AssetPathUtility.cs
-          TexturePreviewUtility.cs
-        Tests/
-          Editor/
-            ColorExtractionServiceTests.cs
-            ColorGroupingServiceTests.cs
-            ColorReplacementServiceTests.cs
-            SessionJsonServiceTests.cs
+        ColorExtractionServiceTests.cs
+        ColorGroupingServiceTests.cs
+        ColorReplacementServiceTests.cs
+        SessionJsonServiceTests.cs
 ```
 
 ## 3. 主要クラス
@@ -455,4 +464,3 @@ UI Toolkit 化を検討する。
 - PNG 出力前に `Texture2D.Apply()` を呼ぶ。
 - Unity の `JsonUtility` は Dictionary 非対応のため、保存形式は List 中心にする。
 - ファイルパスは `Assets/` から始まる Unity 相対パスと OS 絶対パスを明確に区別する。
-

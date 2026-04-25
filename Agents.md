@@ -22,11 +22,11 @@ Tools > Icon Tools > Palette Variant Generator
 
 実装前に以下を読むこと。
 
-1. `requirements.md`
-2. `specification.md`
-3. `architecture.md`
-4. `development_plan.md`
-5. `color_variant_rule.schema.json`
+1. `docs/requirements.md`
+2. `docs/specification.md`
+3. `docs/architecture.md`
+4. `docs/development_plan.md`
+5. `docs/color_variant_rule.schema.json`
 6. `SKILL.md`
 
 ## 4. 実装原則

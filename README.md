@@ -46,11 +46,11 @@ ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ```
 
-## Planning Docs
+## Documentation
 
-The planning baseline is under `unity_icon_palette_variant_generator_docs/`.
+Project planning and product documentation live under `docs/`.
 
 ## Agent Docs
 
-- `unity_icon_palette_variant_generator_docs/AGENTS.md`
-- `unity_icon_palette_variant_generator_docs/SKILL.md`
+- `Agents.md`
+- `Skill.md`
