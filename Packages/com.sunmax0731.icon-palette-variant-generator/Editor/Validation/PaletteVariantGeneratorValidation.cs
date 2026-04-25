@@ -28,8 +28,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
 
             window.Close();
             ValidateColorExtraction();
+            ValidateColorGrouping();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
+            Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
         }
 
         private static void ValidateColorExtraction()
@@ -58,6 +60,29 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (entries.Count != 2)
             {
                 throw new System.InvalidOperationException($"Expected 2 palette colors, got {entries.Count}.");
+            }
+        }
+
+        private static void ValidateColorGrouping()
+        {
+            var colors = new[]
+            {
+                new PaletteColorEntry { id = "#FF0000", hex = "#FF0000", color = new Color32(255, 0, 0, 255), pixelCount = 4 },
+                new PaletteColorEntry { id = "#F00000", hex = "#F00000", color = new Color32(240, 0, 0, 255), pixelCount = 2 },
+                new PaletteColorEntry { id = "#0000FF", hex = "#0000FF", color = new Color32(0, 0, 255, 255), pixelCount = 3 },
+                new PaletteColorEntry { id = "#0000F0", hex = "#0000F0", color = new Color32(0, 0, 240, 255), pixelCount = 1 }
+            };
+
+            GroupSettings settings = new GroupSettings
+            {
+                targetGroupCount = 2,
+                distanceMode = ColorDistanceMode.Rgb
+            };
+
+            var groups = new ColorGroupingService().CreateGroups(colors, settings);
+            if (groups.Count != 2)
+            {
+                throw new System.InvalidOperationException($"Expected 2 color groups, got {groups.Count}.");
             }
         }
     }

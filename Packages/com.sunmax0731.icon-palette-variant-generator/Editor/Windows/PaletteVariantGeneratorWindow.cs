@@ -15,6 +15,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly PaletteVariantSession session = new PaletteVariantSession();
         private readonly TextureAssetLoader textureAssetLoader = new TextureAssetLoader();
         private readonly ColorExtractionService colorExtractionService = new ColorExtractionService();
+        private readonly ColorGroupingService colorGroupingService = new ColorGroupingService();
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Vector2 scrollPosition;
@@ -56,9 +57,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
                 }
 
+                using (new EditorGUI.DisabledScope(session.paletteColors.Count == 0))
+                {
+                    if (GUILayout.Button("Auto Group", EditorStyles.toolbarButton))
+                    {
+                        AutoGroupPalette();
+                    }
+                }
+
                 using (new EditorGUI.DisabledScope(true))
                 {
-                    GUILayout.Button("Auto Group", EditorStyles.toolbarButton);
                     GUILayout.Button("Preview", EditorStyles.toolbarButton);
                     GUILayout.Button("Export", EditorStyles.toolbarButton);
                     GUILayout.Button("Save Session", EditorStyles.toolbarButton);
@@ -98,6 +106,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.analyzeSettings.maxPaletteColors = Mathf.Max(1, EditorGUILayout.IntField("Max Palette Colors", session.analyzeSettings.maxPaletteColors));
 
             EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Group Settings", EditorStyles.boldLabel);
+            session.groupSettings.targetGroupCount = EditorGUILayout.IntSlider("Target Group Count", session.groupSettings.targetGroupCount, 1, 64);
+            session.groupSettings.distanceMode = (ColorDistanceMode)EditorGUILayout.EnumPopup("Distance Mode", session.groupSettings.distanceMode);
+            session.groupSettings.preserveDarkOutline = EditorGUILayout.Toggle("Preserve Dark Outline", session.groupSettings.preserveDarkOutline);
+            session.groupSettings.preserveAlpha = EditorGUILayout.Toggle("Preserve Alpha", session.groupSettings.preserveAlpha);
+
+            EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Palette", EditorStyles.boldLabel);
 
             if (session.paletteColors.Count == 0)
@@ -107,6 +122,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             DrawPaletteList(session.paletteColors);
+
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Groups", EditorStyles.boldLabel);
+            if (session.colorGroups.Count == 0)
+            {
+                EditorGUILayout.HelpBox("Color groups will appear here after Auto Group.", MessageType.None);
+                return;
+            }
+
+            DrawGroupList(session.colorGroups);
         }
 
         private void DrawPaletteList(IReadOnlyList<PaletteColorEntry> paletteColors)
@@ -123,6 +148,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         EditorGUILayout.LabelField($"{entry.color.r},{entry.color.g},{entry.color.b},{entry.color.a}", GUILayout.Width(120f));
                         EditorGUILayout.LabelField(entry.pixelCount.ToString(), GUILayout.Width(64f));
                         EditorGUILayout.LabelField($"{entry.pixelRatio:P1}", GUILayout.Width(64f));
+                        EditorGUILayout.LabelField(entry.groupId, GUILayout.Width(80f));
+                    }
+                }
+            }
+        }
+
+        private void DrawGroupList(IReadOnlyList<ColorGroup> colorGroups)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                foreach (ColorGroup group in colorGroups)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        Rect swatchRect = GUILayoutUtility.GetRect(22f, 18f, GUILayout.Width(22f));
+                        EditorGUI.DrawRect(swatchRect, group.representativeColor);
+                        EditorGUILayout.LabelField(group.displayName, GUILayout.Width(80f));
+                        EditorGUILayout.LabelField(group.id, GUILayout.Width(80f));
+                        EditorGUILayout.LabelField($"{group.colorEntryIds.Count} colors", GUILayout.Width(80f));
+                        EditorGUILayout.LabelField($"{group.pixelRatio:P1}", GUILayout.Width(64f));
                     }
                 }
             }
@@ -141,7 +186,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             sourceAssetPath = assetPath;
             session.sourceImageAssetPath = assetPath;
             session.paletteColors = new List<PaletteColorEntry>(colorExtractionService.Extract(readableSourceImage, session.analyzeSettings));
+            session.colorGroups.Clear();
             reportMessage = $"Analyzed {session.paletteColors.Count} palette colors from {assetPath}.";
+        }
+
+        private void AutoGroupPalette()
+        {
+            session.colorGroups = new List<ColorGroup>(colorGroupingService.CreateGroups(session.paletteColors, session.groupSettings));
+            reportMessage = $"Created {session.colorGroups.Count} color groups.";
         }
 
         private void OnDisable()

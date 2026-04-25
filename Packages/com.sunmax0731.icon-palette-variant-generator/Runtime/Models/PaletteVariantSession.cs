@@ -15,6 +15,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
         public GroupSettings groupSettings = new GroupSettings();
         public ExportSettings exportSettings = new ExportSettings();
         public List<PaletteColorEntry> paletteColors = new List<PaletteColorEntry>();
+        public List<ColorGroup> colorGroups = new List<ColorGroup>();
         public string activeVariationId = string.Empty;
     }
 }
