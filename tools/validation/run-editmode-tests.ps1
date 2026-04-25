@@ -174,6 +174,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE38_PALETTE_RULE_STATUS_VAL
     throw "Unity palette rule status validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS" -Quiet)) {
+    throw "Unity effect highlight validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -215,6 +219,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS",
     "ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS",
     "ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS",
+    "ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

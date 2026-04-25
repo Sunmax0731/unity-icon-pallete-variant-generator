@@ -65,6 +65,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue36DelayedPreviewRefresh();
             ValidateIssue37SelectedColorInfoPanel();
             ValidateIssue38PaletteRuleStatusBadges();
+            ValidateIssue39EffectHighlight();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -103,6 +104,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS");
             Debug.Log("ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS");
             Debug.Log("ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS");
+            Debug.Log("ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1470,6 +1472,33 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
         }
 
+        private static void ValidateIssue39EffectHighlight()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for effect highlight validation.");
+            }
+
+            window.SetValidationSession(CreateNoiseEffectValidationTexture(), CreateNoiseEffectValidationSession());
+            window.SetSelectionHighlightForValidation(false);
+            window.SetEffectHighlightForValidation(true);
+            window.RefreshAfterPreviewForValidation();
+            if (window.EffectHighlightPixelCountForValidation != 1 || !window.IsAfterPreviewUsingEffectHighlightTextureForValidation)
+            {
+                throw new System.InvalidOperationException("Effect highlight did not expose the changed preprocessing pixel in After preview.");
+            }
+
+            window.SetEffectHighlightForValidation(false);
+            if (window.IsAfterPreviewUsingEffectHighlightTextureForValidation)
+            {
+                throw new System.InvalidOperationException("Effect highlight stayed active after disabling it.");
+            }
+
+            window.Close();
+        }
+
         private static Texture2D CreatePreviewPickValidationTexture()
         {
             Texture2D texture = new Texture2D(2, 1, TextureFormat.RGBA32, false)
@@ -1483,6 +1512,77 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             });
             texture.Apply();
             return texture;
+        }
+
+        private static Texture2D CreateNoiseEffectValidationTexture()
+        {
+            Color32 fill = new Color32(240, 0, 0, 255);
+            Color32 noise = new Color32(220, 10, 10, 255);
+            Texture2D texture = new Texture2D(3, 3, TextureFormat.RGBA32, false)
+            {
+                name = "NoiseEffectValidation"
+            };
+            texture.SetPixels32(new[]
+            {
+                fill, fill, fill,
+                fill, noise, fill,
+                fill, fill, fill
+            });
+            texture.Apply();
+            return texture;
+        }
+
+        private static PaletteVariantSession CreateNoiseEffectValidationSession()
+        {
+            Color32 fill = new Color32(240, 0, 0, 255);
+            Color32 noise = new Color32(220, 10, 10, 255);
+            return new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 0, quantizeStep = 1 },
+                groupSettings = new GroupSettings
+                {
+                    distanceMode = ColorDistanceMode.Rgb,
+                    preserveAlpha = true
+                },
+                noiseRemovalSettings = new NoiseRemovalSettings
+                {
+                    enabled = true,
+                    maxRegionPixels = 1,
+                    neighborDistanceThreshold = 64f,
+                    sameGroupOnly = true
+                },
+                paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                {
+                    new PaletteColorEntry
+                    {
+                        id = "#F00000",
+                        hex = "#F00000",
+                        color = fill,
+                        pixelCount = 8,
+                        groupId = "group_01"
+                    },
+                    new PaletteColorEntry
+                    {
+                        id = "#DC0A0A",
+                        hex = "#DC0A0A",
+                        color = noise,
+                        pixelCount = 1,
+                        groupId = "group_01"
+                    }
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        displayName = "Group 1",
+                        representativeColor = fill,
+                        targetColor = fill,
+                        blendRatio = 1f,
+                        colorEntryIds = new System.Collections.Generic.List<string> { "#F00000", "#DC0A0A" }
+                    }
+                }
+            };
         }
 
         private static PaletteVariantSession CreatePreviewPickValidationSession()

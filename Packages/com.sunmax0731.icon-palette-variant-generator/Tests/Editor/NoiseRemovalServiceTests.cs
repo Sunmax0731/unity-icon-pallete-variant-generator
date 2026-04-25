@@ -32,6 +32,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
 
             Assert.That(result.FilledRegionCount, Is.EqualTo(1));
             Assert.That(result.FilledPixelCount, Is.EqualTo(1));
+            Assert.That(result.FilledPixelIndices, Is.EquivalentTo(new[] { 4 }));
             Assert.That(pixels[4].r, Is.EqualTo(fill.r));
             Assert.That(pixels[4].g, Is.EqualTo(fill.g));
             Assert.That(pixels[4].b, Is.EqualTo(fill.b));

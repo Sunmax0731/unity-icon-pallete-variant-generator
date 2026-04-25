@@ -65,6 +65,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
             HashSet<int> mainRegion = new HashSet<int>(regions.OrderByDescending(region => region.Count).First());
             HashSet<int> nearMain = ExpandRegion(mainRegion, foreground.Length, width, height, maxDistancePixels);
+            List<int> clearedPixelIndices = new List<int>();
             int clearedRegions = 0;
             int clearedPixels = 0;
 
@@ -86,13 +87,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                     Color32 pixel = pixels[index];
                     pixel.a = 0;
                     pixels[index] = pixel;
+                    clearedPixelIndices.Add(index);
                 }
 
                 clearedRegions++;
                 clearedPixels += region.Count;
             }
 
-            return new EdgeOutsideCleanupResult(clearedRegions, clearedPixels);
+            return new EdgeOutsideCleanupResult(clearedRegions, clearedPixels, clearedPixelIndices);
         }
 
         private bool[] BuildForegroundMask(Color32[] pixels, int width, int height, PaletteVariantSession session, int alphaThreshold)

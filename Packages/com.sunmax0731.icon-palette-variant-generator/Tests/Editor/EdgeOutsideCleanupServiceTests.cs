@@ -37,6 +37,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
 
             Assert.That(result.ClearedRegionCount, Is.EqualTo(1));
             Assert.That(result.ClearedPixelCount, Is.EqualTo(1));
+            Assert.That(result.ClearedPixelIndices, Is.EquivalentTo(new[] { 9 }));
             Assert.That(pixels[9].a, Is.EqualTo(0));
             Assert.That(pixels[12].a, Is.EqualTo(255));
         }

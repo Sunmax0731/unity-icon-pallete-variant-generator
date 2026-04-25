@@ -43,6 +43,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
         private static readonly Color OverlayBorderColor = new Color(0.1f, 0.65f, 1f, 0.85f);
+        private static readonly Color NoiseEffectHighlightColor = new Color(1f, 0.76f, 0.1f, 0.55f);
+        private static readonly Color EdgeEffectHighlightColor = new Color(1f, 0.2f, 0.16f, 0.62f);
         private static readonly Color BadgeNeutralColor = new Color(0.32f, 0.36f, 0.42f, 1f);
         private static readonly Color BadgeActiveColor = new Color(0.12f, 0.5f, 0.27f, 1f);
         private static readonly Color BadgeWarningColor = new Color(0.74f, 0.42f, 0.08f, 1f);
@@ -97,6 +99,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private ParameterHelpWindow parameterHelpWindow;
         private bool autoPreviewEnabled = true;
         private bool selectionHighlightEnabled = true;
+        private bool effectHighlightEnabled = true;
         private bool showExportOptions;
         private bool autoPreviewPending;
         private double autoPreviewScheduledTime;
@@ -128,6 +131,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement colorRuleContainer;
         private VisualElement selectedColorInfoContainer;
         private bool isRefreshingUiToolkit;
+        private List<int> lastNoiseEffectHighlightIndices = new List<int>();
+        private List<int> lastEdgeEffectHighlightIndices = new List<int>();
 
         [MenuItem("Tools/Palette Variant Generator/開く")]
         public static void Open()
@@ -463,6 +468,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 selectionHighlightEnabled = value;
                 EditorPrefs.SetBool(SelectionHighlightPrefsKey, selectionHighlightEnabled);
                 InvalidateSelectionOverlay();
+                RefreshUiToolkitContent();
+            }));
+            section.Add(CreateToggle("effect-highlight-toggle", T("effectHighlight", "Effect Highlight"), effectHighlightEnabled, value =>
+            {
+                effectHighlightEnabled = value;
+                DestroyUiToolkitHighlightTextures();
                 RefreshUiToolkitContent();
             }));
 
@@ -1072,7 +1083,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             HashSet<uint> selectedKeys = GetSelectedColorKeys();
-            bool applyHighlight = selectionHighlightEnabled && selectedKeys.Count > 0;
+            HashSet<int> noiseEffectIndices = GetNoiseEffectHighlightIndices();
+            HashSet<int> edgeEffectIndices = GetEdgeEffectHighlightIndices();
+            bool applySelectionHighlight = selectionHighlightEnabled && selectedKeys.Count > 0;
+            bool applyEffectHighlight = effectHighlightEnabled
+                && slot != HighlightPreviewSlot.Before
+                && (noiseEffectIndices.Count > 0 || edgeEffectIndices.Count > 0);
+            bool applyHighlight = applySelectionHighlight || applyEffectHighlight;
             bool applyZoom = !Mathf.Approximately(Mathf.Clamp(previewZoom, MinPreviewZoom, MaxPreviewZoom), MinPreviewZoom)
                 || previewPan != Vector2.zero;
             if (!applyHighlight && !applyZoom)
@@ -1080,7 +1097,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return baseTexture;
             }
 
-            string cacheKey = BuildDisplayPreviewCacheKey(baseTexture, slot, applyHighlight, applyZoom, selectedKeys);
+            string cacheKey = BuildDisplayPreviewCacheKey(baseTexture, slot, applyHighlight, applyZoom, selectedKeys, noiseEffectIndices, edgeEffectIndices);
             Texture2D cached = GetCachedDisplayPreviewTexture(slot, applyHighlight, cacheKey);
             if (cached != null)
             {
@@ -1113,24 +1130,32 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     int outputIndex = (y * width) + x;
                     outputPixels[outputIndex] = basePixels[sourceIndex];
 
-                    if (!applyHighlight)
+                    if (applySelectionHighlight)
+                    {
+                        Color32 sourcePixel = sourcePixels[sourceIndex];
+                        if (sourcePixel.a > alphaThreshold)
+                        {
+                            uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
+                            if (selectedKeys.Contains(key))
+                            {
+                                outputPixels[outputIndex] = BlendHighlight(outputPixels[outputIndex], OverlayColor);
+                            }
+                        }
+                    }
+
+                    if (!applyEffectHighlight)
                     {
                         continue;
                     }
 
-                    Color32 sourcePixel = sourcePixels[sourceIndex];
-                    if (sourcePixel.a <= alphaThreshold)
+                    if (edgeEffectIndices.Contains(sourceIndex))
                     {
-                        continue;
+                        outputPixels[outputIndex] = BlendHighlight(outputPixels[outputIndex], EdgeEffectHighlightColor);
                     }
-
-                    uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
-                    if (!selectedKeys.Contains(key))
+                    else if (noiseEffectIndices.Contains(sourceIndex))
                     {
-                        continue;
+                        outputPixels[outputIndex] = BlendHighlight(outputPixels[outputIndex], NoiseEffectHighlightColor);
                     }
-
-                    outputPixels[outputIndex] = BlendHighlight(outputPixels[outputIndex], OverlayColor);
                 }
             }
 
@@ -1147,7 +1172,24 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return texture;
         }
 
-        private string BuildDisplayPreviewCacheKey(Texture2D baseTexture, HighlightPreviewSlot slot, bool highlighted, bool zoomed, HashSet<uint> selectedKeys)
+        private HashSet<int> GetNoiseEffectHighlightIndices()
+        {
+            return new HashSet<int>(lastNoiseEffectHighlightIndices ?? new List<int>());
+        }
+
+        private HashSet<int> GetEdgeEffectHighlightIndices()
+        {
+            return new HashSet<int>(lastEdgeEffectHighlightIndices ?? new List<int>());
+        }
+
+        private string BuildDisplayPreviewCacheKey(
+            Texture2D baseTexture,
+            HighlightPreviewSlot slot,
+            bool highlighted,
+            bool zoomed,
+            HashSet<uint> selectedKeys,
+            HashSet<int> noiseEffectIndices,
+            HashSet<int> edgeEffectIndices)
         {
             return string.Join(
                 "|",
@@ -1163,8 +1205,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 selectionHighlightEnabled.ToString(),
                 selectedGroupId,
                 selectedColorEntryId,
+                effectHighlightEnabled.ToString(),
                 session.analyzeSettings.alphaThreshold.ToString(),
                 session.analyzeSettings.quantizeStep.ToString(),
+                string.Join(",", noiseEffectIndices.OrderBy(index => index)),
+                string.Join(",", edgeEffectIndices.OrderBy(index => index)),
                 string.Join(",", selectedKeys.OrderBy(key => key)));
         }
 
@@ -2511,6 +2556,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             afterPreview = colorReplacementService.Apply(readableSourceImage, session);
             EdgeOutsideCleanupResult edgeResult = colorReplacementService.LastEdgeOutsideCleanupResult;
             NoiseRemovalResult noiseResult = colorReplacementService.LastNoiseRemovalResult;
+            lastEdgeEffectHighlightIndices = edgeResult.ClearedPixelIndices?.ToList() ?? new List<int>();
+            lastNoiseEffectHighlightIndices = noiseResult.FilledPixelIndices?.ToList() ?? new List<int>();
             List<string> preprocessingReports = new List<string>();
             if (session.edgeOutsideCleanupSettings?.enabled == true)
             {
@@ -3308,6 +3355,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal bool IsBeforePreviewUsingZoomTextureForValidation =>
             zoomedBeforePreviewTexture != null && beforePreviewImage != null && beforePreviewImage.image == zoomedBeforePreviewTexture;
 
+        internal bool IsAfterPreviewUsingEffectHighlightTextureForValidation =>
+            effectHighlightEnabled
+            && highlightedAfterPreviewTexture != null
+            && afterPreviewImage != null
+            && afterPreviewImage.image == highlightedAfterPreviewTexture;
+
+        internal int EffectHighlightPixelCountForValidation =>
+            (lastNoiseEffectHighlightIndices?.Count ?? 0) + (lastEdgeEffectHighlightIndices?.Count ?? 0);
+
         internal bool IsPreviewRefreshQueuedForValidation => previewRefreshQueued;
 
         internal bool IsPreviewRefreshProcessingForValidation => previewRefreshProcessing;
@@ -3381,6 +3437,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             selectionHighlightEnabled = enabled;
             InvalidateSelectionOverlay();
+            RefreshUiToolkitContent();
+        }
+
+        internal void SetEffectHighlightForValidation(bool enabled)
+        {
+            effectHighlightEnabled = enabled;
+            DestroyUiToolkitHighlightTextures();
+            RefreshUiToolkitContent();
+        }
+
+        internal void RefreshAfterPreviewForValidation()
+        {
+            RefreshAfterPreview();
             RefreshUiToolkitContent();
         }
 
@@ -3816,6 +3885,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void DestroyAfterPreview()
         {
+            lastNoiseEffectHighlightIndices.Clear();
+            lastEdgeEffectHighlightIndices.Clear();
             if (afterPreview == null)
             {
                 return;

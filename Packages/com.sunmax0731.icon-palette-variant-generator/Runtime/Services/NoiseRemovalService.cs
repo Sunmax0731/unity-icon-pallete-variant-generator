@@ -76,6 +76,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             bool[] visited = new bool[pixels.Length];
             int[] queue = new int[Mathf.Min(pixels.Length, maxRegionPixels + 1)];
             List<int> region = new List<int>(maxRegionPixels + 1);
+            List<int> filledPixelIndices = new List<int>();
             int filledRegionCount = 0;
             int filledPixelCount = 0;
 
@@ -100,13 +101,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 foreach (int regionIndex in region)
                 {
                     pixels[regionIndex] = PreserveAlpha(fillColor, pixels[regionIndex]);
+                    filledPixelIndices.Add(regionIndex);
                 }
 
                 filledRegionCount++;
                 filledPixelCount += region.Count;
             }
 
-            return new NoiseRemovalResult(filledRegionCount, filledPixelCount);
+            return new NoiseRemovalResult(filledRegionCount, filledPixelCount, filledPixelIndices);
         }
 
         private PixelInfo[] BuildPixelInfos(
