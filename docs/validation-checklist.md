@@ -65,6 +65,8 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | UI Toolkit 本番導入 | PASS | issue 25 production UI Toolkit validation で、主要セクションと ObjectField / ColorField / ScrollView が本番 window に存在することを検証。 |
 | UI Toolkit プレビューメニュー非表示 | PASS | issue 25 preview menu hidden validation で、評価用 preview window が通常メニューに表示されないことを検証。 |
 | ノイズ削除 | PASS | issue 26 noise removal validation で、小さな色領域を同一グループ内の近傍色で補正できることを検証。 |
+| エッジ外側クリーンアップ | PASS | issue 27 edge outside cleanup validation で、本体外側近傍の小領域を透明化できることを検証。 |
+| Export 詳細設定の必要時表示 | PASS | issue 28 export UI disclosure validation で、書き出し関連の詳細設定が初期状態で折りたたまれることを検証。 |
 | Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
 | パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |

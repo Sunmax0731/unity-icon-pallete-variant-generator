@@ -45,6 +45,14 @@
         "preserveAlpha": { "type": "boolean" }
       }
     },
+    "edgeOutsideCleanupSettings": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "maxDistancePixels": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "maxRegionPixels": { "type": "integer", "minimum": 1, "maximum": 4096 }
+      }
+    },
     "noiseRemovalSettings": {
       "type": "object",
       "properties": {

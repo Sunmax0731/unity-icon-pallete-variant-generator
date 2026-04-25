@@ -13,6 +13,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
         public string sourceImageAssetPath = string.Empty;
         public AnalyzeSettings analyzeSettings = new AnalyzeSettings();
         public GroupSettings groupSettings = new GroupSettings();
+        public EdgeOutsideCleanupSettings edgeOutsideCleanupSettings = new EdgeOutsideCleanupSettings();
         public NoiseRemovalSettings noiseRemovalSettings = new NoiseRemovalSettings();
         public ExportSettings exportSettings = new ExportSettings();
         public List<PaletteColorEntry> paletteColors = new List<PaletteColorEntry>();

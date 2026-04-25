@@ -52,6 +52,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue25PreviewMenuHidden();
             ValidateIssue25ProductionUiToolkitMainWindow();
             ValidateIssue26NoiseRemoval();
+            ValidateIssue27EdgeOutsideCleanup();
+            ValidateIssue28ExportUiDisclosure();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -78,6 +80,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS");
             Debug.Log("ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS");
             Debug.Log("ISSUE26_NOISE_REMOVAL_VALIDATION=PASS");
+            Debug.Log("ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS");
+            Debug.Log("ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1071,6 +1075,56 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("Noise removal did not fill the isolated region before replacement.");
             }
+        }
+
+        private static void ValidateIssue27EdgeOutsideCleanup()
+        {
+            Color32 body = new Color32(255, 0, 0, 255);
+            Color32 outside = new Color32(0, 255, 0, 255);
+            Color32 clear = new Color32(0, 0, 0, 0);
+            Color32[] pixels =
+            {
+                clear, clear, clear, clear, clear,
+                clear, body, body, clear, outside,
+                clear, body, body, clear, clear,
+                clear, body, body, clear, clear,
+                clear, clear, clear, clear, clear
+            };
+
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 0 },
+                edgeOutsideCleanupSettings = new EdgeOutsideCleanupSettings
+                {
+                    enabled = true,
+                    maxDistancePixels = 2,
+                    maxRegionPixels = 4
+                }
+            };
+
+            EdgeOutsideCleanupResult result = new EdgeOutsideCleanupService().Apply(pixels, 5, 5, session);
+            if (result.ClearedPixelCount != 1 || pixels[9].a != 0)
+            {
+                throw new System.InvalidOperationException("Edge outside cleanup validation failed.");
+            }
+        }
+
+        private static void ValidateIssue28ExportUiDisclosure()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for export UI validation.");
+            }
+
+            VisualElement exportDetails = window.rootVisualElement.Q<VisualElement>("export-details");
+            if (exportDetails == null || exportDetails.style.display.value != DisplayStyle.None)
+            {
+                throw new System.InvalidOperationException("Export details should be available but hidden by default.");
+            }
+
+            window.Close();
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

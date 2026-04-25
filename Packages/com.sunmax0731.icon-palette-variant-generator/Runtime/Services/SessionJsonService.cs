@@ -75,6 +75,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
             session.analyzeSettings ??= new AnalyzeSettings();
             session.groupSettings ??= new GroupSettings();
+            session.edgeOutsideCleanupSettings ??= new EdgeOutsideCleanupSettings();
             session.noiseRemovalSettings ??= new NoiseRemovalSettings();
             session.exportSettings ??= new ExportSettings();
             session.paletteColors ??= new List<PaletteColorEntry>();

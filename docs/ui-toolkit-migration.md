@@ -4,7 +4,8 @@
 
 本番メインウィンドウは UI Toolkit root + ScrollView の構成へ移行した。
 
-- Toolbar、Source、Analyze、Group、Noise Removal、Preview、Palette、Variations、Replacement Rules、Color Rules、Export、Preset、Batch Export の主要セクションは UI Toolkit の VisualElement で構成する。
+- Toolbar、Source、Analyze、Group、Edge Outside Cleanup、Noise Removal、Preview、Palette、Variations、Replacement Rules、Color Rules、Export、Preset、Batch Export の主要セクションは UI Toolkit の VisualElement で構成する。
+- Export Settings と Folder Batch Export は常時表示せず、Export 操作時または `書き出し設定を表示` から開く。
 - Analyze、Auto Group、Preview、Export、Export All、Session、Preset、Batch Export は既存サービス処理を UI Toolkit 側の操作から呼び出す。
 - 旧 IMGUI 描画メソッドは互換・参照用に残すが、通常の本番 Window には `IMGUIContainer` を配置しない。
 - UI Toolkit preview window は評価用コードとして残すが、通常メニューには表示しない。
@@ -22,7 +23,7 @@
 - `Tools > Palette Variant Generator > 開く` からの起動
 - Source Image の選択と Analyze
 - Auto Group と近傍色しきい値の調整
-- ノイズ削除の有効化、最大ノイズサイズ、近傍判定しきい値、同一グループ内のみの調整
+- エッジ外側クリーンアップとノイズ削除の有効化、しきい値、対象サイズの調整
 - Preview、Auto Preview、Zoom、Split compare
 - Palette と Group のスクロール表示、選択
 - Variations の追加、複製、削除、Export 対象切り替え

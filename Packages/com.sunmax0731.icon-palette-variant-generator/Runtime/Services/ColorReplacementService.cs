@@ -12,24 +12,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
     public sealed class ColorReplacementService
     {
         private readonly ColorQuantizationService quantizationService;
+        private readonly EdgeOutsideCleanupService edgeOutsideCleanupService;
         private readonly NoiseRemovalService noiseRemovalService;
 
         public ColorReplacementService()
-            : this(new ColorQuantizationService(), new NoiseRemovalService())
+            : this(new ColorQuantizationService(), new EdgeOutsideCleanupService(), new NoiseRemovalService())
         {
         }
 
         public ColorReplacementService(ColorQuantizationService quantizationService)
-            : this(quantizationService, new NoiseRemovalService())
+            : this(quantizationService, new EdgeOutsideCleanupService(), new NoiseRemovalService())
         {
         }
 
-        public ColorReplacementService(ColorQuantizationService quantizationService, NoiseRemovalService noiseRemovalService)
+        public ColorReplacementService(ColorQuantizationService quantizationService, EdgeOutsideCleanupService edgeOutsideCleanupService, NoiseRemovalService noiseRemovalService)
         {
             this.quantizationService = quantizationService;
+            this.edgeOutsideCleanupService = edgeOutsideCleanupService;
             this.noiseRemovalService = noiseRemovalService;
         }
 
+        public EdgeOutsideCleanupResult LastEdgeOutsideCleanupResult { get; private set; }
         public NoiseRemovalResult LastNoiseRemovalResult { get; private set; }
 
         public Texture2D Apply(Texture2D source, PaletteVariantSession session)
@@ -54,6 +57,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             };
 
             Color32[] sourcePixels = source.GetPixels32();
+            LastEdgeOutsideCleanupResult = edgeOutsideCleanupService.Apply(sourcePixels, source.width, source.height, session);
             LastNoiseRemovalResult = noiseRemovalService.Apply(sourcePixels, source.width, source.height, session);
             Color32[] outputPixels = new Color32[sourcePixels.Length];
             int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);

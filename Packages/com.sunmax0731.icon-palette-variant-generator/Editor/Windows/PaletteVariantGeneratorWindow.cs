@@ -78,6 +78,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private PaletteVariantDisplayLanguage displayLanguage = PaletteVariantDisplayLanguage.English;
         private ParameterHelpWindow parameterHelpWindow;
         private bool autoPreviewEnabled = true;
+        private bool showExportOptions;
         private bool autoPreviewPending;
         private double autoPreviewScheduledTime;
         private PreviewCompareMode previewCompareMode = PreviewCompareMode.SideBySide;
@@ -191,7 +192,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             leftColumn.Add(BuildAnalyzeSection());
             leftColumn.Add(BuildGroupSection());
             leftColumn.Add(BuildExportSection());
-            leftColumn.Add(BuildBatchSection());
             leftColumn.Add(BuildPresetSection());
 
             VisualElement centerColumn = CreateUiColumn("preview-column", 420f, 2f);
@@ -237,8 +237,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             toolbar.Add(CreateToolbarButton(T("analyze", "Analyze"), () => AnalyzeSourceImage(), () => sourceImage != null));
             toolbar.Add(CreateToolbarButton(T("autoGroup", "Auto Group"), () => AutoGroupPalette(), () => session.paletteColors.Count > 0));
             toolbar.Add(CreateToolbarButton(T("preview", "Preview"), () => RefreshAfterPreview(), () => readableSourceImage != null && session.colorGroups.Count > 0));
-            toolbar.Add(CreateToolbarButton(T("export", "Export"), () => ExportPreview(), () => afterPreview != null));
-            toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => ExportAllVariations(), () => readableSourceImage != null && session.variations.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("export", "Export"), () => { showExportOptions = true; ExportPreview(); }, () => afterPreview != null));
+            toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => { showExportOptions = true; ExportAllVariations(); }, () => readableSourceImage != null && session.variations.Count > 0));
             toolbar.Add(CreateToolbarButton(T("saveSession", "Save Session"), () => SaveSession(), () => true));
             toolbar.Add(CreateToolbarButton(T("loadSession", "Load Session"), () => LoadSession(), () => true));
             toolbar.Add(CreateToolbarButton(T("help", "Help"), () => OpenHelpWindow(), () => true));
@@ -321,6 +321,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             section.Add(CreateToggle("preserve-dark-outline-toggle", T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline, value => session.groupSettings.preserveDarkOutline = value));
             section.Add(CreateToggle("preserve-alpha-toggle", T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha, value => session.groupSettings.preserveAlpha = value));
 
+            section.Add(CreateUiSubHeader(T("edgeOutsideCleanup", "Edge Outside Cleanup")));
+            session.edgeOutsideCleanupSettings ??= new EdgeOutsideCleanupSettings();
+            section.Add(CreateToggle("edge-cleanup-toggle", T("edgeCleanupEnabled", "Enable Edge Cleanup"), session.edgeOutsideCleanupSettings.enabled, value => session.edgeOutsideCleanupSettings.enabled = value));
+            section.Add(CreateSliderInt("edge-cleanup-distance-slider", T("edgeCleanupDistance", "Outside Distance"), session.edgeOutsideCleanupSettings.maxDistancePixels, 1, 12, value => session.edgeOutsideCleanupSettings.maxDistancePixels = value));
+            section.Add(CreateSliderInt("edge-cleanup-region-slider", T("edgeCleanupMaxRegion", "Max Outside Region"), session.edgeOutsideCleanupSettings.maxRegionPixels, 1, 128, value => session.edgeOutsideCleanupSettings.maxRegionPixels = value));
+
             section.Add(CreateUiSubHeader(T("noiseRemoval", "Noise Removal")));
             session.noiseRemovalSettings ??= new NoiseRemovalSettings();
             section.Add(CreateToggle("noise-removal-toggle", T("noiseRemovalEnabled", "Enable Noise Removal"), session.noiseRemovalSettings.enabled, value => session.noiseRemovalSettings.enabled = value));
@@ -333,15 +339,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement BuildExportSection()
         {
             VisualElement section = CreateUiSection("export-section", T("exportSettings", "Export Settings"));
+            Button toggle = new Button(() =>
+            {
+                showExportOptions = !showExportOptions;
+                RefreshUiToolkitContent();
+            })
+            {
+                text = showExportOptions ? T("hideExportOptions", "Hide Export Options") : T("showExportOptions", "Show Export Options")
+            };
+            section.Add(toggle);
+
+            VisualElement details = new VisualElement { name = "export-details" };
+            details.style.display = showExportOptions ? DisplayStyle.Flex : DisplayStyle.None;
             VisualElement folderRow = new VisualElement { name = "export-folder-row" };
             folderRow.style.flexDirection = FlexDirection.Row;
             TextField outputField = CreateTextField("export-folder-field", T("outputFolder", "Output Folder"), session.exportSettings.outputFolder, value => session.exportSettings.outputFolder = value);
             outputField.style.flexGrow = 1f;
             folderRow.Add(outputField);
             folderRow.Add(new Button(() => RunUiToolkitAction(SelectOutputFolder)) { text = "..." });
-            section.Add(folderRow);
-            section.Add(CreateTextField("file-prefix-field", T("filePrefix", "File Prefix"), session.exportSettings.filePrefix, value => session.exportSettings.filePrefix = value));
-            section.Add(CreateTextField("file-suffix-field", T("fileSuffix", "File Suffix"), session.exportSettings.fileSuffix, value =>
+            details.Add(folderRow);
+            details.Add(CreateTextField("file-prefix-field", T("filePrefix", "File Prefix"), session.exportSettings.filePrefix, value => session.exportSettings.filePrefix = value));
+            details.Add(CreateTextField("file-suffix-field", T("fileSuffix", "File Suffix"), session.exportSettings.fileSuffix, value =>
             {
                 session.exportSettings.fileSuffix = value;
                 IconVariation activeVariation = variationService.GetActiveVariation(session);
@@ -350,8 +368,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     activeVariation.fileSuffix = value;
                 }
             }));
-            section.Add(CreateEnumField("conflict-mode-popup", T("conflictMode", "Conflict Mode"), session.exportSettings.conflictMode, value => session.exportSettings.conflictMode = (ExportConflictMode)value));
-            section.Add(CreateToggle("refresh-asset-database-toggle", T("refreshAssetDatabase", "Refresh AssetDatabase"), session.exportSettings.refreshAssetDatabase, value => session.exportSettings.refreshAssetDatabase = value));
+            details.Add(CreateEnumField("conflict-mode-popup", T("conflictMode", "Conflict Mode"), session.exportSettings.conflictMode, value => session.exportSettings.conflictMode = (ExportConflictMode)value));
+            details.Add(CreateToggle("refresh-asset-database-toggle", T("refreshAssetDatabase", "Refresh AssetDatabase"), session.exportSettings.refreshAssetDatabase, value => session.exportSettings.refreshAssetDatabase = value));
+            details.Add(BuildBatchSection());
+            section.Add(details);
             return section;
         }
 
@@ -1835,9 +1855,21 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyAfterPreview();
             afterPreview = colorReplacementService.Apply(readableSourceImage, session);
+            EdgeOutsideCleanupResult edgeResult = colorReplacementService.LastEdgeOutsideCleanupResult;
             NoiseRemovalResult noiseResult = colorReplacementService.LastNoiseRemovalResult;
-            reportMessage = noiseResult.FilledRegionCount > 0
-                ? $"After preview updated. Noise Removal filled {noiseResult.FilledRegionCount} region(s), {noiseResult.FilledPixelCount} pixel(s)."
+            List<string> preprocessingReports = new List<string>();
+            if (edgeResult.ClearedRegionCount > 0)
+            {
+                preprocessingReports.Add($"Edge Cleanup cleared {edgeResult.ClearedRegionCount} region(s), {edgeResult.ClearedPixelCount} pixel(s)");
+            }
+
+            if (noiseResult.FilledRegionCount > 0)
+            {
+                preprocessingReports.Add($"Noise Removal filled {noiseResult.FilledRegionCount} region(s), {noiseResult.FilledPixelCount} pixel(s)");
+            }
+
+            reportMessage = preprocessingReports.Count > 0
+                ? "After preview updated. " + string.Join(". ", preprocessingReports) + "."
                 : "After preview updated.";
             reportType = MessageType.Info;
         }
@@ -2793,6 +2825,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "maxColorDistance" => "近傍色しきい値",
                 "preserveDarkOutline" => "暗色輪郭を保持",
                 "preserveAlpha" => "アルファを保持",
+                "edgeOutsideCleanup" => "エッジ外側クリーンアップ",
+                "edgeCleanupEnabled" => "エッジ外側クリーンアップを有効化",
+                "edgeCleanupDistance" => "外側距離",
+                "edgeCleanupMaxRegion" => "最大外側領域",
                 "noiseRemoval" => "ノイズ削除",
                 "noiseRemovalEnabled" => "ノイズ削除を有効化",
                 "maxNoiseRegionPixels" => "最大ノイズサイズ",
@@ -2800,6 +2836,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "sameGroupOnly" => "同一グループ内のみ",
                 "noiseRemovalHint" => "同一グループ内に囲まれた小さな色の塊を、周囲の近傍色で埋めます。",
                 "exportSettings" => "書き出し設定",
+                "showExportOptions" => "書き出し設定を表示",
+                "hideExportOptions" => "書き出し設定を隠す",
                 "outputFolder" => "出力フォルダ",
                 "filePrefix" => "ファイル接頭辞",
                 "fileSuffix" => "ファイル接尾辞",

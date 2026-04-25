@@ -36,6 +36,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             {
                 sourceImageAssetPath = "Assets/Icons/source.png",
                 analyzeSettings = new AnalyzeSettings { alphaThreshold = 16, quantizeStep = 8 },
+                edgeOutsideCleanupSettings = new EdgeOutsideCleanupSettings
+                {
+                    enabled = true,
+                    maxDistancePixels = 2,
+                    maxRegionPixels = 9
+                },
                 noiseRemovalSettings = new NoiseRemovalSettings
                 {
                     enabled = true,
@@ -90,6 +96,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
 
             Assert.That(result.Success, Is.True);
             Assert.That(result.Session.analyzeSettings.alphaThreshold, Is.EqualTo(16));
+            Assert.That(result.Session.edgeOutsideCleanupSettings.enabled, Is.True);
+            Assert.That(result.Session.edgeOutsideCleanupSettings.maxDistancePixels, Is.EqualTo(2));
+            Assert.That(result.Session.edgeOutsideCleanupSettings.maxRegionPixels, Is.EqualTo(9));
             Assert.That(result.Session.noiseRemovalSettings.enabled, Is.True);
             Assert.That(result.Session.noiseRemovalSettings.maxRegionPixels, Is.EqualTo(3));
             Assert.That(result.Session.noiseRemovalSettings.neighborDistanceThreshold, Is.EqualTo(24f));
