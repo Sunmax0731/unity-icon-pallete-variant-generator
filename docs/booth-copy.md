@@ -6,13 +6,13 @@ Unity Icon Palette Variant Generator
 
 ## 短い説明
 
-Unity Editor 上でアイコン画像の色を抽出し、複数の色違い PNG を非破壊で生成するエディタ拡張です。
+Unity Editor 上でアイコン画像の色を抽出し、複数の色違い PNG を元画像非破壊で生成するエディタ拡張です。
 
 ## 商品説明
 
-`Unity Icon Palette Variant Generator` は、1 枚の PNG / Texture2D からパレット色を抽出し、近い色をグループ化した上で、グループ単位または色単位の置換ルールを使って色違いアイコンを作成する Unity Editor 拡張です。
+`Unity Icon Palette Variant Generator` は、1枚の PNG / Texture2D からパレット色を抽出し、近い色をグループ化した上で、グループ単位または色単位の置換ルールを使って色違いアイコンを作成する Unity Editor 拡張です。
 
-鉱石、薬草、料理、装備、宝石、素材アイコンなど、同じ形状で色だけ異なるアイコンを量産したいときに使えます。
+鉱石、薬草、料理、装備、宝箱、素材アイコンなど、同じ形状で色だけ異なるアイコンを量産したいときに使えます。
 
 ## 主な機能
 
@@ -24,7 +24,7 @@ Unity Editor 上でアイコン画像の色を抽出し、複数の色違い PNG
 - 複数バリエーション管理
 - 複数 PNG の一括出力
 - セッション JSON 保存 / 読み込み
-- Help 表示と言語モード切り替え
+- Help 表示、言語設定、Auto Preview
 - 検証用サンプル PNG 付属
 
 ## 動作確認
@@ -42,7 +42,7 @@ Unity Editor 上でアイコン画像の色を抽出し、複数の色違い PNG
 
 - UPM package
 - サンプル PNG
-- Manual
-- Terms
+- マニュアル
+- 利用条件
 - README
 - CHANGELOG

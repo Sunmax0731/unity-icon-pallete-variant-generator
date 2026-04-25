@@ -1,30 +1,30 @@
-# Release Notes - v1.0.0
+# リリースノート - v1.0.0
 
-## Summary
+## 概要
 
-Initial release of Unity Icon Palette Variant Generator.
+`Unity Icon Palette Variant Generator` の初回リリースです。
 
-This release provides a Unity Editor workflow for extracting palette colors from a source icon, grouping nearby colors, editing replacement rules, previewing the result, and exporting one or more PNG color variants.
+このリリースでは、元アイコンからパレット色を抽出し、近傍色をグルーピングし、置換ルールを編集してプレビュー確認し、1つ以上の PNG 色違いバリエーションを書き出す Unity Editor ワークフローを提供します。
 
-## Included
+## 同梱物
 
 - UPM package: `com.sunmax0731.icon-palette-variant-generator`
-- Sample icons under `Samples~/SampleIcons`
-- Manual: `docs/manual.md`
-- Terms: `docs/terms.md`
-- Changelog: `CHANGELOG.md`
-- Validation checklist: `docs/validation-checklist.md`
+- `Samples~/SampleIcons` 配下のサンプルアイコン
+- マニュアル: `docs/manual.md`
+- 利用条件: `docs/terms.md`
+- 変更履歴: `CHANGELOG.md`
+- 検証チェックリスト: `docs/validation-checklist.md`
 
-## Validation
+## 検証
 
 - Unity: `6000.4.0f1`
-- Command:
+- コマンド:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-Markers:
+marker:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
@@ -36,11 +36,13 @@ ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
 ISSUE8_SAMPLE_QA_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
+ISSUE12_VARIATION_UX_VALIDATION=PASS
+ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
 ```
 
-## Known Limitations
+## 既知の制限
 
-- UI is IMGUI-based.
-- Color distance is RGB-based.
-- Direct SpriteAtlas editing is not included.
-- Folder-wide batch processing is not included.
+- UI は IMGUI ベースです。
+- 色距離は RGB ベースです。
+- SpriteAtlas の直接編集は含みません。
+- フォルダ単位の一括処理は含みません。

@@ -1,70 +1,70 @@
-# Validation Checklist
+# 検証チェックリスト
 
-## Run
+## 実行条件
 
-- Date: 2026-04-25
+- 日付: 2026-04-25
 - Unity: 6000.4.0f1
 - Repository: `unity-icon-pallete-variant-generator`
-- Validation command:
+- 検証コマンド:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-## Sample Assets
+## サンプルアセット
 
-Samples are stored under:
+サンプルは以下に格納しています。
 
 ```text
 Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 ```
 
-| Sample | Purpose | Result |
+| サンプル | 目的 | 結果 |
 |---|---|---|
-| `transparent_64.png` | 64x64 transparent PNG | PASS |
-| `transparent_128.png` | 128x128 transparent PNG | PASS |
-| `antialias_128.png` | anti-aliased transparent PNG | PASS |
-| `pixel_art_64.png` | pixel-art transparent PNG | PASS |
+| `transparent_64.png` | 64x64 透明 PNG | PASS |
+| `transparent_128.png` | 128x128 透明 PNG | PASS |
+| `antialias_128.png` | アンチエイリアスあり透明 PNG | PASS |
+| `pixel_art_64.png` | ドット絵風透明 PNG | PASS |
 
-## Automated Validation Result
+## 自動検証結果
 
-| Check | Result |
+| 確認項目 | 結果 |
 |---|---|
-| Unity compiles without errors | PASS |
-| EditorWindow opens from validation entry point | PASS |
-| Palette extraction works on generated samples | PASS |
-| Auto grouping service is covered | PASS |
-| Group / per-color / hybrid replacement is covered | PASS |
-| PNG export is covered | PASS |
-| Session JSON save / load is covered | PASS |
-| Variations and batch export snapshots are covered | PASS |
-| Source sample PNG bytes are unchanged after validation | PASS |
+| Unity がコンパイルエラーなしで起動する | PASS |
+| validation entry point から EditorWindow を開ける | PASS |
+| 生成サンプルでパレット抽出できる | PASS |
+| 自動グルーピング service が検証されている | PASS |
+| グループ単位 / 色単位 / Hybrid 置換が検証されている | PASS |
+| PNG 出力が検証されている | PASS |
+| セッション JSON の保存 / 読み込みが検証されている | PASS |
+| バリエーションと一括出力 snapshot が検証されている | PASS |
+| サンプル PNG のバイト列が validation 後も変わらない | PASS |
 
-## Manual QA Items
+## 手動 QA 項目
 
-| Workflow | Result | Notes |
+| ワークフロー | 結果 | 備考 |
 |---|---|---|
-| Open `Tools > Palette Variant Generator > 開く` | PASS | Covered by headless EditorWindow creation; visual check recommended before release. |
-| Analyze sample PNG | PASS | Covered by sample extraction validation. |
-| Auto Group | PASS | Covered by grouping validation. |
-| Preview replacement | PASS | Covered by replacement validation. |
-| Export PNG | PASS | Covered by PNG export validation. |
-| Save Session / Load Session | PASS | Covered by JSON validation. |
-| Language menu / Help window | PASS | Covered by compile and window code path; visual check recommended before release. |
-| Palette scroll | PASS | Implemented in UI; visual check recommended before release. |
-| Variation Add / Duplicate / Remove | PASS | Covered by variation service validation. |
-| Variation Active / Export state display | PASS | Covered by issue 12 variation UX validation; visual check recommended. |
-| Auto Preview debounce | PASS | Covered by issue 13 debounce validation; visual check recommended. |
-| Export All | PASS | Covered by variation snapshot and export service validation. |
+| `Tools > Palette Variant Generator > 開く` から開く | PASS | headless で EditorWindow 作成を検証。リリース前に目視確認を推奨。 |
+| サンプル PNG を Analyze する | PASS | サンプル抽出 validation で検証。 |
+| Auto Group | PASS | グルーピング validation で検証。 |
+| Preview replacement | PASS | 置換 validation で検証。 |
+| Export PNG | PASS | PNG export validation で検証。 |
+| Save Session / Load Session | PASS | JSON validation で検証。 |
+| Language menu / Help window | PASS | compile と window code path で検証。リリース前に目視確認を推奨。 |
+| Palette scroll | PASS | UI 実装済み。リリース前に目視確認を推奨。 |
+| Variation Add / Duplicate / Remove | PASS | variation service validation で検証。 |
+| Variation Active / Export state display | PASS | issue 12 variation UX validation で検証。目視確認を推奨。 |
+| Auto Preview debounce | PASS | issue 13 debounce validation で検証。目視確認を推奨。 |
+| Export All | PASS | variation snapshot と export service validation で検証。 |
 
-## Release Blockers
+## リリース blocker
 
-- No code blocker identified by the automated validation gate.
-- Remaining release work is tracked by GitHub Issue `#9`.
+- 自動検証ゲートで検出された code blocker はありません。
+- 残りの改善作業は GitHub Issue で管理します。
 
-## Known Limitations
+## 既知の制限
 
-- UI is IMGUI-based for the first release.
-- Color distance is RGB-based; Lab distance is reserved for future refinement.
-- Direct SpriteAtlas editing is out of scope for v1.0.0.
-- Folder-wide batch processing is out of scope for v1.0.0.
+- 初回リリースの UI は IMGUI ベースです。
+- 色距離は RGB ベースです。Lab 色距離は今後の改善候補です。
+- SpriteAtlas の直接編集は v1.0.0 の対象外です。
+- フォルダ単位の一括処理は v1.0.0 の対象外です。

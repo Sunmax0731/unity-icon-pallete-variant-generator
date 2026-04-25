@@ -1,47 +1,47 @@
 # Unity Icon Palette Variant Generator
 
-Unity Editor extension for generating palette-based color variants from icon images.
+アイコン画像からパレット色を抽出し、近傍色グループと置換ルールを使って色違い PNG を生成する Unity Editor 拡張です。
 
-## Unity Version
+## Unity バージョン
 
 - Unity 6000.4.0f1
 
-## Package
+## パッケージ
 
 - Package: `com.sunmax0731.icon-palette-variant-generator`
 - Version: `1.0.0`
-- Distribution: UPM package ZIP
+- 配布形式: UPM package ZIP
 
-## Current Scope
+## 現在の対応範囲
 
-The current implementation covers the MVP editor workflow:
+現在の実装では、MVP として以下の編集ワークフローに対応しています。
 
-- Embedded UPM package under `Packages/com.sunmax0731.icon-palette-variant-generator`
-- Image loading and palette extraction
-- Automatic nearby-color grouping with adjustable max color distance
-- Group uniform, per-color, and hybrid replacement rules
-- Before / After preview with selection overlay
-- Scrollable palette list
-- PNG export
-- Session JSON save / load
-- Multiple variations and batch export
-- Toolbar Help and language setting controls
+- `Packages/com.sunmax0731.icon-palette-variant-generator` 配下の UPM パッケージ
+- 画像読み込みとパレット色抽出
+- 近傍色の自動グルーピングと、距離しきい値の調整
+- グループ単位、色単位、Hybrid の置換ルール
+- Before / After プレビューと選択色 overlay
+- スクロール可能なパレット一覧
+- PNG 出力
+- セッション JSON の保存 / 読み込み
+- 複数バリエーション管理と一括出力
+- Help、言語設定、Auto Preview
 
-## Open
+## 起動方法
 
-In Unity:
+Unity Editor のメニューから起動します。
 
 ```text
 Tools > Palette Variant Generator > 開く
 ```
 
-## Validation
+## 検証
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-Expected marker:
+期待される marker:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
@@ -57,42 +57,43 @@ ISSUE12_VARIATION_UX_VALIDATION=PASS
 ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
 ```
 
-## Documentation
+## ドキュメント
 
-Project planning and product documentation live under `docs/`.
+計画、仕様、利用方法、配布用文案は `docs/` 配下にあります。
 
-- Manual: `docs/manual.md`
-- Terms: `docs/terms.md`
-- Release notes: `docs/release-notes-v1.0.0.md`
-- BOOTH copy draft: `docs/booth-copy.md`
+- マニュアル: `docs/manual.md`
+- 利用条件: `docs/terms.md`
+- リリースノート: `docs/release-notes-v1.0.0.md`
+- BOOTH 商品説明文案: `docs/booth-copy.md`
 
-## Release Build
+## リリースビルド
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.0
 ```
 
-Output:
+出力先:
 
 ```text
 ReleaseBuilds/PaletteVariantGenerator_v1.0.0.zip
 ```
 
-## Samples
+## サンプル
 
-Validation sample icons live under:
+検証用サンプルアイコンは以下にあります。
 
 ```text
 Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 ```
 
-## Known Limitations
+## 既知の制限
 
-- UI is IMGUI-based for the first release.
-- Color distance is RGB-based.
-- Direct SpriteAtlas editing and folder-wide batch processing are out of scope for v1.0.0.
+- 初回リリースの UI は IMGUI ベースです。
+- 現在の色距離は RGB ベースです。
+- SpriteAtlas の直接編集は対象外です。
+- フォルダ単位の一括処理は v1.0.0 では対象外です。
 
-## Agent Docs
+## Agent 向けドキュメント
 
 - `Agents.md`
 - `Skill.md`

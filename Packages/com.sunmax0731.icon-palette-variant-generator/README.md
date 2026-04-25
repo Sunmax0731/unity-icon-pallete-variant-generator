@@ -1,34 +1,34 @@
 # Unity Icon Palette Variant Generator
 
-Unity Editor extension for extracting icon palettes and generating multiple color variant PNGs.
+アイコン画像のパレット色を抽出し、複数の色違い PNG を生成する Unity Editor 拡張です。
 
-## Open
+## 起動方法
 
 ```text
 Tools > Palette Variant Generator > 開く
 ```
 
-## Main Features
+## 主な機能
 
-- Palette extraction from PNG / Texture2D assets
-- Nearby-color grouping with adjustable max color distance
-- Group uniform, per-color, and hybrid replacement rules
-- Before / After preview with selected color overlay
-- Multiple variations with Add / Duplicate / Remove
-- Single export and batch export
-- Session JSON save / load
-- Toolbar Help and language mode selection
+- PNG / Texture2D アセットからのパレット抽出
+- 近傍色の自動グルーピングと距離しきい値の調整
+- グループ単位、色単位、Hybrid の置換ルール
+- Before / After プレビューと選択色 overlay
+- Add / Duplicate / Remove による複数バリエーション管理
+- 単体出力と一括出力
+- セッション JSON の保存 / 読み込み
+- Help、言語設定、Auto Preview
 
-## Samples
+## サンプル
 
-Import package samples from:
+Package Manager から以下のサンプルを import できます。
 
 ```text
 Samples~/SampleIcons
 ```
 
-The sample set includes transparent, anti-aliased, and pixel-art PNGs.
+サンプルには、透明 PNG、アンチエイリアスあり PNG、ドット絵 PNG が含まれます。
 
-## Unity Version
+## Unity バージョン
 
-Validated with Unity `6000.4.0f1`.
+Unity `6000.4.0f1` で検証しています。

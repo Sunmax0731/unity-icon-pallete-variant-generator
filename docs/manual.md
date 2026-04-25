@@ -1,70 +1,70 @@
-# Manual
+# マニュアル
 
-## Overview
+## 概要
 
-Unity Icon Palette Variant Generator is a Unity Editor extension for creating color variants from icon PNGs without modifying the original source asset.
+`Unity Icon Palette Variant Generator` は、元画像を変更せずにアイコン PNG から色違いバリエーションを作成する Unity Editor 拡張です。
 
-## Installation
+## 導入方法
 
-Use one of the following methods.
+以下のいずれかの方法で導入します。
 
 ### Git URL
 
-Add the package from the Unity Package Manager using the repository URL.
+Unity Package Manager から、このリポジトリの Git URL を指定してパッケージを追加します。
 
 ### Release ZIP
 
-Download `PaletteVariantGenerator_v1.0.0.zip` from GitHub Releases, extract it, and add the package folder to your Unity project.
+GitHub Releases から `PaletteVariantGenerator_v1.0.0.zip` をダウンロードして展開し、パッケージフォルダを Unity プロジェクトに追加します。
 
-## Open The Tool
+## 起動方法
 
 ```text
 Tools > Palette Variant Generator > 開く
 ```
 
-## Basic Workflow
+## 基本操作
 
-1. Select a PNG or Texture2D asset in `Source Image`.
-2. Click `Analyze`.
-3. Adjust palette extraction settings if needed.
-4. Click `Auto Group`.
-5. Edit group or color replacement rules.
-6. Click `Preview`.
-7. Add or duplicate variations as needed.
-8. Click `Export` for the active variation, or `Export All` for all enabled variations.
-9. Use `Save Session` to save the setup as JSON.
+1. `Source Image` に PNG または Texture2D アセットを指定する。
+2. `Analyze` を押す。
+3. 必要に応じてパレット抽出設定を調整する。
+4. `Auto Group` を押す。
+5. グループ単位または色単位の置換ルールを編集する。
+6. `Preview` を押して結果を確認する。
+7. 必要に応じてバリエーションを追加または複製する。
+8. active なバリエーションだけ出力する場合は `Export`、出力対象の全バリエーションを出力する場合は `Export All` を押す。
+9. 設定を再利用したい場合は `Save Session` で JSON 保存する。
 
-## Replacement Modes
+## 置換モード
 
-- `GroupUniform`: applies one target color and blend ratio to all colors in the group.
-- `PerColor`: only enabled per-color rules are applied.
-- `Hybrid`: enabled per-color rules override the group fallback.
+- `GroupUniform`: グループ内の全色に、同じ置換色とブレンド率を適用します。
+- `PerColor`: 有効な色別ルールだけを適用します。
+- `Hybrid`: 有効な色別ルールを優先し、未設定色はグループ設定を使います。
 
-## Variation Workflow
+## バリエーション操作
 
-- `Add`: creates a new variation snapshot.
-- `Duplicate`: copies the active variation into an independent variation.
-- `Remove`: removes the active variation when more than one variation exists.
-- `Export` / `Skip`: controls whether a variation is included in `Export All`.
-- `File Suffix`: controls the output file suffix for that variation.
-- `Output File`: previews the generated PNG file name before export.
+- `Add`: 新しいバリエーションを追加します。
+- `Duplicate`: 選択中のバリエーションを複製します。
+- `Remove`: バリエーションが2件以上ある場合に、選択中のバリエーションを削除します。
+- `Export` / `Skip`: `Export All` の対象に含めるかどうかを切り替えます。
+- `File Suffix`: 出力ファイル名の接尾辞を指定します。
+- `Output File`: 出力予定の PNG ファイル名を確認できます。
 
-## Preview Workflow
+## プレビュー操作
 
-- `Preview`: manually refreshes the generated preview.
-- `Auto Preview`: automatically refreshes the preview after color, blend, or mode edits with a short debounce.
-- Large images use a longer Auto Preview delay to avoid excessive recalculation while editing.
+- `Preview`: 手動で生成結果を更新します。
+- `Auto Preview`: 色、ブレンド率、置換モードの変更後、短い debounce を挟んで自動更新します。
+- 大きい画像では、編集中の再計算が増えすぎないよう Auto Preview の待機時間が長くなります。
 
-## Samples
+## サンプル
 
-Validation samples are included under:
+検証用サンプルは以下に含まれています。
 
 ```text
 Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 ```
 
-## Notes
+## 注意事項
 
-- Source images are not overwritten.
-- Output PNGs are written to the configured output folder.
-- Transparent pixels at or below `Alpha Threshold` are ignored during analysis and replacement.
+- 元画像は上書きしません。
+- PNG は設定した出力先フォルダに書き出されます。
+- `Alpha Threshold` 以下の透明ピクセルは、解析と置換の対象外です。

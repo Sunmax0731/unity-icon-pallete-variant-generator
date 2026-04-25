@@ -15,7 +15,7 @@
 - `CHANGELOG.md`
 - Manual
 - Terms
-- Release Notes
+- リリースノート
 - BOOTH 商品説明文
 - GitHub Release
 - 配布 ZIP または unitypackage
@@ -25,7 +25,7 @@
 - `Packages/com.sunmax0731.icon-palette-variant-generator` を含む。
 - Samples / Manual / Terms / README / CHANGELOG を含む。
 - Unity `6000.4.0f1` でクリーン導入確認済みである。
-- 既知の制限と検証結果が Release Notes に記載されている。
+- 既知の制限と検証結果がリリースノートに記載されている。
 - Release notes、Issue コメント、配布説明は日本語を基本にする。
 
 ## BOOTH Copy
