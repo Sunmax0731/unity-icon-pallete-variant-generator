@@ -1,0 +1,67 @@
+# リリースノート - v1.0.2
+
+## 概要
+
+`Unity Icon Palette Variant Generator` の v1.0.2 リリースです。
+
+このリリースでは、メインウィンドウの UI Toolkit 本番化、ノイズ削除、エッジ外側クリーンアップ、書き出し設定ウィンドウを追加し、JPG などの不透明画像でもエッジ外側クリーンアップが効くように修正しました。
+
+## 主な変更
+
+- メインウィンドウを本番 UI Toolkit 構成へ移行しました。
+- ノイズ削除機能を追加しました。
+- エッジ外側クリーンアップ機能を追加しました。
+- 不透明画像では、画像端に接している色グループから外側背景を推定し、外側近傍の小領域を透明化できるようにしました。
+- Export / Export All / 書き出し設定を表示 から、専用の書き出し設定ウィンドウを開けるようにしました。
+- 書き出し設定ウィンドウで、Preview 書き出し、全バリエーション書き出し、フォルダ一括処理を実行できるようにしました。
+- 透明色への置換、Split プレビュー、Before / After レイアウトの UI Toolkit 移行差分を修正しました。
+
+## 検証
+
+- Unity: `6000.4.0f1`
+- コマンド:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.2
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.2
+```
+
+marker:
+
+```text
+ISSUE1_SCAFFOLD_VALIDATION=PASS
+ISSUE2_IMAGE_PALETTE_VALIDATION=PASS
+ISSUE3_COLOR_GROUPING_VALIDATION=PASS
+ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
+ISSUE5_PNG_EXPORT_VALIDATION=PASS
+ISSUE6_SESSION_JSON_VALIDATION=PASS
+ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
+ISSUE8_SAMPLE_QA_VALIDATION=PASS
+ISSUE10_UI_POLISH_VALIDATION=PASS
+ISSUE12_VARIATION_UX_VALIDATION=PASS
+ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
+ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS
+ISSUE18_RULE_PRESET_VALIDATION=PASS
+ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS
+ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS
+ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS
+ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS
+ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS
+ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS
+ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS
+ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS
+ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS
+ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS
+ISSUE26_NOISE_REMOVAL_VALIDATION=PASS
+ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS
+ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS
+ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS
+ISSUE30_EXPORT_SETTINGS_WINDOW_VALIDATION=PASS
+ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
+```
+
+## 既知の制限
+
+- SpriteAtlas の直接編集は対象外です。
+- エッジ外側クリーンアップは、小さな分離領域を対象にします。主要領域と接続した外側の縁取りを削る処理は今後の改善対象です。

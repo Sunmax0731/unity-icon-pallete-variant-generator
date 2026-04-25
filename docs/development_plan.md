@@ -274,7 +274,7 @@
 ## 7. 初回リリース成果物
 
 ```text
-PaletteVariantGenerator_v1.0.1.zip
+PaletteVariantGenerator_v1.0.2.zip
   /UnityPackage or /Packages
   /Samples
   /Manual
