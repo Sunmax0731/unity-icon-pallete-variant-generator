@@ -102,6 +102,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE23_DOCKED_LAYOUT_VALIDATIO
     throw "Unity docked layout validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS" -Quiet)) {
+    throw "Unity UI Toolkit preview validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -125,6 +129,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS",
     "ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS",
     "ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS",
+    "ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

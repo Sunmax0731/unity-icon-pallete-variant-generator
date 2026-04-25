@@ -11,6 +11,14 @@
 3. ObjectField、ColorField、PopupField、ScrollView、Preview 表示、drag pan、split compare の同等操作を確認する。
 4. 同等操作と検証観点が揃ってから main window を置き換える。
 
+## UI Toolkit プレビュー Window
+
+`Tools > Palette Variant Generator > UI Toolkitプレビュー` に、本番置換前の評価用 UI Toolkit window を追加している。
+
+- 本番作業は引き続き IMGUI 版の `Tools > Palette Variant Generator > 開く` を使う。
+- preview window はソース情報、解析設定、グループ設定、出力設定、プリセット、プレビュー、パレット、バリエーション、置換ルール、色別ルールの主要セクション構成を UI Toolkit で検証する。
+- `ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS` で、window の生成、タイトル、最小サイズ、主要セクションの存在を headless validation する。
+
 ## compact layout
 
 `PaletteVariantGeneratorWindow` は、幅が狭い場合に 3 pane 横並びから縦積みへ切り替える。

@@ -4,6 +4,7 @@ using Sunmax0731.IconPaletteVariantGenerator.Models;
 using Sunmax0731.IconPaletteVariantGenerator.Services;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
 {
@@ -45,6 +46,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue21FolderBatchExport();
             ValidateIssue22ScriptableObjectPresetAsset();
             ValidateIssue23DockedLayout();
+            ValidateIssue23UiToolkitPreview();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -65,6 +67,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS");
             Debug.Log("ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS");
+            Debug.Log("ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -879,6 +882,29 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (window == null || window.minSize.x > 800f)
             {
                 throw new System.InvalidOperationException("Docked layout window validation failed.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue23UiToolkitPreview()
+        {
+            UnityEngine.UIElements.VisualElement previewRoot = PaletteVariantGeneratorToolkitPreviewWindow.BuildPreviewRoot();
+            if (!PaletteVariantGeneratorToolkitPreviewWindow.ContainsRequiredSections(previewRoot))
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview layout is missing required production sections.");
+            }
+
+            PaletteVariantGeneratorToolkitPreviewWindow.Open();
+            PaletteVariantGeneratorToolkitPreviewWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorToolkitPreviewWindow>();
+            if (window == null || window.titleContent == null || window.titleContent.text != PaletteVariantGeneratorToolkitPreviewWindow.WindowTitle)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview window could not be created.");
+            }
+
+            if (window.minSize.x > 800f || window.rootVisualElement.Q<UnityEngine.UIElements.Label>("preview-status") == null)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview window validation failed.");
             }
 
             window.Close();
