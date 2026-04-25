@@ -75,12 +75,14 @@ ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS
 ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS
 ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS
 ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS
+ISSUE40_ANALYSIS_PRESET_VALIDATION=PASS
 ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS
 ISSUE42_PREVIEW_MINI_TOOLBAR_VALIDATION=PASS
 ISSUE43_UNDO_REDO_VALIDATION=PASS
 ISSUE44_DIFFERENCE_PREVIEW_VALIDATION=PASS
 ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS
 ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS
+ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS
 ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
 ```
 
@@ -127,3 +129,13 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 
 - `Agents.md`
 - `Skill.md`
+
+## Category Presets
+
+The Analyze section includes category presets for Transparent PNG, White Background JPG, Line Art/Icon, Gem, and Plant assets. Selecting a preset updates analysis, grouping, noise removal, and edge cleanup settings together.
+
+Preset details are documented in `docs/analysis-category-presets.md`.
+
+## Preview Brush
+
+Set Preview Mode to `BrushSelect` to collect multiple palette colors from the preview. Use `Create Brush Rules` to create or enable per-color rules for the selected colors.

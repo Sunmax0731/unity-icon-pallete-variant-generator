@@ -178,6 +178,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE39_EFFECT_HIGHLIGHT_VALIDA
     throw "Unity effect highlight validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE40_ANALYSIS_PRESET_VALIDATION=PASS" -Quiet)) {
+    throw "Unity analysis preset validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS" -Quiet)) {
     throw "Unity collapsible settings validation did not emit pass marker. Log: $logPath"
 }
@@ -200,6 +204,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE45_EXPORT_PRECHECK_VALIDAT
 
 if (-not (Select-String -Path $logPath -Pattern "ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS" -Quiet)) {
     throw "Unity boundary trim validation did not emit pass marker. Log: $logPath"
+}
+
+if (-not (Select-String -Path $logPath -Pattern "ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS" -Quiet)) {
+    throw "Unity preview brush selection validation did not emit pass marker. Log: $logPath"
 }
 
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
@@ -244,12 +252,14 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS",
     "ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS",
     "ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS",
+    "ISSUE40_ANALYSIS_PRESET_VALIDATION=PASS",
     "ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS",
     "ISSUE42_PREVIEW_MINI_TOOLBAR_VALIDATION=PASS",
     "ISSUE43_UNDO_REDO_VALIDATION=PASS",
     "ISSUE44_DIFFERENCE_PREVIEW_VALIDATION=PASS",
     "ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS",
     "ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS",
+    "ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

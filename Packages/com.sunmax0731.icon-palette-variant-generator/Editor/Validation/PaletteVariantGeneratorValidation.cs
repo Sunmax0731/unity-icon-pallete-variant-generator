@@ -66,12 +66,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue37SelectedColorInfoPanel();
             ValidateIssue38PaletteRuleStatusBadges();
             ValidateIssue39EffectHighlight();
+            ValidateIssue40AnalysisCategoryPresets();
             ValidateIssue41CollapsibleSettings();
             ValidateIssue42PreviewMiniToolbar();
             ValidateIssue43UndoRedoHistory();
             ValidateIssue44DifferencePreview();
             ValidateIssue45ExportPrecheck();
             ValidateIssue46BoundaryTrimCleanup();
+            ValidateIssue47PreviewBrushSelection();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -111,12 +113,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS");
             Debug.Log("ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS");
             Debug.Log("ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS");
+            Debug.Log("ISSUE40_ANALYSIS_PRESET_VALIDATION=PASS");
             Debug.Log("ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS");
             Debug.Log("ISSUE42_PREVIEW_MINI_TOOLBAR_VALIDATION=PASS");
             Debug.Log("ISSUE43_UNDO_REDO_VALIDATION=PASS");
             Debug.Log("ISSUE44_DIFFERENCE_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS");
             Debug.Log("ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS");
+            Debug.Log("ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1523,6 +1527,36 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             window.Close();
         }
 
+        private static void ValidateIssue40AnalysisCategoryPresets()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for analysis preset validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), session);
+            window.ApplyAnalysisCategoryPresetForValidation(AnalysisCategoryPreset.WhiteBackgroundJpg);
+            if (window.SelectedAnalysisPresetForValidation != AnalysisCategoryPreset.WhiteBackgroundJpg
+                || session.edgeOutsideCleanupSettings.mode != EdgeOutsideCleanupMode.BoundaryTrim
+                || !session.noiseRemovalSettings.enabled)
+            {
+                throw new System.InvalidOperationException("White background JPG preset did not apply expected analysis/noise/edge settings.");
+            }
+
+            window.ApplyAnalysisCategoryPresetForValidation(AnalysisCategoryPreset.LineArtIcon);
+            if (session.analyzeSettings.quantizeStep != 1
+                || session.groupSettings.maxColorDistance > 48f
+                || session.noiseRemovalSettings.enabled)
+            {
+                throw new System.InvalidOperationException("Line art preset did not apply expected precise icon settings.");
+            }
+
+            window.Close();
+        }
+
         private static void ValidateIssue42PreviewMiniToolbar()
         {
             PaletteVariantGeneratorWindow.Open();
@@ -1656,6 +1690,41 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("Boundary trim cleanup did not clear connected outer edge pixels while preserving the center.");
             }
+        }
+
+        private static void ValidateIssue47PreviewBrushSelection()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for preview brush validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            window.SetValidationSession(CreatePreviewPickValidationTexture(), session);
+            window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.BrushSelect);
+            if (!window.AddBrushSelectionAtSourcePixelForValidation(0, 0)
+                || !window.AddBrushSelectionAtSourcePixelForValidation(1, 0)
+                || window.BrushedColorCountForValidation != 2)
+            {
+                throw new System.InvalidOperationException("Preview brush did not collect multiple palette colors.");
+            }
+
+            window.CreateBrushRulesForValidation();
+            ColorReplacementRule redRule = session.colorRules.Find(rule => rule.colorEntryId == "red");
+            ColorReplacementRule blueRule = session.colorRules.Find(rule => rule.colorEntryId == "blue");
+            if (redRule == null || blueRule == null || !redRule.enabled || !blueRule.enabled)
+            {
+                throw new System.InvalidOperationException("Preview brush did not create enabled per-color rules for selected colors.");
+            }
+
+            if (session.colorGroups.Any(group => group.replacementMode == ColorReplacementMode.GroupUniform))
+            {
+                throw new System.InvalidOperationException("Preview brush did not switch affected groups to color-rule-compatible mode.");
+            }
+
+            window.Close();
         }
 
         private static Texture2D CreatePreviewPickValidationTexture()

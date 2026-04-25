@@ -40,6 +40,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private const string AutoPreviewPrefsKey = "Sunmax.IconPaletteVariantGenerator.AutoPreview";
         private const string SelectionHighlightPrefsKey = "Sunmax.IconPaletteVariantGenerator.SelectionHighlight";
+        private const int DefaultBrushSize = 5;
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
         private static readonly Color OverlayBorderColor = new Color(0.1f, 0.65f, 1f, 0.85f);
@@ -106,14 +107,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private bool autoPreviewPending;
         private double autoPreviewScheduledTime;
         private PreviewCompareMode previewCompareMode = PreviewCompareMode.SideBySide;
+        private PreviewInteractionMode previewInteractionMode = PreviewInteractionMode.Pick;
+        private AnalysisCategoryPreset selectedAnalysisPreset = AnalysisCategoryPreset.TransparentPng;
         private float previewZoom = 1f;
         private float previewSplit = 0.5f;
+        private int previewBrushSize = DefaultBrushSize;
         private Vector2 previewPan;
         private bool previewDragActive;
         private bool previewDragMoved;
+        private bool previewBrushActive;
         private int previewDragPointerId = -1;
         private Vector2 previewDragStartPosition;
         private Vector2 previewDragStartPan;
+        private readonly HashSet<string> brushedColorEntryIds = new HashSet<string>();
         private bool previewRefreshQueued;
         private bool previewRefreshProcessing;
         private int previewRefreshRequestVersion;
@@ -315,6 +321,92 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             HandlePreviewSettingChanged();
         }
 
+        private void ApplyAnalysisCategoryPreset(AnalysisCategoryPreset preset)
+        {
+            RecordSessionEdit(() =>
+            {
+                switch (preset)
+                {
+                    case AnalysisCategoryPreset.Gem:
+                        session.analyzeSettings.alphaThreshold = 4;
+                        session.analyzeSettings.minimumPixelCount = 1;
+                        session.analyzeSettings.quantizeStep = 2;
+                        session.analyzeSettings.maxPaletteColors = 384;
+                        session.groupSettings.targetGroupCount = 8;
+                        session.groupSettings.distanceMode = ColorDistanceMode.Lab;
+                        session.groupSettings.maxColorDistance = 96f;
+                        session.groupSettings.preserveDarkOutline = false;
+                        session.groupSettings.preserveAlpha = true;
+                        session.noiseRemovalSettings.enabled = true;
+                        session.noiseRemovalSettings.maxRegionPixels = 3;
+                        session.noiseRemovalSettings.neighborDistanceThreshold = 24f;
+                        session.edgeOutsideCleanupSettings.enabled = false;
+                        break;
+                    case AnalysisCategoryPreset.Plant:
+                        session.analyzeSettings.alphaThreshold = 6;
+                        session.analyzeSettings.minimumPixelCount = 1;
+                        session.analyzeSettings.quantizeStep = 4;
+                        session.analyzeSettings.maxPaletteColors = 320;
+                        session.groupSettings.targetGroupCount = 7;
+                        session.groupSettings.distanceMode = ColorDistanceMode.Hsv;
+                        session.groupSettings.maxColorDistance = 120f;
+                        session.groupSettings.preserveDarkOutline = false;
+                        session.groupSettings.preserveAlpha = true;
+                        session.noiseRemovalSettings.enabled = true;
+                        session.noiseRemovalSettings.maxRegionPixels = 4;
+                        session.noiseRemovalSettings.neighborDistanceThreshold = 36f;
+                        session.edgeOutsideCleanupSettings.enabled = false;
+                        break;
+                    case AnalysisCategoryPreset.WhiteBackgroundJpg:
+                        session.analyzeSettings.alphaThreshold = 0;
+                        session.analyzeSettings.minimumPixelCount = 2;
+                        session.analyzeSettings.quantizeStep = 8;
+                        session.analyzeSettings.maxPaletteColors = 192;
+                        session.groupSettings.targetGroupCount = 5;
+                        session.groupSettings.distanceMode = ColorDistanceMode.Lab;
+                        session.groupSettings.maxColorDistance = 72f;
+                        session.groupSettings.preserveDarkOutline = false;
+                        session.groupSettings.preserveAlpha = false;
+                        session.noiseRemovalSettings.enabled = true;
+                        session.noiseRemovalSettings.maxRegionPixels = 6;
+                        session.noiseRemovalSettings.neighborDistanceThreshold = 48f;
+                        session.edgeOutsideCleanupSettings.enabled = true;
+                        session.edgeOutsideCleanupSettings.mode = EdgeOutsideCleanupMode.BoundaryTrim;
+                        session.edgeOutsideCleanupSettings.trimDistancePixels = 1;
+                        break;
+                    case AnalysisCategoryPreset.LineArtIcon:
+                        session.analyzeSettings.alphaThreshold = 8;
+                        session.analyzeSettings.minimumPixelCount = 1;
+                        session.analyzeSettings.quantizeStep = 1;
+                        session.analyzeSettings.maxPaletteColors = 128;
+                        session.groupSettings.targetGroupCount = 4;
+                        session.groupSettings.distanceMode = ColorDistanceMode.Rgb;
+                        session.groupSettings.maxColorDistance = 42f;
+                        session.groupSettings.preserveDarkOutline = true;
+                        session.groupSettings.preserveAlpha = true;
+                        session.noiseRemovalSettings.enabled = false;
+                        session.edgeOutsideCleanupSettings.enabled = false;
+                        break;
+                    case AnalysisCategoryPreset.TransparentPng:
+                    default:
+                        session.analyzeSettings.alphaThreshold = 8;
+                        session.analyzeSettings.minimumPixelCount = 1;
+                        session.analyzeSettings.quantizeStep = 4;
+                        session.analyzeSettings.maxPaletteColors = 256;
+                        session.groupSettings.targetGroupCount = 6;
+                        session.groupSettings.distanceMode = ColorDistanceMode.Rgb;
+                        session.groupSettings.maxColorDistance = 441f;
+                        session.groupSettings.preserveDarkOutline = true;
+                        session.groupSettings.preserveAlpha = true;
+                        session.noiseRemovalSettings.enabled = false;
+                        session.edgeOutsideCleanupSettings.enabled = false;
+                        break;
+                }
+            });
+            reportMessage = $"Applied preset: {preset}.";
+            reportType = MessageType.Info;
+        }
+
         private void UndoSessionEdit()
         {
             if (undoSnapshots.Count == 0)
@@ -420,6 +512,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement BuildAnalyzeSection()
         {
             VisualElement section = CreateUiSection("analyze-section", T("analyzeSettings", "Analyze Settings"));
+            section.Add(CreateEnumField("analysis-preset-popup", T("analysisPreset", "Category Preset"), selectedAnalysisPreset, value =>
+            {
+                selectedAnalysisPreset = (AnalysisCategoryPreset)value;
+                ApplyAnalysisCategoryPreset(selectedAnalysisPreset);
+            }));
             section.Add(CreateSliderInt("alpha-threshold-slider", T("alphaThreshold", "Alpha Threshold"), session.analyzeSettings.alphaThreshold, 0, 255, value => session.analyzeSettings.alphaThreshold = value));
             section.Add(CreateIntegerField("minimum-pixel-count-field", T("minimumPixelCount", "Minimum Pixel Count"), session.analyzeSettings.minimumPixelCount, value => session.analyzeSettings.minimumPixelCount = Mathf.Max(1, value)));
             section.Add(CreateSliderInt("quantize-step-slider", T("quantizeStep", "Quantize Step"), session.analyzeSettings.quantizeStep, 1, 64, value => session.analyzeSettings.quantizeStep = value));
@@ -534,12 +631,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             miniToolbar.style.flexWrap = Wrap.Wrap;
             miniToolbar.style.marginBottom = 4f;
             miniToolbar.Add(CreateStatusBadge(T("clickPick", "Click: Pick"), BadgeNeutralColor));
-            miniToolbar.Add(CreateStatusBadge(previewZoom > MinPreviewZoom ? T("dragPan", "Drag: Pan") : T("dragPanDisabled", "Drag Pan Off"), previewZoom > MinPreviewZoom ? BadgeActiveColor : BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge(previewInteractionMode.ToString(), previewInteractionMode == PreviewInteractionMode.BrushSelect ? BadgeWarningColor : BadgeActiveColor));
+            miniToolbar.Add(CreateStatusBadge(previewZoom > MinPreviewZoom ? T("dragPan", "Drag: Pan") : T("dragPanDisabled", "Drag Pan Off"), previewZoom > MinPreviewZoom && previewInteractionMode == PreviewInteractionMode.Pan ? BadgeActiveColor : BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(selectionHighlightEnabled ? T("selectionHighlight", "Selection Highlight") : T("selectionHighlightOff", "Selection Off"), selectionHighlightEnabled ? BadgeActiveColor : BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(effectHighlightEnabled ? T("effectHighlight", "Effect Highlight") : T("effectHighlightOff", "Effect Off"), effectHighlightEnabled ? BadgeWarningColor : BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge($"{T("zoom", "Zoom")} {previewZoom:0.##}x", BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(previewCompareMode.ToString(), previewCompareMode == PreviewCompareMode.Split ? BadgeActiveColor : BadgeNeutralColor));
             section.Add(miniToolbar);
+            section.Add(CreateEnumField("preview-interaction-mode-popup", T("previewMode", "Preview Mode"), previewInteractionMode, value =>
+            {
+                previewInteractionMode = (PreviewInteractionMode)value;
+                RefreshUiToolkitContent();
+            }));
+            section.Add(CreateSliderInt("preview-brush-size-slider", T("brushSize", "Brush Size"), previewBrushSize, 1, 33, value =>
+            {
+                previewBrushSize = Mathf.Max(1, value | 1);
+                RefreshUiToolkitContent();
+            }));
             section.Add(CreateEnumField("compare-mode-popup", T("compareMode", "Compare"), previewCompareMode, value =>
             {
                 previewCompareMode = (PreviewCompareMode)value;
@@ -588,6 +696,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 previewPan = Vector2.zero;
                 RefreshUiToolkitContent();
             }) { text = T("resetView", "Reset View") });
+            section.Add(new Button(() => RunUiToolkitAction(CreateRulesFromBrushSelection))
+            {
+                text = T("createRulesFromBrush", "Create Brush Rules")
+            });
+            section.Add(new Button(() => RunUiToolkitAction(ClearBrushSelection))
+            {
+                text = T("clearBrushSelection", "Clear Brush")
+            });
             return section;
         }
 
@@ -810,13 +926,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     continue;
                 }
 
-                VisualElement row = CreateSelectableRow(entry.id == selectedColorEntryId);
+                bool isBrushSelected = brushedColorEntryIds.Contains(entry.id);
+                VisualElement row = CreateSelectableRow(entry.id == selectedColorEntryId || isBrushSelected);
                 row.Add(CreateSwatch(entry.color));
                 Label infoLabel = CreateWrappingLabel($"{entry.hex}  {entry.pixelCount} px  {(entry.pixelCount / (float)totalPixels):P1}");
                 infoLabel.style.flexGrow = 1f;
                 infoLabel.style.minWidth = 120f;
                 row.Add(infoLabel);
                 row.Add(CreatePaletteRuleBadgeRow(entry));
+                if (isBrushSelected)
+                {
+                    row.Add(CreateStatusBadge(T("brushSelected", "Brush"), BadgeWarningColor));
+                }
                 row.RegisterCallback<PointerDownEvent>(_ =>
                 {
                     SelectPaletteEntry(entry, "Palette");
@@ -1489,6 +1610,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
+            if (previewInteractionMode == PreviewInteractionMode.BrushSelect)
+            {
+                previewBrushActive = true;
+                previewDragPointerId = evt.pointerId;
+                image.CapturePointer(evt.pointerId);
+                AddBrushSelectionFromPreview(image, evt.localPosition);
+                evt.StopPropagation();
+                return;
+            }
+
             previewDragActive = true;
             previewDragMoved = false;
             previewDragPointerId = evt.pointerId;
@@ -1500,7 +1631,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void HandlePreviewDrag(PointerMoveEvent evt)
         {
-            if (!previewDragActive || evt.pointerId != previewDragPointerId || previewZoom <= MinPreviewZoom)
+            if (previewBrushActive && evt.pointerId == previewDragPointerId && evt.currentTarget is Image brushImage)
+            {
+                AddBrushSelectionFromPreview(brushImage, evt.localPosition);
+                evt.StopPropagation();
+                return;
+            }
+
+            if (!previewDragActive || evt.pointerId != previewDragPointerId || previewZoom <= MinPreviewZoom || previewInteractionMode != PreviewInteractionMode.Pan)
             {
                 return;
             }
@@ -1525,12 +1663,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void EndPreviewDrag(Image image, PointerUpEvent evt)
         {
+            if (previewBrushActive && evt.pointerId == previewDragPointerId)
+            {
+                AddBrushSelectionFromPreview(image, evt.localPosition);
+                previewBrushActive = false;
+                previewDragPointerId = -1;
+                image.ReleasePointer(evt.pointerId);
+                reportMessage = $"Brush selected {brushedColorEntryIds.Count} palette color(s).";
+                reportType = MessageType.Info;
+                RefreshUiToolkitContent();
+                evt.StopPropagation();
+                return;
+            }
+
             if (!previewDragActive || evt.pointerId != previewDragPointerId)
             {
                 return;
             }
 
-            bool shouldPick = !previewDragMoved;
+            bool shouldPick = !previewDragMoved && previewInteractionMode == PreviewInteractionMode.Pick;
             CancelPreviewDrag();
             image.ReleasePointer(evt.pointerId);
             if (shouldPick)
@@ -1577,6 +1728,101 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             TrySelectPaletteColorAtSourcePixel(x, y, "Preview");
         }
 
+        private void AddBrushSelectionFromPreview(Image image, Vector2 localPosition)
+        {
+            if (readableSourceImage == null || session.paletteColors.Count == 0)
+            {
+                return;
+            }
+
+            if (!TryGetPreviewPixelCoordinate(image, localPosition, readableSourceImage, previewZoom, previewPan, out int centerX, out int centerY))
+            {
+                return;
+            }
+
+            int radius = Mathf.Max(0, previewBrushSize / 2);
+            for (int y = centerY - radius; y <= centerY + radius; y++)
+            {
+                for (int x = centerX - radius; x <= centerX + radius; x++)
+                {
+                    TryAddBrushPaletteColorAtSourcePixel(x, y);
+                }
+            }
+        }
+
+        private bool TryAddBrushPaletteColorAtSourcePixel(int x, int y)
+        {
+            PaletteColorEntry entry = FindPaletteColorAtSourcePixel(x, y);
+            if (entry == null)
+            {
+                return false;
+            }
+
+            brushedColorEntryIds.Add(entry.id);
+            return true;
+        }
+
+        private PaletteColorEntry FindPaletteColorAtSourcePixel(int x, int y)
+        {
+            if (readableSourceImage == null || session.paletteColors.Count == 0)
+            {
+                return null;
+            }
+
+            if (x < 0 || y < 0 || x >= readableSourceImage.width || y >= readableSourceImage.height)
+            {
+                return null;
+            }
+
+            Color32 sourcePixel = readableSourceImage.GetPixel(x, y);
+            int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
+            if (sourcePixel.a <= alphaThreshold)
+            {
+                return null;
+            }
+
+            int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
+            uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
+            return session.paletteColors.FirstOrDefault(candidate =>
+                candidate != null && ColorCodeUtility.ToRgbKey(candidate.color) == key);
+        }
+
+        private void CreateRulesFromBrushSelection()
+        {
+            if (brushedColorEntryIds.Count == 0)
+            {
+                reportMessage = "Brush selection is empty.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            RecordSessionEdit(() =>
+            {
+                foreach (string entryId in brushedColorEntryIds.ToList())
+                {
+                    PaletteColorEntry entry = session.paletteColors.FirstOrDefault(candidate => candidate != null && candidate.id == entryId);
+                    if (entry == null)
+                    {
+                        continue;
+                    }
+
+                    ColorReplacementRule rule = GetOrCreateColorRule(entry);
+                    rule.enabled = true;
+                    rule.targetColor = rule.targetColor.a == 0 ? entry.color : rule.targetColor;
+                    EnsureGroupSupportsColorRule(entry);
+                }
+            });
+            reportMessage = $"Created or updated {brushedColorEntryIds.Count} brush color rule(s).";
+            reportType = MessageType.Info;
+        }
+
+        private void ClearBrushSelection()
+        {
+            brushedColorEntryIds.Clear();
+            reportMessage = "Brush selection cleared.";
+            reportType = MessageType.Info;
+        }
+
         internal bool TrySelectPaletteColorAtSourcePixel(int x, int y, string source)
         {
             if (readableSourceImage == null || session.paletteColors.Count == 0)
@@ -1589,20 +1835,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return false;
             }
 
-            Color32 sourcePixel = readableSourceImage.GetPixel(x, y);
-            int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
-            if (sourcePixel.a <= alphaThreshold)
-            {
-                reportMessage = "Transparent preview pixel does not map to a palette color.";
-                reportType = MessageType.Warning;
-                RefreshUiToolkitContent();
-                return false;
-            }
-
-            int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
-            uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
-            PaletteColorEntry entry = session.paletteColors.FirstOrDefault(candidate =>
-                candidate != null && ColorCodeUtility.ToRgbKey(candidate.color) == key);
+            PaletteColorEntry entry = FindPaletteColorAtSourcePixel(x, y);
             if (entry == null)
             {
                 reportMessage = $"Preview pixel {x}, {y} does not match an extracted palette color.";
@@ -3555,6 +3788,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         internal int RedoSnapshotCountForValidation => redoSnapshots.Count;
 
+        internal int BrushedColorCountForValidation => brushedColorEntryIds.Count;
+
+        internal AnalysisCategoryPreset SelectedAnalysisPresetForValidation => selectedAnalysisPreset;
+
         internal bool IsPreviewRefreshQueuedForValidation => previewRefreshQueued;
 
         internal bool IsPreviewRefreshProcessingForValidation => previewRefreshProcessing;
@@ -3753,6 +3990,29 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             previewCompareMode = mode;
             RefreshUiToolkitContent();
+        }
+
+        internal void ApplyAnalysisCategoryPresetForValidation(AnalysisCategoryPreset preset)
+        {
+            selectedAnalysisPreset = preset;
+            ApplyAnalysisCategoryPreset(preset);
+            RefreshUiToolkitContent();
+        }
+
+        internal void SetPreviewInteractionModeForValidation(PreviewInteractionMode mode)
+        {
+            previewInteractionMode = mode;
+            RefreshUiToolkitContent();
+        }
+
+        internal bool AddBrushSelectionAtSourcePixelForValidation(int x, int y)
+        {
+            return TryAddBrushPaletteColorAtSourcePixel(x, y);
+        }
+
+        internal void CreateBrushRulesForValidation()
+        {
+            CreateRulesFromBrushSelection();
         }
 
         internal void RefreshAfterPreviewForValidation()
@@ -4417,6 +4677,22 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         SideBySide,
         Split,
         Difference
+    }
+
+    internal enum PreviewInteractionMode
+    {
+        Pick,
+        Pan,
+        BrushSelect
+    }
+
+    internal enum AnalysisCategoryPreset
+    {
+        TransparentPng,
+        WhiteBackgroundJpg,
+        LineArtIcon,
+        Gem,
+        Plant
     }
 
     internal enum PaletteVariantLanguageMode
