@@ -63,6 +63,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D highlightedBeforePreviewTexture;
         private Texture2D highlightedAfterPreviewTexture;
         private Texture2D highlightedSplitPreviewTexture;
+        private Texture2D zoomedBeforePreviewTexture;
+        private Texture2D zoomedAfterPreviewTexture;
+        private Texture2D zoomedSplitPreviewTexture;
         private Texture2D checkerboardTexture;
         private Texture2D selectionOverlayTexture;
         private string selectionOverlayCacheKey = string.Empty;
@@ -423,7 +426,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 previewCompareMode = (PreviewCompareMode)value;
                 RefreshUiToolkitContent();
             }));
-            section.Add(CreateSlider("preview-zoom-slider", T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom, value => previewZoom = value));
+            section.Add(CreateSlider("preview-zoom-slider", T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom, value =>
+            {
+                previewZoom = Mathf.Clamp(value, MinPreviewZoom, MaxPreviewZoom);
+                ClampPreviewPan();
+                RefreshUiToolkitContent();
+            }));
             section.Add(CreateSlider("preview-split-slider", T("split", "Split"), previewSplit, 0f, 1f, value =>
             {
                 previewSplit = value;
@@ -531,14 +539,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
 
                 beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Split
-                    ? GetHighlightedPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
-                    : GetHighlightedPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+                    ? GetDisplayPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
+                    : GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
                 beforePreviewImage.style.display = DisplayStyle.Flex;
             }
 
             if (afterPreviewImage != null)
             {
-                afterPreviewImage.image = GetHighlightedPreviewTexture(afterPreview, HighlightPreviewSlot.After);
+                afterPreviewImage.image = GetDisplayPreviewTexture(afterPreview, HighlightPreviewSlot.After);
                 afterPreviewImage.style.display = previewCompareMode == PreviewCompareMode.Split || afterPreview == null
                     ? DisplayStyle.None
                     : DisplayStyle.Flex;
@@ -907,15 +915,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             splitPreviewTexture = null;
         }
 
-        private Texture2D GetHighlightedPreviewTexture(Texture2D baseTexture, HighlightPreviewSlot slot)
+        private Texture2D GetDisplayPreviewTexture(Texture2D baseTexture, HighlightPreviewSlot slot)
         {
-            if (baseTexture == null || !selectionHighlightEnabled || readableSourceImage == null)
+            if (baseTexture == null || readableSourceImage == null)
             {
                 return baseTexture;
             }
 
             HashSet<uint> selectedKeys = GetSelectedColorKeys();
-            if (selectedKeys.Count == 0)
+            bool applyHighlight = selectionHighlightEnabled && selectedKeys.Count > 0;
+            bool applyZoom = !Mathf.Approximately(Mathf.Clamp(previewZoom, MinPreviewZoom, MaxPreviewZoom), MinPreviewZoom)
+                || previewPan != Vector2.zero;
+            if (!applyHighlight && !applyZoom)
             {
                 return baseTexture;
             }
@@ -928,52 +939,91 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             Color32[] outputPixels = new Color32[basePixels.Length];
-            System.Array.Copy(basePixels, outputPixels, basePixels.Length);
             int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
             int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
+            Rect texCoords = GetPreviewTexCoords(previewZoom, previewPan);
+            int width = baseTexture.width;
+            int height = baseTexture.height;
 
-            for (int index = 0; index < sourcePixels.Length; index++)
+            for (int y = 0; y < height; y++)
             {
-                Color32 sourcePixel = sourcePixels[index];
-                if (sourcePixel.a <= alphaThreshold)
+                float v = texCoords.yMin + (((y + 0.5f) / height) * texCoords.height);
+                int sourceY = Mathf.Clamp(Mathf.FloorToInt(v * height), 0, height - 1);
+                for (int x = 0; x < width; x++)
                 {
-                    continue;
-                }
+                    float u = texCoords.xMin + (((x + 0.5f) / width) * texCoords.width);
+                    int sourceX = Mathf.Clamp(Mathf.FloorToInt(u * width), 0, width - 1);
+                    int sourceIndex = (sourceY * width) + sourceX;
+                    int outputIndex = (y * width) + x;
+                    outputPixels[outputIndex] = basePixels[sourceIndex];
 
-                uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
-                if (!selectedKeys.Contains(key))
-                {
-                    continue;
-                }
+                    if (!applyHighlight)
+                    {
+                        continue;
+                    }
 
-                outputPixels[index] = BlendHighlight(outputPixels[index], OverlayColor);
+                    Color32 sourcePixel = sourcePixels[sourceIndex];
+                    if (sourcePixel.a <= alphaThreshold)
+                    {
+                        continue;
+                    }
+
+                    uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(sourcePixel, quantizeStep));
+                    if (!selectedKeys.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    outputPixels[outputIndex] = BlendHighlight(outputPixels[outputIndex], OverlayColor);
+                }
             }
 
-            Texture2D highlighted = new Texture2D(baseTexture.width, baseTexture.height, TextureFormat.RGBA32, false)
+            Texture2D texture = new Texture2D(baseTexture.width, baseTexture.height, TextureFormat.RGBA32, false)
             {
-                name = $"{baseTexture.name}_SelectionHighlight",
+                name = $"{baseTexture.name}_PreviewDisplay",
                 filterMode = baseTexture.filterMode,
                 wrapMode = TextureWrapMode.Clamp,
                 hideFlags = HideFlags.HideAndDontSave
             };
-            highlighted.SetPixels32(outputPixels);
-            highlighted.Apply(false, true);
-            SetHighlightedPreviewTexture(slot, highlighted);
-            return highlighted;
+            texture.SetPixels32(outputPixels);
+            texture.Apply(false, true);
+            SetDisplayPreviewTexture(slot, texture, applyHighlight);
+            return texture;
         }
 
-        private void SetHighlightedPreviewTexture(HighlightPreviewSlot slot, Texture2D texture)
+        private void SetDisplayPreviewTexture(HighlightPreviewSlot slot, Texture2D texture, bool highlighted)
         {
             switch (slot)
             {
                 case HighlightPreviewSlot.Before:
-                    highlightedBeforePreviewTexture = texture;
+                    if (highlighted)
+                    {
+                        highlightedBeforePreviewTexture = texture;
+                    }
+                    else
+                    {
+                        zoomedBeforePreviewTexture = texture;
+                    }
                     break;
                 case HighlightPreviewSlot.After:
-                    highlightedAfterPreviewTexture = texture;
+                    if (highlighted)
+                    {
+                        highlightedAfterPreviewTexture = texture;
+                    }
+                    else
+                    {
+                        zoomedAfterPreviewTexture = texture;
+                    }
                     break;
                 case HighlightPreviewSlot.Split:
-                    highlightedSplitPreviewTexture = texture;
+                    if (highlighted)
+                    {
+                        highlightedSplitPreviewTexture = texture;
+                    }
+                    else
+                    {
+                        zoomedSplitPreviewTexture = texture;
+                    }
                     break;
             }
         }
@@ -993,6 +1043,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DestroyTexture(ref highlightedBeforePreviewTexture);
             DestroyTexture(ref highlightedAfterPreviewTexture);
             DestroyTexture(ref highlightedSplitPreviewTexture);
+            DestroyTexture(ref zoomedBeforePreviewTexture);
+            DestroyTexture(ref zoomedAfterPreviewTexture);
+            DestroyTexture(ref zoomedSplitPreviewTexture);
         }
 
         private static void DestroyTexture(ref Texture2D texture)
@@ -1013,7 +1066,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
-            if (!TryGetPreviewPixelCoordinate(image, localPosition, readableSourceImage, out int x, out int y))
+            if (!TryGetPreviewPixelCoordinate(image, localPosition, readableSourceImage, previewZoom, previewPan, out int x, out int y))
             {
                 return;
             }
@@ -1061,6 +1114,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         internal static bool TryGetPreviewPixelCoordinate(Image image, Vector2 localPosition, Texture2D texture, out int x, out int y)
         {
+            return TryGetPreviewPixelCoordinate(image, localPosition, texture, MinPreviewZoom, Vector2.zero, out x, out y);
+        }
+
+        internal static bool TryGetPreviewPixelCoordinate(Image image, Vector2 localPosition, Texture2D texture, float zoom, Vector2 pan, out int x, out int y)
+        {
             x = 0;
             y = 0;
             if (image == null || texture == null)
@@ -1094,8 +1152,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return false;
             }
 
-            x = Mathf.Clamp(Mathf.FloorToInt(px), 0, texture.width - 1);
-            y = Mathf.Clamp(texture.height - 1 - Mathf.FloorToInt(py), 0, texture.height - 1);
+            Rect texCoords = GetPreviewTexCoords(zoom, pan);
+            float normalizedX = px / texture.width;
+            float normalizedY = 1f - (py / texture.height);
+            float sourceU = texCoords.xMin + (normalizedX * texCoords.width);
+            float sourceV = texCoords.yMin + (normalizedY * texCoords.height);
+            x = Mathf.Clamp(Mathf.FloorToInt(sourceU * texture.width), 0, texture.width - 1);
+            y = Mathf.Clamp(Mathf.FloorToInt(sourceV * texture.height), 0, texture.height - 1);
             return true;
         }
 
@@ -2767,6 +2830,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         internal bool IsBeforePreviewUsingHighlightTextureForValidation =>
             highlightedBeforePreviewTexture != null && beforePreviewImage != null && beforePreviewImage.image == highlightedBeforePreviewTexture;
+
+        internal bool IsBeforePreviewUsingZoomTextureForValidation =>
+            zoomedBeforePreviewTexture != null && beforePreviewImage != null && beforePreviewImage.image == zoomedBeforePreviewTexture;
+
+        internal void SetPreviewZoomForValidation(float zoom, Vector2 pan)
+        {
+            previewZoom = Mathf.Clamp(zoom, MinPreviewZoom, MaxPreviewZoom);
+            previewPan = pan;
+            ClampPreviewPan();
+            RefreshUiToolkitContent();
+        }
 
         internal void SetValidationSession(Texture2D texture, PaletteVariantSession validationSession)
         {

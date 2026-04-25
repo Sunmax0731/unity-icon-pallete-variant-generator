@@ -58,6 +58,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue30ExportSettingsWindow();
             ValidateIssue31PreviewColorPick();
             ValidateIssue32SelectionHighlightToggle();
+            ValidateIssue33UiToolkitPreviewZoom();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -90,6 +91,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE30_EXPORT_SETTINGS_WINDOW_VALIDATION=PASS");
             Debug.Log("ISSUE31_PREVIEW_COLOR_PICK_VALIDATION=PASS");
             Debug.Log("ISSUE32_SELECTION_HIGHLIGHT_VALIDATION=PASS");
+            Debug.Log("ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1253,6 +1255,34 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (window.IsBeforePreviewUsingHighlightTextureForValidation)
             {
                 throw new System.InvalidOperationException("Selection highlight stayed active after disabling it.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue33UiToolkitPreviewZoom()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for UI Toolkit preview zoom validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            Texture2D texture = CreatePreviewPickValidationTexture();
+            window.SetValidationSession(texture, session);
+            window.SetSelectionHighlightForValidation(false);
+            window.SetPreviewZoomForValidation(2f, Vector2.zero);
+            if (!window.IsBeforePreviewUsingZoomTextureForValidation)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview zoom did not create a zoomed display texture.");
+            }
+
+            Rect texCoords = PaletteVariantGeneratorWindow.GetPreviewTexCoords(2f, Vector2.zero);
+            if (!Mathf.Approximately(texCoords.width, 0.5f) || !Mathf.Approximately(texCoords.height, 0.5f))
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview zoom texcoord validation failed.");
             }
 
             window.Close();

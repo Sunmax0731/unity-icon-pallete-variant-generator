@@ -150,6 +150,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE32_SELECTION_HIGHLIGHT_VAL
     throw "Unity selection highlight validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS" -Quiet)) {
+    throw "Unity UI Toolkit preview zoom validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -185,6 +189,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE30_EXPORT_SETTINGS_WINDOW_VALIDATION=PASS",
     "ISSUE31_PREVIEW_COLOR_PICK_VALIDATION=PASS",
     "ISSUE32_SELECTION_HIGHLIGHT_VALIDATION=PASS",
+    "ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"
