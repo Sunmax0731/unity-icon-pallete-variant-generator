@@ -44,6 +44,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue20ColorDistanceModes();
             ValidateIssue21FolderBatchExport();
             ValidateIssue22ScriptableObjectPresetAsset();
+            ValidateIssue23DockedLayout();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -63,6 +64,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS");
             Debug.Log("ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS");
+            Debug.Log("ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -852,6 +854,34 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                     throw new System.InvalidOperationException($"Release automation file is missing: {path}");
                 }
             }
+        }
+
+        private static void ValidateIssue23DockedLayout()
+        {
+            Vector2 minSize = PaletteVariantGeneratorWindow.GetDockedMinimumWindowSize();
+            if (minSize.x > 800f || minSize.y > 620f)
+            {
+                throw new System.InvalidOperationException($"Docked minimum window size is too large: {minSize}.");
+            }
+
+            if (!PaletteVariantGeneratorWindow.ShouldUseCompactLayout(760f))
+            {
+                throw new System.InvalidOperationException("Compact layout should be active at narrow docked width.");
+            }
+
+            if (PaletteVariantGeneratorWindow.ShouldUseCompactLayout(1240f))
+            {
+                throw new System.InvalidOperationException("Wide layout should remain active at full authoring width.");
+            }
+
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null || window.minSize.x > 800f)
+            {
+                throw new System.InvalidOperationException("Docked layout window validation failed.");
+            }
+
+            window.Close();
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

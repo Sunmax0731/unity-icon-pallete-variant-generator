@@ -58,6 +58,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | プレビューのズーム / パン / split 比較 | PASS | issue 17 preview navigation validation で検証。目視確認を推奨。 |
 | 置換ルールプリセット export / import | PASS | issue 18 rule preset validation で検証。 |
 | ScriptableObject プリセットアセット | PASS | issue 22 preset asset validation で作成、適用、更新を検証。 |
+| ドッキング向け compact layout | PASS | issue 23 docked layout validation で最小サイズと切り替え条件を検証。wide / compact の目視確認を推奨。 |
 | Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
 | パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |

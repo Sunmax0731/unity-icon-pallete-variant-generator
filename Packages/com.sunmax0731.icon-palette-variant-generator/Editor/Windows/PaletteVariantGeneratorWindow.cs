@@ -17,6 +17,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float LeftPaneWidth = 300f;
         private const float RightPaneWidth = 420f;
         private const float PaneGap = 14f;
+        private const float CompactLayoutWidth = 980f;
+        private const float DockedMinWidth = 760f;
+        private const float DockedMinHeight = 540f;
         private const float MinPreviewHeight = 260f;
         private const float MinPreviewZoom = 1f;
         private const float MaxPreviewZoom = 8f;
@@ -58,6 +61,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Vector2 paletteScroll;
         private Vector2 variationScroll;
         private Vector2 batchResultScroll;
+        private Vector2 compactLayoutScroll;
         private Vector2 rightScroll;
         private string sourceAssetPath = string.Empty;
         private string batchSourceFolder = "Assets";
@@ -88,7 +92,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             PaletteVariantGeneratorWindow window = GetWindow<PaletteVariantGeneratorWindow>();
             window.titleContent = new GUIContent("Palette Variant Generator");
-            window.minSize = new Vector2(1240f, 620f);
+            window.minSize = new Vector2(DockedMinWidth, DockedMinHeight);
             window.Show();
         }
 
@@ -113,22 +117,46 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void OnGUI()
         {
+            bool compactLayout = ShouldUseCompactLayout(position.width);
             DrawToolbar();
             EditorGUILayout.HelpBox(reportMessage, reportType);
 
+            if (compactLayout)
+            {
+                compactLayoutScroll = EditorGUILayout.BeginScrollView(compactLayoutScroll);
+                DrawLeftPane(true);
+                DrawSectionSeparator();
+                DrawCenterPane(true);
+                DrawSectionSeparator();
+                DrawRightPane(true);
+                EditorGUILayout.EndScrollView();
+                return;
+            }
+
             using (new EditorGUILayout.HorizontalScope())
             {
-                DrawLeftPane();
+                DrawLeftPane(false);
                 DrawPaneSeparator();
                 GUILayout.Space(PaneGap);
-                DrawCenterPane();
+                DrawCenterPane(false);
                 GUILayout.Space(PaneGap);
                 DrawPaneSeparator();
-                DrawRightPane();
+                DrawRightPane(false);
             }
         }
 
         private void DrawToolbar()
+        {
+            if (ShouldUseCompactLayout(position.width))
+            {
+                DrawCompactToolbar();
+                return;
+            }
+
+            DrawWideToolbar();
+        }
+
+        private void DrawWideToolbar()
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
@@ -228,9 +256,113 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
         }
 
-        private void DrawLeftPane()
+        private void DrawCompactToolbar()
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(LeftPaneWidth)))
+            using (new EditorGUILayout.VerticalScope(EditorStyles.toolbar))
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField(T("sourceImage", "Source Image"), GUILayout.Width(86f));
+                    sourceImage = (Texture2D)EditorGUILayout.ObjectField(sourceImage, typeof(Texture2D), false, GUILayout.MinWidth(180f));
+                    DrawLanguagePopup();
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(sourceImage == null))
+                    {
+                        if (GUILayout.Button(T("analyze", "Analyze"), EditorStyles.toolbarButton))
+                        {
+                            AnalyzeSourceImage();
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(session.paletteColors.Count == 0))
+                    {
+                        if (GUILayout.Button(T("autoGroup", "Auto Group"), EditorStyles.toolbarButton))
+                        {
+                            AutoGroupPalette();
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(readableSourceImage == null || session.colorGroups.Count == 0))
+                    {
+                        if (GUILayout.Button(T("preview", "Preview"), EditorStyles.toolbarButton))
+                        {
+                            CancelScheduledAutoPreview();
+                            RefreshAfterPreview();
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(afterPreview == null))
+                    {
+                        if (GUILayout.Button(T("export", "Export"), EditorStyles.toolbarButton))
+                        {
+                            ExportPreview();
+                        }
+                    }
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(session.colorGroups.Count == 0))
+                    {
+                        if (GUILayout.Button(T("exportPreset", "Export Preset"), EditorStyles.toolbarButton))
+                        {
+                            ExportRulePreset();
+                        }
+
+                        if (GUILayout.Button(T("importPreset", "Import Preset"), EditorStyles.toolbarButton))
+                        {
+                            ImportRulePreset();
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(readableSourceImage == null || session.variations.Count == 0))
+                    {
+                        if (GUILayout.Button(T("exportAll", "Export All"), EditorStyles.toolbarButton))
+                        {
+                            ExportAllVariations();
+                        }
+                    }
+
+                    if (GUILayout.Button(T("saveSession", "Save Session"), EditorStyles.toolbarButton))
+                    {
+                        SaveSession();
+                    }
+
+                    if (GUILayout.Button(T("loadSession", "Load Session"), EditorStyles.toolbarButton))
+                    {
+                        LoadSession();
+                    }
+
+                    if (GUILayout.Button(T("help", "Help"), EditorStyles.toolbarButton))
+                    {
+                        OpenHelpWindow();
+                    }
+
+                    bool nextAutoPreview = GUILayout.Toggle(autoPreviewEnabled, T("autoPreview", "Auto Preview"), EditorStyles.toolbarButton);
+                    if (nextAutoPreview != autoPreviewEnabled)
+                    {
+                        autoPreviewEnabled = nextAutoPreview;
+                        EditorPrefs.SetBool(AutoPreviewPrefsKey, autoPreviewEnabled);
+                        if (!autoPreviewEnabled)
+                        {
+                            CancelScheduledAutoPreview();
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(sourceAssetPath))
+                {
+                    EditorGUILayout.LabelField(sourceAssetPath, EditorStyles.miniLabel);
+                }
+            }
+        }
+
+        private void DrawLeftPane(bool compactLayout)
+        {
+            using (new EditorGUILayout.VerticalScope(GetPaneLayoutOptions(LeftPaneWidth, compactLayout)))
             {
                 leftScroll = EditorGUILayout.BeginScrollView(leftScroll);
                 DrawSectionHeader(T("analyzeSettings", "Analyze Settings"));
@@ -353,15 +485,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
         }
 
-        private void DrawCenterPane()
+        private void DrawCenterPane(bool compactLayout)
         {
             using (new EditorGUILayout.VerticalScope(GUILayout.MinWidth(360f), GUILayout.ExpandWidth(true)))
             {
                 DrawSectionHeader(T("preview", "Preview"));
-                DrawPreviewControls();
+                DrawPreviewControls(compactLayout);
                 if (previewCompareMode == PreviewCompareMode.Split)
                 {
                     DrawSplitPreviewPanel();
+                }
+                else if (compactLayout)
+                {
+                    DrawPreviewPanel(T("before", "Before"), readableSourceImage);
+                    DrawPreviewPanel(T("after", "After"), afterPreview);
                 }
                 else
                 {
@@ -384,8 +521,32 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
         }
 
-        private void DrawPreviewControls()
+        private void DrawPreviewControls(bool compactLayout)
         {
+            if (compactLayout)
+            {
+                previewCompareMode = (PreviewCompareMode)EditorGUILayout.EnumPopup(T("compareMode", "Compare"), previewCompareMode);
+                EditorGUI.BeginChangeCheck();
+                previewZoom = EditorGUILayout.Slider(T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    previewZoom = Mathf.Clamp(previewZoom, MinPreviewZoom, MaxPreviewZoom);
+                    ClampPreviewPan();
+                }
+
+                if (GUILayout.Button(T("resetView", "Reset View")))
+                {
+                    ResetPreviewView();
+                }
+
+                if (previewCompareMode == PreviewCompareMode.Split)
+                {
+                    previewSplit = EditorGUILayout.Slider(T("split", "Split"), previewSplit, 0.05f, 0.95f);
+                }
+
+                return;
+            }
+
             using (new EditorGUILayout.HorizontalScope())
             {
                 previewCompareMode = (PreviewCompareMode)EditorGUILayout.EnumPopup(
@@ -413,9 +574,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
         }
 
-        private void DrawRightPane()
+        private void DrawRightPane(bool compactLayout)
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(RightPaneWidth)))
+            using (new EditorGUILayout.VerticalScope(GetPaneLayoutOptions(RightPaneWidth, compactLayout)))
             {
                 rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
                 DrawSectionHeader(T("variations", "Variations"));
@@ -835,6 +996,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 centerY - (size * 0.5f),
                 centerX + (size * 0.5f),
                 centerY + (size * 0.5f));
+        }
+
+        internal static bool ShouldUseCompactLayout(float windowWidth)
+        {
+            return windowWidth > 0f && windowWidth < CompactLayoutWidth;
+        }
+
+        internal static Vector2 GetDockedMinimumWindowSize()
+        {
+            return new Vector2(DockedMinWidth, DockedMinHeight);
+        }
+
+        private static GUILayoutOption[] GetPaneLayoutOptions(float fixedWidth, bool compactLayout)
+        {
+            return compactLayout
+                ? new[] { GUILayout.ExpandWidth(true) }
+                : new[] { GUILayout.Width(fixedWidth) };
         }
 
         private static bool IsLargeAutoPreviewSource(Texture2D texture)

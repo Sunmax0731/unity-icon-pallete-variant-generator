@@ -16,6 +16,7 @@ MMORPG / RPG / アイテム制作向けに、鉱石、木材、薬草、料理�
 | `development_plan.md` | 開発計画。実装フェーズ、タスク、優先度、テスト観点、リリース準備を整理。 |
 | `color_variant_rule.schema.json` | セッション / プリセット保存用 JSON スキーマ草案。 |
 | `release-checklist.md` | Release Package workflow と手動 fallback の確認手順。 |
+| `ui-toolkit-migration.md` | UI Toolkit 移行判断とドッキング向け compact layout の確認観点。 |
 | `../Agents.md` | AI Agent / Codex に実装を依頼するための作業指示書。 |
 | `../Skill.md` | 工程別 Skill の入口。 |
 | `skills/` | Issue、実装、UI、検証、Release の工程別 Skill。 |
