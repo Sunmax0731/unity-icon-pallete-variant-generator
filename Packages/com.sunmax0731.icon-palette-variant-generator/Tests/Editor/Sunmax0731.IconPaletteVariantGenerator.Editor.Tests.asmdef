@@ -1,0 +1,25 @@
+{
+  "name": "Sunmax0731.IconPaletteVariantGenerator.Editor.Tests",
+  "rootNamespace": "Sunmax0731.IconPaletteVariantGenerator.Editor.Tests",
+  "references": [
+    "Sunmax0731.IconPaletteVariantGenerator.Runtime",
+    "Sunmax0731.IconPaletteVariantGenerator.Editor",
+    "UnityEditor.TestRunner",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

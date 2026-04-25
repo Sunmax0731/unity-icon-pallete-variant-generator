@@ -1,0 +1,14 @@
+{
+  "name": "Sunmax0731.IconPaletteVariantGenerator.Runtime",
+  "rootNamespace": "Sunmax0731.IconPaletteVariantGenerator",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

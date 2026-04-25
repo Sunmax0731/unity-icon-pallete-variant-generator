@@ -1,0 +1,18 @@
+{
+  "name": "Sunmax0731.IconPaletteVariantGenerator.Editor",
+  "rootNamespace": "Sunmax0731.IconPaletteVariantGenerator.Editor",
+  "references": [
+    "Sunmax0731.IconPaletteVariantGenerator.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
