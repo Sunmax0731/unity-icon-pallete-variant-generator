@@ -15,7 +15,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     public sealed class PaletteVariantGeneratorWindow : EditorWindow
     {
         private const float LeftPaneWidth = 300f;
-        private const float RightPaneWidth = 330f;
+        private const float RightPaneWidth = 420f;
         private const float PaneGap = 14f;
         private const float MinPreviewHeight = 260f;
         private const float PaletteListHeight = 170f;
@@ -56,7 +56,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             PaletteVariantGeneratorWindow window = GetWindow<PaletteVariantGeneratorWindow>();
             window.titleContent = new GUIContent("Palette Variant Generator");
-            window.minSize = new Vector2(1080f, 620f);
+            window.minSize = new Vector2(1240f, 620f);
             window.Show();
         }
 
@@ -286,7 +286,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void DrawPaletteList(IReadOnlyList<PaletteColorEntry> paletteColors)
         {
-            paletteScroll = EditorGUILayout.BeginScrollView(paletteScroll, GUI.skin.box, GUILayout.Height(PaletteListHeight), GUILayout.ExpandWidth(true));
+            paletteScroll = EditorGUILayout.BeginScrollView(
+                paletteScroll,
+                false,
+                true,
+                GUIStyle.none,
+                GUI.skin.verticalScrollbar,
+                GUI.skin.box,
+                GUILayout.Height(PaletteListHeight),
+                GUILayout.ExpandWidth(true));
+
             using (new EditorGUILayout.VerticalScope())
             {
                 foreach (PaletteColorEntry entry in paletteColors)
@@ -304,11 +313,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                             Repaint();
                         }
 
-                        EditorGUILayout.LabelField(entry.hex, GUILayout.Width(80f));
-                        EditorGUILayout.LabelField($"{entry.color.r},{entry.color.g},{entry.color.b},{entry.color.a}", GUILayout.Width(120f));
-                        EditorGUILayout.LabelField(entry.pixelCount.ToString(), GUILayout.Width(64f));
-                        EditorGUILayout.LabelField($"{entry.pixelRatio:P1}", GUILayout.Width(64f));
-                        EditorGUILayout.LabelField(entry.groupId, GUILayout.Width(80f));
+                        EditorGUILayout.LabelField(entry.hex, EditorStyles.boldLabel, GUILayout.Width(78f));
+                        EditorGUILayout.LabelField($"{entry.pixelCount} px", GUILayout.Width(58f));
+                        EditorGUILayout.LabelField($"{entry.pixelRatio:P1}", GUILayout.Width(58f));
+                        EditorGUILayout.LabelField(entry.groupId, EditorStyles.miniLabel, GUILayout.MinWidth(64f), GUILayout.ExpandWidth(true));
                     }
                 }
             }
@@ -349,6 +357,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     EditorGUILayout.LabelField($"{group.pixelRatio:P1}", GUILayout.Width(56f));
                 }
 
+                float previousLabelWidth = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = 84f;
                 using (var change = new EditorGUI.ChangeCheckScope())
                 {
                     group.targetColor = EditorGUILayout.ColorField(T("targetColor", "Target Color"), group.targetColor);
@@ -360,6 +370,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         RefreshAfterPreview();
                     }
                 }
+
+                EditorGUIUtility.labelWidth = previousLabelWidth;
             }
         }
 
@@ -408,6 +420,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         }
                     }
 
+                    float previousLabelWidth = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = 84f;
                     using (var change = new EditorGUI.ChangeCheckScope())
                     {
                         rule.targetColor = EditorGUILayout.ColorField(T("targetColor", "Target Color"), rule.targetColor);
@@ -418,6 +432,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                             RefreshAfterPreview();
                         }
                     }
+
+                    EditorGUIUtility.labelWidth = previousLabelWidth;
                 }
             }
         }
@@ -718,7 +734,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
             }
 
-            variationScroll = EditorGUILayout.BeginScrollView(variationScroll, GUI.skin.box, GUILayout.Height(VariationListHeight));
+            variationScroll = EditorGUILayout.BeginScrollView(
+                variationScroll,
+                false,
+                true,
+                GUIStyle.none,
+                GUI.skin.verticalScrollbar,
+                GUI.skin.box,
+                GUILayout.Height(VariationListHeight));
+
             foreach (IconVariation variation in session.variations)
             {
                 if (variation == null)
@@ -742,7 +766,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         using (var change = new EditorGUI.ChangeCheckScope())
                         {
                             variation.exportEnabled = EditorGUILayout.Toggle(variation.exportEnabled, GUILayout.Width(18f));
-                            variation.displayName = EditorGUILayout.TextField(variation.displayName);
+                            variation.displayName = EditorGUILayout.TextField(variation.displayName, GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true));
                             if (change.changed)
                             {
                                 variationService.SyncActiveVariation(session);
@@ -750,6 +774,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         }
                     }
 
+                    float previousLabelWidth = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = 78f;
                     using (var change = new EditorGUI.ChangeCheckScope())
                     {
                         variation.fileSuffix = EditorGUILayout.TextField(T("fileSuffix", "File Suffix"), variation.fileSuffix);
@@ -763,6 +789,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                             variationService.SyncActiveVariation(session);
                         }
                     }
+
+                    EditorGUIUtility.labelWidth = previousLabelWidth;
                 }
             }
 
