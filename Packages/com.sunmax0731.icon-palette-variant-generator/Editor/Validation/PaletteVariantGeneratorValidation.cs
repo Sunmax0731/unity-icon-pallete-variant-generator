@@ -74,6 +74,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue45ExportPrecheck();
             ValidateIssue46BoundaryTrimCleanup();
             ValidateIssue47PreviewBrushSelection();
+            ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -121,6 +122,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS");
             Debug.Log("ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS");
             Debug.Log("ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS");
+            Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1722,6 +1724,63 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (session.colorGroups.Any(group => group.replacementMode == ColorReplacementMode.GroupUniform))
             {
                 throw new System.InvalidOperationException("Preview brush did not switch affected groups to color-rule-compatible mode.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidatePreviewVisibilityAndParameterHelpFollowup()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for follow-up validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            Texture2D texture = CreatePreviewPickValidationTexture();
+            window.SetValidationSession(texture, session);
+            window.SetSelectionHighlightForValidation(false);
+            window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Pick);
+            window.SetPreviewZoomForValidation(4f, Vector2.zero);
+            window.ApplyPreviewPanDragForValidation(new Vector2(-70f, 20f), 320f, 160f);
+            if (window.PreviewPanForValidation == Vector2.zero)
+            {
+                throw new System.InvalidOperationException("Preview did not pan while in Pick mode.");
+            }
+
+            if (!window.TrySelectPaletteColorAtSourcePixel(1, 0, "Preview")
+                || !window.SetSelectedColorVisibleForValidation(false))
+            {
+                throw new System.InvalidOperationException("Selected color visibility could not be toggled off.");
+            }
+
+            ColorReplacementRule blueRule = session.colorRules.Find(rule => rule.colorEntryId == "blue");
+            ColorGroup blueGroup = session.colorGroups.Find(group => group.id == "blueGroup");
+            if (blueRule == null
+                || !blueRule.enabled
+                || blueRule.targetColor.a != 0
+                || blueRule.blendRatio < 1f
+                || blueGroup == null
+                || blueGroup.replacementMode == ColorReplacementMode.GroupUniform)
+            {
+                throw new System.InvalidOperationException("Selected color visibility toggle did not create a transparent per-color rule.");
+            }
+
+            Texture2D output = new ColorReplacementService().Apply(texture, session);
+            Color32 hiddenPixel = output.GetPixels32()[1];
+            Object.DestroyImmediate(output);
+            if (hiddenPixel.a != 0)
+            {
+                throw new System.InvalidOperationException("Transparent selected color rule did not produce alpha 0 output.");
+            }
+
+            string alphaHelp = window.ParameterHelpText("alphaThreshold");
+            string groupHelp = window.ParameterHelpText("maxColorDistance");
+            if (!alphaHelp.Contains("Increase") || !alphaHelp.Contains("Decrease") || !groupHelp.Contains("Visually"))
+            {
+                throw new System.InvalidOperationException("Parameter focus help text does not describe increase/decrease visual impact.");
             }
 
             window.Close();

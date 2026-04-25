@@ -100,6 +100,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private PaletteVariantLanguageMode languageMode = PaletteVariantLanguageMode.Auto;
         private PaletteVariantDisplayLanguage displayLanguage = PaletteVariantDisplayLanguage.English;
         private ParameterHelpWindow parameterHelpWindow;
+        private Label analyzeParameterHelpLabel;
+        private Label groupParameterHelpLabel;
         private bool autoPreviewEnabled = true;
         private bool selectionHighlightEnabled = true;
         private bool effectHighlightEnabled = true;
@@ -512,41 +514,46 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement BuildAnalyzeSection()
         {
             VisualElement section = CreateUiSection("analyze-section", T("analyzeSettings", "Analyze Settings"));
-            section.Add(CreateEnumField("analysis-preset-popup", T("analysisPreset", "Category Preset"), selectedAnalysisPreset, value =>
+            analyzeParameterHelpLabel = CreateParameterHelpLabel("analyze-parameter-help", T("parameterHelpDefault", "Focus a parameter to see how increasing or decreasing it changes the output."));
+            section.Add(analyzeParameterHelpLabel);
+            EnumField presetField = CreateEnumField("analysis-preset-popup", T("analysisPreset", "Category Preset"), selectedAnalysisPreset, value =>
             {
                 selectedAnalysisPreset = (AnalysisCategoryPreset)value;
                 ApplyAnalysisCategoryPreset(selectedAnalysisPreset);
-            }));
-            section.Add(CreateSliderInt("alpha-threshold-slider", T("alphaThreshold", "Alpha Threshold"), session.analyzeSettings.alphaThreshold, 0, 255, value => session.analyzeSettings.alphaThreshold = value));
-            section.Add(CreateIntegerField("minimum-pixel-count-field", T("minimumPixelCount", "Minimum Pixel Count"), session.analyzeSettings.minimumPixelCount, value => session.analyzeSettings.minimumPixelCount = Mathf.Max(1, value)));
-            section.Add(CreateSliderInt("quantize-step-slider", T("quantizeStep", "Quantize Step"), session.analyzeSettings.quantizeStep, 1, 64, value => session.analyzeSettings.quantizeStep = value));
-            section.Add(CreateIntegerField("max-palette-colors-field", T("maxPaletteColors", "Max Palette Colors"), session.analyzeSettings.maxPaletteColors, value => session.analyzeSettings.maxPaletteColors = Mathf.Max(1, value)));
+            });
+            section.Add(AttachParameterHelp(presetField, analyzeParameterHelpLabel, ParameterHelpText("analysisPreset")));
+            section.Add(AttachParameterHelp(CreateSliderInt("alpha-threshold-slider", T("alphaThreshold", "Alpha Threshold"), session.analyzeSettings.alphaThreshold, 0, 255, value => session.analyzeSettings.alphaThreshold = value), analyzeParameterHelpLabel, ParameterHelpText("alphaThreshold")));
+            section.Add(AttachParameterHelp(CreateIntegerField("minimum-pixel-count-field", T("minimumPixelCount", "Minimum Pixel Count"), session.analyzeSettings.minimumPixelCount, value => session.analyzeSettings.minimumPixelCount = Mathf.Max(1, value)), analyzeParameterHelpLabel, ParameterHelpText("minimumPixelCount")));
+            section.Add(AttachParameterHelp(CreateSliderInt("quantize-step-slider", T("quantizeStep", "Quantize Step"), session.analyzeSettings.quantizeStep, 1, 64, value => session.analyzeSettings.quantizeStep = value), analyzeParameterHelpLabel, ParameterHelpText("quantizeStep")));
+            section.Add(AttachParameterHelp(CreateIntegerField("max-palette-colors-field", T("maxPaletteColors", "Max Palette Colors"), session.analyzeSettings.maxPaletteColors, value => session.analyzeSettings.maxPaletteColors = Mathf.Max(1, value)), analyzeParameterHelpLabel, ParameterHelpText("maxPaletteColors")));
             return section;
         }
 
         private VisualElement BuildGroupSection()
         {
             VisualElement section = CreateUiSection("group-section", T("groupSettings", "Group Settings"));
-            section.Add(CreateSliderInt("target-group-count-slider", T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64, value => RecordSessionEdit(() => session.groupSettings.targetGroupCount = value)));
-            section.Add(CreateEnumField("distance-mode-popup", T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode, value => RecordSessionEdit(() => session.groupSettings.distanceMode = (ColorDistanceMode)value)));
-            section.Add(CreateSlider("near-color-threshold-slider", T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f, value => RecordSessionEdit(() => session.groupSettings.maxColorDistance = value)));
-            section.Add(CreateToggle("preserve-dark-outline-toggle", T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline, value => RecordSessionEdit(() => session.groupSettings.preserveDarkOutline = value)));
-            section.Add(CreateToggle("preserve-alpha-toggle", T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha, value => RecordSessionEdit(() => session.groupSettings.preserveAlpha = value)));
+            groupParameterHelpLabel = CreateParameterHelpLabel("group-parameter-help", T("parameterHelpDefault", "Focus a parameter to see how increasing or decreasing it changes the output."));
+            section.Add(groupParameterHelpLabel);
+            section.Add(AttachParameterHelp(CreateSliderInt("target-group-count-slider", T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64, value => RecordSessionEdit(() => session.groupSettings.targetGroupCount = value)), groupParameterHelpLabel, ParameterHelpText("targetGroupCount")));
+            section.Add(AttachParameterHelp(CreateEnumField("distance-mode-popup", T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode, value => RecordSessionEdit(() => session.groupSettings.distanceMode = (ColorDistanceMode)value)), groupParameterHelpLabel, ParameterHelpText("distanceMode")));
+            section.Add(AttachParameterHelp(CreateSlider("near-color-threshold-slider", T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f, value => RecordSessionEdit(() => session.groupSettings.maxColorDistance = value)), groupParameterHelpLabel, ParameterHelpText("maxColorDistance")));
+            section.Add(AttachParameterHelp(CreateToggle("preserve-dark-outline-toggle", T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline, value => RecordSessionEdit(() => session.groupSettings.preserveDarkOutline = value)), groupParameterHelpLabel, ParameterHelpText("preserveDarkOutline")));
+            section.Add(AttachParameterHelp(CreateToggle("preserve-alpha-toggle", T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha, value => RecordSessionEdit(() => session.groupSettings.preserveAlpha = value)), groupParameterHelpLabel, ParameterHelpText("preserveAlpha")));
 
             section.Add(CreateUiSubHeader(T("edgeOutsideCleanup", "Edge Outside Cleanup")));
             session.edgeOutsideCleanupSettings ??= new EdgeOutsideCleanupSettings();
-            section.Add(CreateToggle("edge-cleanup-toggle", T("edgeCleanupEnabled", "Enable Edge Cleanup"), session.edgeOutsideCleanupSettings.enabled, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.enabled = value)));
-            section.Add(CreateEnumField("edge-cleanup-mode-popup", T("edgeCleanupMode", "Cleanup Mode"), session.edgeOutsideCleanupSettings.mode, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.mode = (EdgeOutsideCleanupMode)value)));
-            section.Add(CreateSliderInt("edge-cleanup-distance-slider", T("edgeCleanupDistance", "Outside Distance"), session.edgeOutsideCleanupSettings.maxDistancePixels, 1, 12, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.maxDistancePixels = value)));
-            section.Add(CreateSliderInt("edge-cleanup-region-slider", T("edgeCleanupMaxRegion", "Max Outside Region"), session.edgeOutsideCleanupSettings.maxRegionPixels, 1, 128, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.maxRegionPixels = value)));
-            section.Add(CreateSliderInt("edge-trim-distance-slider", T("edgeTrimDistance", "Trim Distance"), session.edgeOutsideCleanupSettings.trimDistancePixels, 1, 4, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.trimDistancePixels = value)));
+            section.Add(AttachParameterHelp(CreateToggle("edge-cleanup-toggle", T("edgeCleanupEnabled", "Enable Edge Cleanup"), session.edgeOutsideCleanupSettings.enabled, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.enabled = value)), groupParameterHelpLabel, ParameterHelpText("edgeCleanupEnabled")));
+            section.Add(AttachParameterHelp(CreateEnumField("edge-cleanup-mode-popup", T("edgeCleanupMode", "Cleanup Mode"), session.edgeOutsideCleanupSettings.mode, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.mode = (EdgeOutsideCleanupMode)value)), groupParameterHelpLabel, ParameterHelpText("edgeCleanupMode")));
+            section.Add(AttachParameterHelp(CreateSliderInt("edge-cleanup-distance-slider", T("edgeCleanupDistance", "Outside Distance"), session.edgeOutsideCleanupSettings.maxDistancePixels, 1, 12, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.maxDistancePixels = value)), groupParameterHelpLabel, ParameterHelpText("edgeCleanupDistance")));
+            section.Add(AttachParameterHelp(CreateSliderInt("edge-cleanup-region-slider", T("edgeCleanupMaxRegion", "Max Outside Region"), session.edgeOutsideCleanupSettings.maxRegionPixels, 1, 128, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.maxRegionPixels = value)), groupParameterHelpLabel, ParameterHelpText("edgeCleanupMaxRegion")));
+            section.Add(AttachParameterHelp(CreateSliderInt("edge-trim-distance-slider", T("edgeTrimDistance", "Trim Distance"), session.edgeOutsideCleanupSettings.trimDistancePixels, 1, 4, value => RecordSessionEdit(() => session.edgeOutsideCleanupSettings.trimDistancePixels = value)), groupParameterHelpLabel, ParameterHelpText("edgeTrimDistance")));
 
             section.Add(CreateUiSubHeader(T("noiseRemoval", "Noise Removal")));
             session.noiseRemovalSettings ??= new NoiseRemovalSettings();
-            section.Add(CreateToggle("noise-removal-toggle", T("noiseRemovalEnabled", "Enable Noise Removal"), session.noiseRemovalSettings.enabled, value => session.noiseRemovalSettings.enabled = value));
-            section.Add(CreateSliderInt("max-noise-region-slider", T("maxNoiseRegionPixels", "Max Noise Size"), session.noiseRemovalSettings.maxRegionPixels, 1, 64, value => session.noiseRemovalSettings.maxRegionPixels = value));
-            section.Add(CreateSlider("noise-neighbor-threshold-slider", T("noiseNeighborThreshold", "Neighbor Threshold"), session.noiseRemovalSettings.neighborDistanceThreshold, 0f, 441f, value => session.noiseRemovalSettings.neighborDistanceThreshold = value));
-            section.Add(CreateToggle("same-group-only-toggle", T("sameGroupOnly", "Same Group Only"), session.noiseRemovalSettings.sameGroupOnly, value => session.noiseRemovalSettings.sameGroupOnly = value));
+            section.Add(AttachParameterHelp(CreateToggle("noise-removal-toggle", T("noiseRemovalEnabled", "Enable Noise Removal"), session.noiseRemovalSettings.enabled, value => session.noiseRemovalSettings.enabled = value), groupParameterHelpLabel, ParameterHelpText("noiseRemovalEnabled")));
+            section.Add(AttachParameterHelp(CreateSliderInt("max-noise-region-slider", T("maxNoiseRegionPixels", "Max Noise Size"), session.noiseRemovalSettings.maxRegionPixels, 1, 64, value => session.noiseRemovalSettings.maxRegionPixels = value), groupParameterHelpLabel, ParameterHelpText("maxNoiseRegionPixels")));
+            section.Add(AttachParameterHelp(CreateSlider("noise-neighbor-threshold-slider", T("noiseNeighborThreshold", "Neighbor Threshold"), session.noiseRemovalSettings.neighborDistanceThreshold, 0f, 441f, value => session.noiseRemovalSettings.neighborDistanceThreshold = value), groupParameterHelpLabel, ParameterHelpText("noiseNeighborThreshold")));
+            section.Add(AttachParameterHelp(CreateToggle("same-group-only-toggle", T("sameGroupOnly", "Same Group Only"), session.noiseRemovalSettings.sameGroupOnly, value => session.noiseRemovalSettings.sameGroupOnly = value), groupParameterHelpLabel, ParameterHelpText("sameGroupOnly")));
             return section;
         }
 
@@ -632,7 +639,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             miniToolbar.style.marginBottom = 4f;
             miniToolbar.Add(CreateStatusBadge(T("clickPick", "Click: Pick"), BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(previewInteractionMode.ToString(), previewInteractionMode == PreviewInteractionMode.BrushSelect ? BadgeWarningColor : BadgeActiveColor));
-            miniToolbar.Add(CreateStatusBadge(previewZoom > MinPreviewZoom ? T("dragPan", "Drag: Pan") : T("dragPanDisabled", "Drag Pan Off"), previewZoom > MinPreviewZoom && previewInteractionMode == PreviewInteractionMode.Pan ? BadgeActiveColor : BadgeNeutralColor));
+            miniToolbar.Add(CreateStatusBadge(previewZoom > MinPreviewZoom ? T("dragPan", "Drag: Pan") : T("dragPanDisabled", "Drag Pan Off"), previewZoom > MinPreviewZoom && previewInteractionMode != PreviewInteractionMode.BrushSelect ? BadgeActiveColor : BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(selectionHighlightEnabled ? T("selectionHighlight", "Selection Highlight") : T("selectionHighlightOff", "Selection Off"), selectionHighlightEnabled ? BadgeActiveColor : BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(effectHighlightEnabled ? T("effectHighlight", "Effect Highlight") : T("effectHighlightOff", "Effect Off"), effectHighlightEnabled ? BadgeWarningColor : BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge($"{T("zoom", "Zoom")} {previewZoom:0.##}x", BadgeNeutralColor));
@@ -1086,6 +1093,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             ColorReplacementRule rule = GetOrCreateColorRule(entry);
             colorRuleContainer.Add(CreateWrappingLabel($"{entry.hex} / {entry.pixelCount} px"));
+            colorRuleContainer.Add(CreateToggle("color-rule-visible-toggle", T("visibleInExport", "Visible in Export"), IsColorEntryVisible(rule), value =>
+            {
+                RecordSessionEdit(() => SetColorEntryVisible(entry, rule, value));
+            }));
             colorRuleContainer.Add(CreateColorField("color-rule-color-field", T("targetColor", "Target Color"), rule.targetColor, value =>
             {
                 RecordSessionEdit(() =>
@@ -1110,6 +1121,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
                 });
             }));
+        }
+
+        private static bool IsColorEntryVisible(ColorReplacementRule rule)
+        {
+            return rule == null || !rule.enabled || rule.targetColor.a > 0 || rule.blendRatio < 1f;
+        }
+
+        private void SetColorEntryVisible(PaletteColorEntry entry, ColorReplacementRule rule, bool visible)
+        {
+            if (entry == null || rule == null)
+            {
+                return;
+            }
+
+            rule.enabled = true;
+            rule.blendRatio = 1f;
+            rule.targetColor = visible
+                ? new Color32(entry.color.r, entry.color.g, entry.color.b, 255)
+                : new Color32(entry.color.r, entry.color.g, entry.color.b, 0);
+            EnsureGroupSupportsColorRule(entry);
         }
 
         private void RunUiToolkitAction(System.Action action)
@@ -1643,7 +1674,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
-            if (!previewDragActive || evt.pointerId != previewDragPointerId || previewZoom <= MinPreviewZoom || previewInteractionMode != PreviewInteractionMode.Pan)
+            if (!previewDragActive || evt.pointerId != previewDragPointerId || previewZoom <= MinPreviewZoom)
             {
                 return;
             }
@@ -2055,6 +2086,63 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             IntegerField field = new IntegerField(label) { name = name, value = value };
             field.RegisterValueChangedCallback(evt => ApplyUiChange(() => onChanged(evt.newValue)));
             return field;
+        }
+
+        private static Label CreateParameterHelpLabel(string name, string text)
+        {
+            Label label = new Label(text) { name = name };
+            label.style.whiteSpace = WhiteSpace.Normal;
+            label.style.marginBottom = 6f;
+            label.style.paddingTop = 4f;
+            label.style.paddingRight = 6f;
+            label.style.paddingBottom = 4f;
+            label.style.paddingLeft = 6f;
+            label.style.borderTopWidth = 1f;
+            label.style.borderRightWidth = 1f;
+            label.style.borderBottomWidth = 1f;
+            label.style.borderLeftWidth = 1f;
+            label.style.borderTopColor = SeparatorColor;
+            label.style.borderRightColor = SeparatorColor;
+            label.style.borderBottomColor = SeparatorColor;
+            label.style.borderLeftColor = SeparatorColor;
+            label.style.backgroundColor = new Color(0.1f, 0.12f, 0.14f, 0.55f);
+            return label;
+        }
+
+        private static TControl AttachParameterHelp<TControl>(TControl control, Label helpLabel, string helpText)
+            where TControl : VisualElement
+        {
+            control.tooltip = helpText;
+            control.RegisterCallback<FocusInEvent>(_ => helpLabel.text = helpText, TrickleDown.TrickleDown);
+            control.RegisterCallback<PointerEnterEvent>(_ => helpLabel.text = helpText);
+            return control;
+        }
+
+        internal string ParameterHelpText(string key)
+        {
+            return key switch
+            {
+                "analysisPreset" => T("analysisPresetHelp", "Changes several analysis defaults at once. Choose this first, then fine tune individual parameters."),
+                "alphaThreshold" => T("alphaThresholdHelp", "Increase to treat more semi-transparent edge pixels as transparent, making extracted shapes cleaner but possibly thinner. Decrease to keep faint antialiasing and soft glows."),
+                "minimumPixelCount" => T("minimumPixelCountHelp", "Increase to ignore tiny colors and reduce palette noise. Decrease to keep small accents, sparkles, and single-pixel details."),
+                "quantizeStep" => T("quantizeStepHelp", "Increase to merge close color values into fewer swatches, producing smoother groups. Decrease for more exact colors and sharper gradients."),
+                "maxPaletteColors" => T("maxPaletteColorsHelp", "Increase to keep more extracted colors. Decrease to cap the palette earlier and make the list easier to edit."),
+                "targetGroupCount" => T("targetGroupCountHelp", "Increase for more separate replacement groups and finer control. Decrease to combine similar colors into broader changes."),
+                "distanceMode" => T("distanceModeHelp", "RGB is direct and fast, HSV keeps hue relationships, and Lab tends to match human-perceived color similarity."),
+                "maxColorDistance" => T("maxColorDistanceHelp", "Increase to merge colors that are farther apart, reducing group count but broadening replacements. Decrease to keep similar shades separate. Visually, replacements become broader or more localized."),
+                "preserveDarkOutline" => T("preserveDarkOutlineHelp", "Enable to keep dark line work from being absorbed into bright groups. Disable when outlines should recolor with the surrounding material."),
+                "preserveAlpha" => T("preserveAlphaHelp", "Enable to keep original opacity for normal color replacements. Disable when replacement alpha should directly affect exported transparency."),
+                "edgeCleanupEnabled" => T("edgeCleanupEnabledHelp", "Enable to remove color spill outside the detected foreground. Visually this clears stray edge pixels around opaque-background assets."),
+                "edgeCleanupMode" => T("edgeCleanupModeHelp", "Boundary Trim cuts a narrow border from the inferred foreground, while outside cleanup targets small regions beyond the edge."),
+                "edgeCleanupDistance" => T("edgeCleanupDistanceHelp", "Increase to search farther outside the edge for removable spill. Too high can remove nearby intentional details."),
+                "edgeCleanupMaxRegion" => T("edgeCleanupMaxRegionHelp", "Increase to remove larger outside islands. Decrease to only remove very small specks."),
+                "edgeTrimDistance" => T("edgeTrimDistanceHelp", "Increase to trim more pixels from the boundary, making silhouettes tighter. Decrease to preserve more edge antialiasing."),
+                "noiseRemovalEnabled" => T("noiseRemovalEnabledHelp", "Enable to fill small isolated color islands with nearby colors. This reduces speckles in the generated preview/export."),
+                "maxNoiseRegionPixels" => T("maxNoiseRegionPixelsHelp", "Increase to treat larger islands as noise. Decrease to protect small intentional highlights."),
+                "noiseNeighborThreshold" => T("noiseNeighborThresholdHelp", "Increase to allow less similar neighbor colors to fill noise. Decrease to require closer visual matches."),
+                "sameGroupOnly" => T("sameGroupOnlyHelp", "Enable to fill noise only from the same group, preserving material boundaries. Disable for more aggressive cleanup."),
+                _ => T("parameterHelpDefault", "Focus a parameter to see how increasing or decreasing it changes the output.")
+            };
         }
 
         private TextField CreateTextField(string name, string label, string value, System.Action<string> onChanged)
@@ -4018,6 +4106,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal void CreateBrushRulesForValidation()
         {
             CreateRulesFromBrushSelection();
+        }
+
+        internal bool SetSelectedColorVisibleForValidation(bool visible)
+        {
+            PaletteColorEntry entry = session.paletteColors.FirstOrDefault(candidate => candidate != null && candidate.id == selectedColorEntryId);
+            if (entry == null)
+            {
+                return false;
+            }
+
+            ColorReplacementRule rule = GetOrCreateColorRule(entry);
+            RecordSessionEdit(() => SetColorEntryVisible(entry, rule, visible));
+            return true;
         }
 
         internal void RefreshAfterPreviewForValidation()

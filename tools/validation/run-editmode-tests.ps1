@@ -210,6 +210,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE47_PREVIEW_BRUSH_SELECTION
     throw "Unity preview brush selection validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS" -Quiet)) {
+    throw "Unity preview visibility/help follow-up validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -260,6 +264,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS",
     "ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS",
     "ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS",
+    "FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"
