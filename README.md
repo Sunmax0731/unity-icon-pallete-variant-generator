@@ -9,7 +9,7 @@
 ## パッケージ
 
 - Package: `com.sunmax0731.icon-palette-variant-generator`
-- Version: `1.0.0`
+- Version: `1.0.1`
 - 配布形式: UPM package ZIP
 
 ## 現在の対応範囲
@@ -68,6 +68,7 @@ ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS
 ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS
 ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS
 ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS
+ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS
 ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
 ```
 
@@ -77,20 +78,20 @@ ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
 
 - マニュアル: `docs/manual.md`
 - 利用条件: `docs/terms.md`
-- リリースノート: `docs/release-notes-v1.0.0.md`
+- リリースノート: `docs/release-notes-v1.0.1.md`
 - BOOTH 商品説明文案: `docs/booth-copy.md`
 
 ## リリースビルド
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.0
-powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.0
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.1
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.1
 ```
 
 出力先:
 
 ```text
-ReleaseBuilds/PaletteVariantGenerator_v1.0.0.zip
+ReleaseBuilds/PaletteVariantGenerator_v1.0.1.zip
 ```
 
 GitHub Actions の `Release Package` workflow でも tracked files から同じ ZIP を生成します。

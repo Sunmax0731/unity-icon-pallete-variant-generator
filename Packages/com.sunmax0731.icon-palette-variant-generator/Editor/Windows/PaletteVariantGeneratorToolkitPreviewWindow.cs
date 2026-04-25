@@ -48,7 +48,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private Label statusLabel;
 
-        [MenuItem(MenuPath)]
         public static void Open()
         {
             PaletteVariantGeneratorToolkitPreviewWindow window = GetWindow<PaletteVariantGeneratorToolkitPreviewWindow>();

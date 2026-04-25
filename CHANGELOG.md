@@ -1,5 +1,20 @@
 # 変更履歴
 
+## 1.0.1 - 2026-04-25
+
+### 追加
+
+- RGB / HSV / Lab 色距離モードを追加。
+- フォルダ一括処理と複数ソース画像の出力ワークフローを追加。
+- ScriptableObject プリセットアセットによる置換ルール共有を追加。
+- UI Toolkit 移行準備として main window を UI Toolkit root + `IMGUIContainer` の hybrid 構成へ移行。
+
+### 変更
+
+- パレット、バリエーション、置換ルール、色別ルール周辺のスクロールと横幅を調整。
+- 評価用 UI Toolkit preview window を通常メニューから非表示化。
+- ローカル QA 用アセットを `.gitignore` に追加。
+
 ## 1.0.0 - 2026-04-25
 
 初回リリース。

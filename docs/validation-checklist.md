@@ -62,6 +62,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | UI Toolkit プレビュー Window | PASS | issue 23 UI Toolkit preview validation で評価用 window と主要セクション構成を検証。本番操作は IMGUI 版を使用。 |
 | UI Toolkit 標準コントロール同等性 | PASS | ObjectField / ColorField / PopupField / ScrollView / Slider と preview pan / wheel zoom / split compare の入力受け口を検証。 |
 | Main Window UI Toolkit ホスト | PASS | 本番 window が UI Toolkit root と IMGUIContainer で開き、既存 IMGUI ワークフローを維持することを検証。 |
+| UI Toolkit プレビューメニュー非表示 | PASS | issue 25 preview menu hidden validation で、評価用 preview window が通常メニューに表示されないことを検証。純 UI Toolkit 本番導入は #25 で管理。 |
 | Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
 | パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |
@@ -75,5 +76,5 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 
 - 初回リリースの UI は IMGUI ベースです。
 - 色距離は RGB / HSV / Lab から選択できます。Lab 色距離は知覚差に近い近傍色判定として検証対象です。
-- SpriteAtlas の直接編集は v1.0.0 の対象外です。
+- SpriteAtlas の直接編集は v1.0.1 の対象外です。
 - フォルダ単位の一括処理は Texture2D アセットを対象に検証します。

@@ -49,6 +49,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue23UiToolkitPreview();
             ValidateIssue23UiToolkitInteractionControls();
             ValidateIssue23MainWindowUiToolkitHost();
+            ValidateIssue25PreviewMenuHidden();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -72,6 +73,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS");
             Debug.Log("ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS");
+            Debug.Log("ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -952,6 +954,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             window.Close();
+        }
+
+        private static void ValidateIssue25PreviewMenuHidden()
+        {
+            System.Reflection.MethodInfo openMethod = typeof(PaletteVariantGeneratorToolkitPreviewWindow).GetMethod(
+                nameof(PaletteVariantGeneratorToolkitPreviewWindow.Open),
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (openMethod == null)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview Open method is missing.");
+            }
+
+            object[] menuItems = openMethod.GetCustomAttributes(typeof(MenuItem), false);
+            if (menuItems.Length != 0)
+            {
+                throw new System.InvalidOperationException("UI Toolkit preview window should not be exposed as a production menu item.");
+            }
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

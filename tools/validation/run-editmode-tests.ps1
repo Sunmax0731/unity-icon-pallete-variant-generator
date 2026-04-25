@@ -114,6 +114,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE23_MAIN_WINDOW_UI_TOOLKIT_
     throw "Unity main window UI Toolkit host validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS" -Quiet)) {
+    throw "Unity UI Toolkit preview menu hidden validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -140,6 +144,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS",
     "ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS",
     "ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS",
+    "ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

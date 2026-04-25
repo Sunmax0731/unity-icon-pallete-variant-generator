@@ -14,7 +14,7 @@ Unity Package Manager から、このリポジトリの Git URL を指定して�
 
 ### Release ZIP
 
-GitHub Releases から `PaletteVariantGenerator_v1.0.0.zip` をダウンロードして展開し、パッケージフォルダを Unity プロジェクトに追加します。
+GitHub Releases から `PaletteVariantGenerator_v1.0.1.zip` をダウンロードして展開し、パッケージフォルダを Unity プロジェクトに追加します。
 
 ## 起動方法
 

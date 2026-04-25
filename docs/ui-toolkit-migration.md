@@ -13,7 +13,7 @@
 
 ## UI Toolkit プレビュー Window
 
-`Tools > Palette Variant Generator > UI Toolkitプレビュー` に、本番置換前の評価用 UI Toolkit window を追加している。
+UI Toolkit preview window は本番置換前の評価用としてコード上に残しているが、通常メニューには表示しない。
 
 - 本番作業は引き続き IMGUI 版の `Tools > Palette Variant Generator > 開く` を使う。
 - preview window はソース情報、解析設定、グループ設定、出力設定、プリセット、プレビュー、パレット、バリエーション、置換ルール、色別ルールの主要セクション構成を UI Toolkit で検証する。
