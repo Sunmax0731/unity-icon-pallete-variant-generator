@@ -8,12 +8,17 @@ Unity Editor extension for generating palette-based color variants from icon ima
 
 ## Current Scope
 
-The current implementation is the Phase 0 scaffold:
+The current implementation covers the MVP editor workflow:
 
 - Embedded UPM package under `Packages/com.sunmax0731.icon-palette-variant-generator`
-- Runtime model and enum baseline
-- Editor-only assembly
-- Empty EditorWindow opened from `Tools > Icon Tools > Palette Variant Generator`
+- Image loading and palette extraction
+- Automatic nearby-color grouping with adjustable max color distance
+- Group uniform, per-color, and hybrid replacement rules
+- Before / After preview with selection overlay
+- Scrollable palette list
+- PNG export
+- Session JSON save / load
+- Toolbar Help and language setting controls
 
 ## Open
 
@@ -44,3 +49,8 @@ ISSUE10_UI_POLISH_VALIDATION=PASS
 ## Planning Docs
 
 The planning baseline is under `unity_icon_palette_variant_generator_docs/`.
+
+## Agent Docs
+
+- `Agents.md`
+- `Skill.md`
