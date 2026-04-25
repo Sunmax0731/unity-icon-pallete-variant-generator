@@ -28,6 +28,7 @@ Tools > Icon Tools > Palette Variant Generator
 4. `docs/development_plan.md`
 5. `docs/color_variant_rule.schema.json`
 6. `SKILL.md`
+7. 作業工程に対応する `docs/skills/*.md`
 
 ## 4. 実装原則
 
