@@ -19,6 +19,7 @@
 - `Packages/com.sunmax0731.icon-palette-variant-generator` 配下の UPM パッケージ
 - 画像読み込みとパレット色抽出
 - 近傍色の自動グルーピングと、距離しきい値の調整
+- パレット色の手動グループ移動と locked group 保護
 - グループ単位、色単位、Hybrid の置換ルール
 - Before / After プレビューと選択色 overlay
 - スクロール可能なパレット一覧
@@ -58,6 +59,7 @@ ISSUE12_VARIATION_UX_VALIDATION=PASS
 ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
 ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS
 ISSUE18_RULE_PRESET_VALIDATION=PASS
+ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS
 ```
 
 ## ドキュメント

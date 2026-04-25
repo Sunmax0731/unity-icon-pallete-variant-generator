@@ -482,12 +482,35 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         EditorGUILayout.LabelField(entry.hex, EditorStyles.boldLabel, GUILayout.Width(78f));
                         EditorGUILayout.LabelField($"{entry.pixelCount} px", GUILayout.Width(58f));
                         EditorGUILayout.LabelField($"{entry.pixelRatio:P1}", GUILayout.Width(58f));
-                        EditorGUILayout.LabelField(entry.groupId, EditorStyles.miniLabel, GUILayout.MinWidth(64f), GUILayout.ExpandWidth(true));
+                        DrawPaletteGroupPopup(entry);
                     }
                 }
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawPaletteGroupPopup(PaletteColorEntry entry)
+        {
+            if (session.colorGroups.Count == 0)
+            {
+                EditorGUILayout.LabelField(entry.groupId, EditorStyles.miniLabel, GUILayout.MinWidth(64f), GUILayout.ExpandWidth(true));
+                return;
+            }
+
+            string[] groupNames = session.colorGroups
+                .Select(group => group == null ? string.Empty : $"{group.displayName} ({group.id})")
+                .ToArray();
+            int currentIndex = Mathf.Max(0, session.colorGroups.FindIndex(group => group != null && group.id == entry.groupId));
+            ColorGroup sourceGroup = session.colorGroups.FirstOrDefault(group => group != null && group.id == entry.groupId);
+            using (new EditorGUI.DisabledScope(sourceGroup != null && sourceGroup.lockedGroup))
+            {
+                int nextIndex = EditorGUILayout.Popup(currentIndex, groupNames, GUILayout.MinWidth(132f), GUILayout.ExpandWidth(true));
+                if (nextIndex != currentIndex && nextIndex >= 0 && nextIndex < session.colorGroups.Count)
+                {
+                    MovePaletteEntryToGroup(entry, session.colorGroups[nextIndex].id);
+                }
+            }
         }
 
         private void DrawGroupList(IReadOnlyList<ColorGroup> colorGroups)
@@ -522,6 +545,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     EditorGUILayout.LabelField(group.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField($"{group.colorEntryIds.Count} colors", GUILayout.Width(76f));
                     EditorGUILayout.LabelField($"{group.pixelRatio:P1}", GUILayout.Width(56f));
+                    group.lockedGroup = GUILayout.Toggle(group.lockedGroup, T("locked", "Locked"), EditorStyles.miniButton, GUILayout.Width(62f));
                 }
 
                 float previousLabelWidth = EditorGUIUtility.labelWidth;
@@ -1216,6 +1240,76 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return rule;
         }
 
+        private void MovePaletteEntryToGroup(PaletteColorEntry entry, string targetGroupId)
+        {
+            if (entry == null || string.IsNullOrWhiteSpace(targetGroupId) || entry.groupId == targetGroupId)
+            {
+                return;
+            }
+
+            ColorGroup sourceGroup = session.colorGroups.FirstOrDefault(group => group != null && group.id == entry.groupId);
+            ColorGroup targetGroup = session.colorGroups.FirstOrDefault(group => group != null && group.id == targetGroupId);
+            if (targetGroup == null)
+            {
+                return;
+            }
+
+            if ((sourceGroup != null && sourceGroup.lockedGroup) || targetGroup.lockedGroup)
+            {
+                reportMessage = "Locked groups cannot be edited.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            if (sourceGroup != null)
+            {
+                sourceGroup.colorEntryIds.Remove(entry.id);
+            }
+
+            if (!targetGroup.colorEntryIds.Contains(entry.id))
+            {
+                targetGroup.colorEntryIds.Add(entry.id);
+            }
+
+            entry.groupId = targetGroup.id;
+            selectedGroupId = targetGroup.id;
+            selectedColorEntryId = entry.id;
+            RecalculateGroupStats();
+            variationService.SyncActiveVariation(session);
+            InvalidateSelectionOverlay();
+            if (afterPreview != null)
+            {
+                RefreshAfterPreview();
+            }
+
+            reportMessage = $"Moved {entry.hex} to {targetGroup.displayName}.";
+            reportType = MessageType.Info;
+        }
+
+        private void RecalculateGroupStats()
+        {
+            int totalPixels = session.paletteColors == null ? 0 : session.paletteColors.Sum(entry => entry == null ? 0 : entry.pixelCount);
+            foreach (ColorGroup group in session.colorGroups)
+            {
+                if (group == null)
+                {
+                    continue;
+                }
+
+                List<PaletteColorEntry> entries = session.paletteColors
+                    .Where(entry => entry != null && entry.groupId == group.id)
+                    .ToList();
+                group.colorEntryIds = entries.Select(entry => entry.id).ToList();
+                group.pixelCount = entries.Sum(entry => entry.pixelCount);
+                group.pixelRatio = totalPixels <= 0 ? 0f : (float)group.pixelCount / totalPixels;
+                if (entries.Count > 0)
+                {
+                    PaletteColorEntry representative = entries.OrderByDescending(entry => entry.pixelCount).First();
+                    group.representativeColor = representative.color;
+                }
+            }
+        }
+
         private void DrawSelectionOverlay(Rect imageRect, Rect texCoords)
         {
             if (Event.current.type != EventType.Repaint || readableSourceImage == null)
@@ -1468,6 +1562,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "replacementRules" => "置換ルール",
                 "variations" => "バリエーション",
                 "variationsEmpty" => "Auto Group後にバリエーションが表示されます。",
+                "locked" => "固定",
                 "activeVariation" => "選択中",
                 "useVariation" => "選択",
                 "skip" => "Skip",

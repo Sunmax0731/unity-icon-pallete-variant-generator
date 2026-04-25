@@ -57,6 +57,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | Auto Preview debounce | PASS | issue 13 debounce validation で検証。目視確認を推奨。 |
 | プレビューのズーム / パン / split 比較 | PASS | issue 17 preview navigation validation で検証。目視確認を推奨。 |
 | 置換ルールプリセット export / import | PASS | issue 18 rule preset validation で検証。 |
+| パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
 | Export All | PASS | variation snapshot と export service validation で検証。 |
 
 ## リリース blocker

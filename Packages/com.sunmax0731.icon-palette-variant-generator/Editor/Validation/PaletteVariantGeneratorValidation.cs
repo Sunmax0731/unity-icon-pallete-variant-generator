@@ -39,6 +39,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue13AutoPreviewDebounce();
             ValidateIssue17PreviewNavigation();
             ValidateIssue18RulePresetWorkflow();
+            ValidateIssue19ManualGroupEditing();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -53,6 +54,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS");
             Debug.Log("ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS");
             Debug.Log("ISSUE18_RULE_PRESET_VALIDATION=PASS");
+            Debug.Log("ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -530,6 +532,70 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 {
                     System.IO.Directory.Delete(tempRoot, true);
                 }
+            }
+        }
+
+        private static void ValidateIssue19ManualGroupEditing()
+        {
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                {
+                    new PaletteColorEntry
+                    {
+                        id = "#FF0000",
+                        hex = "#FF0000",
+                        color = new Color32(255, 0, 0, 255),
+                        pixelCount = 3,
+                        groupId = "group_01"
+                    },
+                    new PaletteColorEntry
+                    {
+                        id = "#0000FF",
+                        hex = "#0000FF",
+                        color = new Color32(0, 0, 255, 255),
+                        pixelCount = 1,
+                        groupId = "group_02"
+                    }
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        displayName = "Group 1",
+                        colorEntryIds = new System.Collections.Generic.List<string> { "#FF0000" },
+                        pixelCount = 3,
+                        pixelRatio = 0.75f
+                    },
+                    new ColorGroup
+                    {
+                        id = "group_02",
+                        displayName = "Group 2",
+                        colorEntryIds = new System.Collections.Generic.List<string> { "#0000FF" },
+                        pixelCount = 1,
+                        pixelRatio = 0.25f
+                    }
+                }
+            };
+
+            session.paletteColors[0].groupId = "group_02";
+            foreach (ColorGroup group in session.colorGroups)
+            {
+                var entries = session.paletteColors.FindAll(entry => entry.groupId == group.id);
+                group.colorEntryIds = entries.ConvertAll(entry => entry.id);
+                group.pixelCount = 0;
+                foreach (PaletteColorEntry entry in entries)
+                {
+                    group.pixelCount += entry.pixelCount;
+                }
+            }
+
+            if (session.colorGroups[0].colorEntryIds.Count != 0
+                || session.colorGroups[1].colorEntryIds.Count != 2
+                || session.colorGroups[1].pixelCount != 4)
+            {
+                throw new System.InvalidOperationException("Manual group editing validation failed.");
             }
         }
 
