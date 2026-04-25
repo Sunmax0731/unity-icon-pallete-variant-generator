@@ -45,12 +45,27 @@ ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
 ISSUE5_PNG_EXPORT_VALIDATION=PASS
 ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
+ISSUE8_SAMPLE_QA_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ```
 
 ## Documentation
 
 Project planning and product documentation live under `docs/`.
+
+## Samples
+
+Validation sample icons live under:
+
+```text
+Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
+```
+
+## Known Limitations
+
+- UI is IMGUI-based for the first release.
+- Color distance is RGB-based.
+- Direct SpriteAtlas editing and folder-wide batch processing are out of scope for v1.0.0.
 
 ## Agent Docs
 

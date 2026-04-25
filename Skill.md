@@ -27,7 +27,6 @@
 
 ## Current Required Order
 
-1. `#8` 手動 QA、サンプル、検証チェックリスト
-2. `#9` Release packaging と GitHub Release `v1.0.0`
+1. `#9` Release packaging と GitHub Release `v1.0.0`
 
-Release 作業は #7 と #8 の完了後に行う。
+Release 作業は #8 の完了後に行う。

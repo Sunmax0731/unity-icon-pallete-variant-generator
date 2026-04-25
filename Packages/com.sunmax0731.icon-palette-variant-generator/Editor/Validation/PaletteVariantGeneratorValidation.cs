@@ -34,6 +34,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateSessionJson();
             ValidateIssue10UiPolish();
             ValidateIssue7Variations();
+            ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
             Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
@@ -41,6 +42,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE5_PNG_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE6_SESSION_JSON_VALIDATION=PASS");
             Debug.Log("ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS");
+            Debug.Log("ISSUE8_SAMPLE_QA_VALIDATION=PASS");
             Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
         }
 
@@ -272,6 +274,67 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 || session.exportSettings.fileSuffix != first.fileSuffix)
             {
                 throw new System.InvalidOperationException("Variation snapshot validation failed.");
+            }
+        }
+
+        private static void ValidateIssue8Samples()
+        {
+            string sampleRoot = System.IO.Path.Combine(
+                System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..")),
+                "Packages",
+                "com.sunmax0731.icon-palette-variant-generator",
+                "Samples~",
+                "SampleIcons");
+
+            string[] sampleNames =
+            {
+                "transparent_64.png",
+                "transparent_128.png",
+                "antialias_128.png",
+                "pixel_art_64.png"
+            };
+
+            foreach (string sampleName in sampleNames)
+            {
+                string path = System.IO.Path.Combine(sampleRoot, sampleName);
+                if (!System.IO.File.Exists(path))
+                {
+                    throw new System.InvalidOperationException($"Sample icon is missing: {path}");
+                }
+
+                byte[] beforeBytes = System.IO.File.ReadAllBytes(path);
+                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!ImageConversion.LoadImage(texture, beforeBytes))
+                {
+                    Object.DestroyImmediate(texture);
+                    throw new System.InvalidOperationException($"Sample icon could not be loaded: {path}");
+                }
+
+                var entries = new ColorExtractionService().Extract(
+                    texture,
+                    new AnalyzeSettings
+                    {
+                        alphaThreshold = 8,
+                        minimumPixelCount = 1,
+                        quantizeStep = 8,
+                        maxPaletteColors = 64
+                    });
+
+                Object.DestroyImmediate(texture);
+
+                byte[] afterBytes = System.IO.File.ReadAllBytes(path);
+                if (entries.Count == 0 || beforeBytes.Length != afterBytes.Length)
+                {
+                    throw new System.InvalidOperationException($"Sample icon validation failed: {path}");
+                }
+
+                for (int index = 0; index < beforeBytes.Length; index++)
+                {
+                    if (beforeBytes[index] != afterBytes[index])
+                    {
+                        throw new System.InvalidOperationException($"Sample icon was modified during validation: {path}");
+                    }
+                }
             }
         }
 

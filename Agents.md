@@ -177,12 +177,12 @@ ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
 ISSUE5_PNG_EXPORT_VALIDATION=PASS
 ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
+ISSUE8_SAMPLE_QA_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ```
 
 ## 12. 残タスク順
 
-1. `#8` 手動 QA、サンプル、検証チェックリスト
-2. `#9` Release packaging と GitHub Release `v1.0.0`
+1. `#9` Release packaging と GitHub Release `v1.0.0`
 
-Release 作業は #7 と #8 の完了後に行う。
+Release 作業は #8 の完了後に行う。
