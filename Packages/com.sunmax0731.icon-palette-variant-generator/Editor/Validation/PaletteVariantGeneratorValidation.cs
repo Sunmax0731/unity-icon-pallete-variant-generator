@@ -27,6 +27,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             window.Close();
+            ValidateVersionLicenseMenus();
             ValidateColorExtraction();
             ValidateColorGrouping();
             ValidateColorReplacement();
@@ -44,6 +45,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE8_SAMPLE_QA_VALIDATION=PASS");
             Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
+        }
+
+        private static void ValidateVersionLicenseMenus()
+        {
+            PaletteVariantGeneratorWindow.OpenVersionInfo();
+            PaletteVariantInfoWindow infoWindow = EditorWindow.GetWindow<PaletteVariantInfoWindow>();
+            if (infoWindow == null || infoWindow.titleContent == null || infoWindow.titleContent.text != "Palette Variant Info")
+            {
+                throw new System.InvalidOperationException("Version info window could not be created.");
+            }
+
+            infoWindow.Close();
+
+            PaletteVariantGeneratorWindow.OpenLicense();
+            PaletteVariantInfoWindow licenseWindow = EditorWindow.GetWindow<PaletteVariantInfoWindow>();
+            if (licenseWindow == null || licenseWindow.titleContent == null || licenseWindow.titleContent.text != "Palette Variant License")
+            {
+                throw new System.InvalidOperationException("License window could not be created.");
+            }
+
+            licenseWindow.Close();
         }
 
         private static void ValidateColorExtraction()

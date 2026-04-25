@@ -20,6 +20,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float MinPreviewHeight = 260f;
         private const float PaletteListHeight = 170f;
         private const float VariationListHeight = 126f;
+        internal const string ProductName = "Unity Icon Palette Variant Generator";
+        internal const string PackageName = "com.sunmax0731.icon-palette-variant-generator";
+        internal const string PackageVersion = "1.0.0";
+        internal const string ValidatedUnityVersion = "6000.4.0f1";
+        internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.0";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
@@ -56,10 +61,33 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         [MenuItem("Tools/Icon Tools/Palette Variant Generator")]
         public static void Open()
         {
+            OpenWindow();
+        }
+
+        [MenuItem("Tools/Palette Variant Generator/Open")]
+        public static void OpenFromRootMenu()
+        {
+            OpenWindow();
+        }
+
+        private static void OpenWindow()
+        {
             PaletteVariantGeneratorWindow window = GetWindow<PaletteVariantGeneratorWindow>();
             window.titleContent = new GUIContent("Palette Variant Generator");
             window.minSize = new Vector2(1240f, 620f);
             window.Show();
+        }
+
+        [MenuItem("Tools/Palette Variant Generator/Version Info")]
+        public static void OpenVersionInfo()
+        {
+            PaletteVariantInfoWindow.OpenInfo();
+        }
+
+        [MenuItem("Tools/Palette Variant Generator/License")]
+        public static void OpenLicense()
+        {
+            PaletteVariantInfoWindow.OpenLicense();
         }
 
         private void OnEnable()
@@ -1316,6 +1344,90 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(body, MessageType.None);
             EditorGUILayout.Space(4f);
+        }
+    }
+
+    internal sealed class PaletteVariantInfoWindow : EditorWindow
+    {
+        private InfoMode mode;
+        private Vector2 scroll;
+
+        public static void OpenInfo()
+        {
+            PaletteVariantInfoWindow window = GetWindow<PaletteVariantInfoWindow>("Palette Variant Info");
+            window.mode = InfoMode.Version;
+            window.minSize = new Vector2(460f, 320f);
+            window.Show();
+            window.Focus();
+        }
+
+        public static void OpenLicense()
+        {
+            PaletteVariantInfoWindow window = GetWindow<PaletteVariantInfoWindow>("Palette Variant License");
+            window.mode = InfoMode.License;
+            window.minSize = new Vector2(520f, 420f);
+            window.Show();
+            window.Focus();
+        }
+
+        private void OnGUI()
+        {
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            if (mode == InfoMode.License)
+            {
+                DrawLicense();
+            }
+            else
+            {
+                DrawVersionInfo();
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        private static void DrawVersionInfo()
+        {
+            EditorGUILayout.LabelField(PaletteVariantGeneratorWindow.ProductName, EditorStyles.boldLabel);
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Package", PaletteVariantGeneratorWindow.PackageName);
+            EditorGUILayout.LabelField("Version", PaletteVariantGeneratorWindow.PackageVersion);
+            EditorGUILayout.LabelField("Validated Unity", PaletteVariantGeneratorWindow.ValidatedUnityVersion);
+            EditorGUILayout.LabelField("Menu", "Tools > Palette Variant Generator");
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.TextField("Release", PaletteVariantGeneratorWindow.ReleaseUrl);
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.HelpBox(
+                "This editor extension extracts icon palettes, groups nearby colors, previews replacements, and exports PNG color variants without modifying the source image.",
+                MessageType.None);
+        }
+
+        private static void DrawLicense()
+        {
+            EditorGUILayout.LabelField("License And Use", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "You may use this tool in personal and commercial Unity projects, generate and distribute PNG assets created with the tool, and modify the package for your own projects.",
+                MessageType.None);
+            EditorGUILayout.HelpBox(
+                "You may not redistribute this package as a competing standalone product without permission, or claim the original package as your own work.",
+                MessageType.Warning);
+
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Warranty", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "The package is provided as-is. The author is not responsible for project data loss, production delays, or other damages caused by use of the package. Always keep backups of source assets and project data.",
+                MessageType.None);
+
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Source Assets", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "The tool is designed not to overwrite source images. Users are responsible for confirming export destinations and file conflict settings.",
+                MessageType.Info);
+        }
+
+        private enum InfoMode
+        {
+            Version,
+            License
         }
     }
 }
