@@ -15,9 +15,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     public sealed class PaletteVariantGeneratorWindow : EditorWindow
     {
         private const float LeftPaneWidth = 300f;
-        private const float RightPaneWidth = 420f;
+        private const float RightPaneWidth = 500f;
         private const float PaneGap = 14f;
-        private const float CompactLayoutWidth = 980f;
+        private const float CompactLayoutWidth = 1220f;
         private const float DockedMinWidth = 760f;
         private const float DockedMinHeight = 540f;
         private const float MinPreviewHeight = 260f;
@@ -471,7 +471,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 DrawSectionHeader(T("sourceInfo", "Source Info"));
                 if (readableSourceImage != null)
                 {
-                    EditorGUILayout.LabelField(T("assetPath", "Asset Path"), sourceAssetPath);
+                    DrawSourceAssetPath();
                     EditorGUILayout.LabelField(T("size", "Size"), $"{readableSourceImage.width} x {readableSourceImage.height}");
                     EditorGUILayout.LabelField(T("paletteColors", "Palette Colors"), session.paletteColors.Count.ToString());
                     EditorGUILayout.LabelField(T("groups", "Groups"), session.colorGroups.Count.ToString());
@@ -578,7 +578,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             using (new EditorGUILayout.VerticalScope(GetPaneLayoutOptions(RightPaneWidth, compactLayout)))
             {
-                rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
+                rightScroll = EditorGUILayout.BeginScrollView(
+                    rightScroll,
+                    false,
+                    true,
+                    GUIStyle.none,
+                    GUI.skin.verticalScrollbar,
+                    GUI.skin.scrollView);
                 DrawSectionHeader(T("variations", "Variations"));
                 DrawVariationList();
                 DrawSectionSeparator();
@@ -594,6 +600,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 DrawSelectedColorRules();
                 EditorGUILayout.EndScrollView();
             }
+        }
+
+        private void DrawSourceAssetPath()
+        {
+            EditorGUILayout.LabelField(T("assetPath", "Asset Path"), EditorStyles.miniBoldLabel);
+            GUIStyle wrappedPathStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel)
+            {
+                wordWrap = true
+            };
+            EditorGUILayout.SelectableLabel(sourceAssetPath, wrappedPathStyle, GUILayout.MinHeight(32f));
         }
 
         private void DrawPreviewPanel(string title, Texture2D texture)
