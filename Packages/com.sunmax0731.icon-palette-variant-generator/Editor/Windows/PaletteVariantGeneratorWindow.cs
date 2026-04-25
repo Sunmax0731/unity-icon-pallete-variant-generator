@@ -19,6 +19,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float PaneGap = 14f;
         private const float MinPreviewHeight = 260f;
         private const float PaletteListHeight = 170f;
+        private const float VariationListHeight = 126f;
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
         private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
@@ -30,6 +31,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly ColorGroupingService colorGroupingService = new ColorGroupingService();
         private readonly ColorQuantizationService colorQuantizationService = new ColorQuantizationService();
         private readonly ColorReplacementService colorReplacementService = new ColorReplacementService();
+        private readonly IconVariationService variationService = new IconVariationService();
         private readonly PngExportService pngExportService = new PngExportService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
         private Texture2D sourceImage;
@@ -38,6 +40,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D checkerboardTexture;
         private Vector2 leftScroll;
         private Vector2 paletteScroll;
+        private Vector2 variationScroll;
         private Vector2 rightScroll;
         private string sourceAssetPath = string.Empty;
         private string reportMessage = "Select a project PNG or Texture2D asset, then click Analyze.";
@@ -111,6 +114,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
                 }
 
+                using (new EditorGUI.DisabledScope(readableSourceImage == null || session.variations.Count == 0))
+                {
+                    if (GUILayout.Button(T("exportAll", "Export All"), EditorStyles.toolbarButton, GUILayout.Width(78f)))
+                    {
+                        ExportAllVariations();
+                    }
+                }
+
                 using (new EditorGUI.DisabledScope(false))
                 {
                     if (GUILayout.Button(T("saveSession", "Save Session"), EditorStyles.toolbarButton, GUILayout.Width(104f)))
@@ -174,7 +185,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
 
                 session.exportSettings.filePrefix = EditorGUILayout.TextField(T("filePrefix", "File Prefix"), session.exportSettings.filePrefix);
-                session.exportSettings.fileSuffix = EditorGUILayout.TextField(T("fileSuffix", "File Suffix"), session.exportSettings.fileSuffix);
+                using (var change = new EditorGUI.ChangeCheckScope())
+                {
+                    session.exportSettings.fileSuffix = EditorGUILayout.TextField(T("fileSuffix", "File Suffix"), session.exportSettings.fileSuffix);
+                    if (change.changed)
+                    {
+                        IconVariation activeVariation = variationService.GetActiveVariation(session);
+                        if (activeVariation != null)
+                        {
+                            activeVariation.fileSuffix = session.exportSettings.fileSuffix;
+                        }
+                    }
+                }
                 session.exportSettings.conflictMode = (ExportConflictMode)EditorGUILayout.EnumPopup(T("conflictMode", "Conflict Mode"), session.exportSettings.conflictMode);
                 session.exportSettings.refreshAssetDatabase = EditorGUILayout.Toggle(T("refreshAssetDatabase", "Refresh AssetDatabase"), session.exportSettings.refreshAssetDatabase);
 
@@ -224,6 +246,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(RightPaneWidth)))
             {
                 rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
+                DrawSectionHeader(T("variations", "Variations"));
+                DrawVariationList();
+                DrawSectionSeparator();
                 DrawSectionHeader(T("replacementRules", "Replacement Rules"));
                 if (session.colorGroups.Count == 0)
                 {
@@ -331,6 +356,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     group.replacementMode = (ColorReplacementMode)EditorGUILayout.EnumPopup(T("mode", "Mode"), group.replacementMode);
                     if (change.changed && afterPreview != null)
                     {
+                        variationService.SyncActiveVariation(session);
                         RefreshAfterPreview();
                     }
                 }
@@ -376,6 +402,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                             rule.enabled = EditorGUILayout.ToggleLeft(T("enabled", "Enabled"), rule.enabled, GUILayout.Width(84f));
                             if (change.changed && afterPreview != null)
                             {
+                                variationService.SyncActiveVariation(session);
                                 RefreshAfterPreview();
                             }
                         }
@@ -387,6 +414,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         rule.blendRatio = EditorGUILayout.Slider(T("blendRatio", "Blend Ratio"), rule.blendRatio, 0f, 1f);
                         if (change.changed && afterPreview != null)
                         {
+                            variationService.SyncActiveVariation(session);
                             RefreshAfterPreview();
                         }
                     }
@@ -409,6 +437,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.paletteColors = new List<PaletteColorEntry>(colorExtractionService.Extract(readableSourceImage, session.analyzeSettings));
             session.colorGroups.Clear();
             session.colorRules.Clear();
+            session.variations.Clear();
+            session.activeVariationId = string.Empty;
             selectedGroupId = string.Empty;
             selectedColorEntryId = string.Empty;
             DestroyAfterPreview();
@@ -419,6 +449,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private void AutoGroupPalette()
         {
             session.colorGroups = new List<ColorGroup>(colorGroupingService.CreateGroups(session.paletteColors, session.groupSettings));
+            session.colorRules.Clear();
+            session.variations.Clear();
+            session.activeVariationId = string.Empty;
+            variationService.EnsureActiveVariation(session);
+            variationService.SyncActiveVariation(session);
             selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
             selectedColorEntryId = string.Empty;
             reportMessage = $"Created {session.colorGroups.Count} color groups.";
@@ -457,6 +492,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
+            variationService.SyncActiveVariation(session);
             PngExportResult result = pngExportService.Export(afterPreview, session.exportSettings, GetProjectRoot());
             if (session.exportSettings.refreshAssetDatabase)
             {
@@ -481,6 +517,69 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
         }
 
+        private void ExportAllVariations()
+        {
+            if (readableSourceImage == null)
+            {
+                reportMessage = "Analyze a source image before batch export.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            if (session.variations.Count == 0)
+            {
+                reportMessage = "Create at least one variation before batch export.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            variationService.SyncActiveVariation(session);
+            string originalVariationId = session.activeVariationId;
+            int exported = 0;
+            int skipped = 0;
+            List<string> failures = new List<string>();
+
+            foreach (IconVariation variation in session.variations.Where(variation => variation != null && variation.exportEnabled))
+            {
+                variationService.ApplyVariation(session, variation.id);
+                Texture2D preview = colorReplacementService.Apply(readableSourceImage, session);
+                ExportSettings exportSettings = CreateExportSettingsForVariation(variation);
+                PngExportResult result = pngExportService.Export(preview, exportSettings, GetProjectRoot());
+                DestroyImmediate(preview);
+
+                if (result.Status == PngExportStatus.Exported)
+                {
+                    exported++;
+                }
+                else if (result.Status == PngExportStatus.Skipped)
+                {
+                    skipped++;
+                }
+                else
+                {
+                    failures.Add(result.Message);
+                }
+            }
+
+            variationService.ApplyVariation(session, originalVariationId);
+            RefreshAfterPreview();
+            if (session.exportSettings.refreshAssetDatabase)
+            {
+                AssetDatabase.Refresh();
+            }
+
+            if (failures.Count > 0)
+            {
+                reportMessage = $"Batch export completed with {failures.Count} failure(s): {string.Join("; ", failures)}";
+                reportType = MessageType.Error;
+            }
+            else
+            {
+                reportMessage = $"Batch export completed. Exported: {exported}, Skipped: {skipped}.";
+                reportType = skipped > 0 ? MessageType.Warning : MessageType.Info;
+            }
+        }
+
         private void SaveSession()
         {
             string path = EditorUtility.SaveFilePanel(
@@ -496,6 +595,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             try
             {
+                variationService.SyncActiveVariation(session);
                 sessionJsonService.Save(path, session);
                 reportMessage = $"Session saved: {path}";
                 reportType = MessageType.Info;
@@ -525,6 +625,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             session = result.Session;
             session.colorRules ??= new List<ColorReplacementRule>();
+            session.variations ??= new List<IconVariation>();
+            if (session.variations.Count > 0)
+            {
+                variationService.ApplyVariation(session, string.IsNullOrWhiteSpace(session.activeVariationId)
+                    ? session.variations[0].id
+                    : session.activeVariationId);
+            }
+            else if (session.colorGroups.Count > 0)
+            {
+                variationService.EnsureActiveVariation(session);
+                variationService.SyncActiveVariation(session);
+            }
             sourceAssetPath = session.sourceImageAssetPath;
             sourceImage = string.IsNullOrWhiteSpace(sourceAssetPath)
                 ? null
@@ -571,6 +683,102 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             session.exportSettings.outputFolder = ToProjectRelativePath(selectedFolder);
+        }
+
+        private void DrawVariationList()
+        {
+            if (session.colorGroups.Count == 0 && session.variations.Count == 0)
+            {
+                EditorGUILayout.HelpBox(T("variationsEmpty", "Variations will appear after Auto Group."), MessageType.None);
+                return;
+            }
+
+            variationService.EnsureActiveVariation(session);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button(T("add", "Add"), GUILayout.Width(58f)))
+                {
+                    variationService.AddVariation(session);
+                    RefreshAfterPreview();
+                }
+
+                if (GUILayout.Button(T("duplicate", "Duplicate"), GUILayout.Width(82f)))
+                {
+                    variationService.DuplicateActiveVariation(session);
+                    RefreshAfterPreview();
+                }
+
+                using (new EditorGUI.DisabledScope(session.variations.Count <= 1))
+                {
+                    if (GUILayout.Button(T("remove", "Remove"), GUILayout.Width(72f)))
+                    {
+                        variationService.RemoveActiveVariation(session);
+                        RefreshAfterPreview();
+                    }
+                }
+            }
+
+            variationScroll = EditorGUILayout.BeginScrollView(variationScroll, GUI.skin.box, GUILayout.Height(VariationListHeight));
+            foreach (IconVariation variation in session.variations)
+            {
+                if (variation == null)
+                {
+                    continue;
+                }
+
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        bool isActive = variation.id == session.activeVariationId;
+                        bool nextActive = GUILayout.Toggle(isActive, string.Empty, GUILayout.Width(18f));
+                        if (nextActive && !isActive)
+                        {
+                            variationService.SyncActiveVariation(session);
+                            variationService.ApplyVariation(session, variation.id);
+                            RefreshAfterPreview();
+                        }
+
+                        using (var change = new EditorGUI.ChangeCheckScope())
+                        {
+                            variation.exportEnabled = EditorGUILayout.Toggle(variation.exportEnabled, GUILayout.Width(18f));
+                            variation.displayName = EditorGUILayout.TextField(variation.displayName);
+                            if (change.changed)
+                            {
+                                variationService.SyncActiveVariation(session);
+                            }
+                        }
+                    }
+
+                    using (var change = new EditorGUI.ChangeCheckScope())
+                    {
+                        variation.fileSuffix = EditorGUILayout.TextField(T("fileSuffix", "File Suffix"), variation.fileSuffix);
+                        if (variation.id == session.activeVariationId)
+                        {
+                            session.exportSettings.fileSuffix = variation.fileSuffix;
+                        }
+
+                        if (change.changed)
+                        {
+                            variationService.SyncActiveVariation(session);
+                        }
+                    }
+                }
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        private ExportSettings CreateExportSettingsForVariation(IconVariation variation)
+        {
+            return new ExportSettings
+            {
+                outputFolder = session.exportSettings.outputFolder,
+                filePrefix = session.exportSettings.filePrefix,
+                fileSuffix = string.IsNullOrWhiteSpace(variation.fileSuffix) ? variation.id : variation.fileSuffix,
+                conflictMode = session.exportSettings.conflictMode,
+                refreshAssetDatabase = false
+            };
         }
 
         private ColorReplacementRule GetOrCreateColorRule(PaletteColorEntry entry)
@@ -742,6 +950,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "analyze" => "Analyze",
                 "autoGroup" => "Auto Group",
                 "export" => "Export",
+                "exportAll" => "Export All",
                 "saveSession" => "Save Session",
                 "loadSession" => "Load Session",
                 "preview" => "Preview",
@@ -774,6 +983,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "palette" => "パレット",
                 "paletteEmpty" => "解析後にパレット色がここに表示されます。",
                 "replacementRules" => "置換ルール",
+                "variations" => "バリエーション",
+                "variationsEmpty" => "Auto Group後にバリエーションが表示されます。",
+                "add" => "追加",
+                "duplicate" => "複製",
+                "remove" => "削除",
                 "groupsEmpty" => "Auto Group後にカラーグループがここに表示されます。",
                 "noPreview" => "プレビューなし",
                 "targetColor" => "置換色",

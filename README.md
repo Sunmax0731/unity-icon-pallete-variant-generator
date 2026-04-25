@@ -18,6 +18,7 @@ The current implementation covers the MVP editor workflow:
 - Scrollable palette list
 - PNG export
 - Session JSON save / load
+- Multiple variations and batch export
 - Toolbar Help and language setting controls
 
 ## Open
@@ -43,6 +44,7 @@ ISSUE3_COLOR_GROUPING_VALIDATION=PASS
 ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
 ISSUE5_PNG_EXPORT_VALIDATION=PASS
 ISSUE6_SESSION_JSON_VALIDATION=PASS
+ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ```
 

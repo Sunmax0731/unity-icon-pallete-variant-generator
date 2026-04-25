@@ -176,13 +176,13 @@ ISSUE3_COLOR_GROUPING_VALIDATION=PASS
 ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
 ISSUE5_PNG_EXPORT_VALIDATION=PASS
 ISSUE6_SESSION_JSON_VALIDATION=PASS
+ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ```
 
 ## 12. 残タスク順
 
-1. `#7` 複数バリエーション管理と一括出力
-2. `#8` 手動 QA、サンプル、検証チェックリスト
-3. `#9` Release packaging と GitHub Release `v1.0.0`
+1. `#8` 手動 QA、サンプル、検証チェックリスト
+2. `#9` Release packaging と GitHub Release `v1.0.0`
 
 Release 作業は #7 と #8 の完了後に行う。

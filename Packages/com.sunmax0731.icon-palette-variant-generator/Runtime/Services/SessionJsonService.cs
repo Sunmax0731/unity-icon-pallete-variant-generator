@@ -79,6 +79,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             session.paletteColors ??= new List<PaletteColorEntry>();
             session.colorGroups ??= new List<ColorGroup>();
             session.colorRules ??= new List<ColorReplacementRule>();
+            session.variations ??= new List<IconVariation>();
 
             return warnings;
         }

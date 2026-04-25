@@ -55,6 +55,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
                         targetColor = new Color32(0, 0, 255, 255),
                         blendRatio = 0.5f
                     }
+                },
+                variations = new List<IconVariation>
+                {
+                    new IconVariation
+                    {
+                        id = "variation_01",
+                        displayName = "Blue",
+                        fileSuffix = "blue",
+                        exportEnabled = true,
+                        colorGroups = new List<ColorGroup>
+                        {
+                            new ColorGroup
+                            {
+                                id = "group_01",
+                                targetColor = new Color32(0, 0, 255, 255),
+                                blendRatio = 0.5f
+                            }
+                        }
+                    }
                 }
             };
 
@@ -67,6 +86,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             Assert.That(result.Session.paletteColors, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups[0].blendRatio, Is.EqualTo(0.5f));
+            Assert.That(result.Session.variations, Has.Count.EqualTo(1));
+            Assert.That(result.Session.variations[0].fileSuffix, Is.EqualTo("blue"));
         }
 
         [Test]

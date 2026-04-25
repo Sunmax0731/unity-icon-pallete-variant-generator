@@ -17,6 +17,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
         public List<PaletteColorEntry> paletteColors = new List<PaletteColorEntry>();
         public List<ColorGroup> colorGroups = new List<ColorGroup>();
         public List<ColorReplacementRule> colorRules = new List<ColorReplacementRule>();
+        public List<IconVariation> variations = new List<IconVariation>();
         public string activeVariationId = string.Empty;
     }
 }

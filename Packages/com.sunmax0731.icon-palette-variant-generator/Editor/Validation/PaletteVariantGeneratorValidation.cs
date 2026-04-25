@@ -33,12 +33,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidatePngExport();
             ValidateSessionJson();
             ValidateIssue10UiPolish();
+            ValidateIssue7Variations();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
             Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
             Debug.Log("ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE5_PNG_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE6_SESSION_JSON_VALIDATION=PASS");
+            Debug.Log("ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
         }
 
@@ -227,6 +229,50 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
         {
             ValidateMaxColorDistance();
             ValidatePerColorHybridReplacement();
+        }
+
+        private static void ValidateIssue7Variations()
+        {
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                exportSettings = new ExportSettings { fileSuffix = "blue" },
+                paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                {
+                    new PaletteColorEntry
+                    {
+                        id = "#FF0000",
+                        hex = "#FF0000",
+                        color = new Color32(255, 0, 0, 255),
+                        pixelCount = 1,
+                        groupId = "group_01"
+                    }
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        targetColor = new Color32(0, 0, 255, 255),
+                        blendRatio = 1f
+                    }
+                }
+            };
+
+            IconVariationService service = new IconVariationService();
+            IconVariation first = service.EnsureActiveVariation(session);
+            service.SyncActiveVariation(session);
+            IconVariation second = service.DuplicateActiveVariation(session);
+            session.colorGroups[0].targetColor = new Color32(0, 255, 0, 255);
+            second.fileSuffix = "green";
+            service.SyncActiveVariation(session);
+            service.ApplyVariation(session, first.id);
+
+            if (session.variations.Count != 2
+                || session.colorGroups[0].targetColor.b != 255
+                || session.exportSettings.fileSuffix != first.fileSuffix)
+            {
+                throw new System.InvalidOperationException("Variation snapshot validation failed.");
+            }
         }
 
         private static void ValidateMaxColorDistance()
