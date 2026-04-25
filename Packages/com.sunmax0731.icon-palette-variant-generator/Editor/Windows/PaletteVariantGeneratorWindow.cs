@@ -1253,8 +1253,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             string cacheKey = string.Join(
                 "|",
-                readableSourceImage.GetInstanceID().ToString(),
-                afterPreview == null ? "before" : afterPreview.GetInstanceID().ToString(),
+                GetTextureCacheId(readableSourceImage),
+                afterPreview == null ? "before" : GetTextureCacheId(afterPreview),
                 previewSplit.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture));
             if (splitPreviewTexture != null && splitPreviewCacheKey == cacheKey)
             {
@@ -1300,7 +1300,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return readableSourceImage;
             }
 
-            string cacheKey = $"{readableSourceImage.GetInstanceID()}|{afterPreview.GetInstanceID()}|diff";
+            string cacheKey = $"{GetTextureCacheId(readableSourceImage)}|{GetTextureCacheId(afterPreview)}|diff";
             if (diffPreviewTexture != null && diffPreviewKey == cacheKey)
             {
                 return diffPreviewTexture;
@@ -1476,8 +1476,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return string.Join(
                 "|",
                 slot.ToString(),
-                baseTexture.GetInstanceID().ToString(),
-                readableSourceImage.GetInstanceID().ToString(),
+                GetTextureCacheId(baseTexture),
+                GetTextureCacheId(readableSourceImage),
                 highlighted ? "highlight" : "plain",
                 zoomed ? "zoom" : "nozoom",
                 previewZoom.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture),
@@ -1601,6 +1601,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(texture);
             texture = null;
+        }
+
+        private static string GetTextureCacheId(Texture2D texture)
+        {
+            return texture == null ? "none" : texture.GetEntityId().ToString();
         }
 
         private void BeginPreviewDrag(Image image, PointerDownEvent evt)
@@ -4218,7 +4223,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             return string.Join(
                 "|",
-                readableSourceImage.GetInstanceID().ToString(),
+                GetTextureCacheId(readableSourceImage),
                 readableSourceImage.width.ToString(),
                 readableSourceImage.height.ToString(),
                 session.analyzeSettings.alphaThreshold.ToString(),
