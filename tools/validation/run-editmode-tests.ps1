@@ -134,6 +134,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE28_EXPORT_UI_DISCLOSURE_VA
     throw "Unity export UI disclosure validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS" -Quiet)) {
+    throw "Unity opaque edge outside cleanup validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS" -Quiet)) {
     throw "Unity release automation validation did not emit pass marker. Log: $logPath"
 }
@@ -165,6 +169,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE26_NOISE_REMOVAL_VALIDATION=PASS",
     "ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS",
     "ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS",
+    "ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

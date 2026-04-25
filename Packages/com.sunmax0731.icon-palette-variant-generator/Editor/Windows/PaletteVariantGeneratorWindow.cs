@@ -1858,12 +1858,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             EdgeOutsideCleanupResult edgeResult = colorReplacementService.LastEdgeOutsideCleanupResult;
             NoiseRemovalResult noiseResult = colorReplacementService.LastNoiseRemovalResult;
             List<string> preprocessingReports = new List<string>();
-            if (edgeResult.ClearedRegionCount > 0)
+            if (session.edgeOutsideCleanupSettings?.enabled == true)
             {
                 preprocessingReports.Add($"Edge Cleanup cleared {edgeResult.ClearedRegionCount} region(s), {edgeResult.ClearedPixelCount} pixel(s)");
             }
 
-            if (noiseResult.FilledRegionCount > 0)
+            if (session.noiseRemovalSettings?.enabled == true)
             {
                 preprocessingReports.Add($"Noise Removal filled {noiseResult.FilledRegionCount} region(s), {noiseResult.FilledPixelCount} pixel(s)");
             }

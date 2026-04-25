@@ -54,6 +54,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue26NoiseRemoval();
             ValidateIssue27EdgeOutsideCleanup();
             ValidateIssue28ExportUiDisclosure();
+            ValidateIssue29OpaqueEdgeOutsideCleanup();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -82,6 +83,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE26_NOISE_REMOVAL_VALIDATION=PASS");
             Debug.Log("ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS");
             Debug.Log("ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS");
+            Debug.Log("ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1125,6 +1127,44 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             window.Close();
+        }
+
+        private static void ValidateIssue29OpaqueEdgeOutsideCleanup()
+        {
+            Color32 background = new Color32(255, 220, 64, 255);
+            Color32 body = new Color32(32, 96, 192, 255);
+            Color32 outside = new Color32(255, 255, 255, 255);
+            Color32[] pixels =
+            {
+                background, background, background, background, background,
+                background, body,       body,       background, outside,
+                background, body,       body,       background, background,
+                background, body,       body,       background, background,
+                background, background, background, background, background
+            };
+
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 0, quantizeStep = 1 },
+                edgeOutsideCleanupSettings = new EdgeOutsideCleanupSettings
+                {
+                    enabled = true,
+                    maxDistancePixels = 2,
+                    maxRegionPixels = 4
+                }
+            };
+            session.colorGroups.Add(new ColorGroup { id = "background", representativeColor = background, pixelRatio = 0.72f });
+            session.colorGroups.Add(new ColorGroup { id = "body", representativeColor = body, pixelRatio = 0.24f });
+            session.colorGroups.Add(new ColorGroup { id = "outside", representativeColor = outside, pixelRatio = 0.04f });
+            session.paletteColors.Add(new PaletteColorEntry { id = "backgroundColor", color = background, groupId = "background" });
+            session.paletteColors.Add(new PaletteColorEntry { id = "bodyColor", color = body, groupId = "body" });
+            session.paletteColors.Add(new PaletteColorEntry { id = "outsideColor", color = outside, groupId = "outside" });
+
+            EdgeOutsideCleanupResult result = new EdgeOutsideCleanupService().Apply(pixels, 5, 5, session);
+            if (result.ClearedPixelCount != 1 || pixels[9].a != 0 || pixels[6].a == 0 || pixels[0].a == 0)
+            {
+                throw new System.InvalidOperationException("Opaque image edge outside cleanup validation failed.");
+            }
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)
