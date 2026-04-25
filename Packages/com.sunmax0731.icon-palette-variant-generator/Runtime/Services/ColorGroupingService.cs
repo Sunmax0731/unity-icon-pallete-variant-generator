@@ -60,6 +60,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             int totalPixels = activeColors.Sum(color => color.pixelCount);
             List<ColorGroup> groups = new List<ColorGroup>();
 
+            float maxColorDistance = Mathf.Clamp(settings.maxColorDistance, 0f, 441.7f);
             for (int index = 0; index < centers.Count; index++)
             {
                 if (!assignments.TryGetValue(index, out List<PaletteColorEntry> groupColors) || groupColors.Count == 0)
@@ -67,31 +68,64 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                     continue;
                 }
 
-                string groupId = $"group_{groups.Count + 1:00}";
-                int pixelCount = groupColors.Sum(color => color.pixelCount);
                 Color32 representative = CalculateWeightedAverage(groupColors);
+                List<PaletteColorEntry> nearbyColors = new List<PaletteColorEntry>();
+                List<PaletteColorEntry> outlierColors = new List<PaletteColorEntry>();
 
                 foreach (PaletteColorEntry color in groupColors)
                 {
-                    color.groupId = groupId;
+                    float distance = distanceService.Calculate(color.color, representative, settings.distanceMode);
+                    if (distance <= maxColorDistance)
+                    {
+                        nearbyColors.Add(color);
+                    }
+                    else
+                    {
+                        outlierColors.Add(color);
+                    }
                 }
 
-                groups.Add(new ColorGroup
+                if (nearbyColors.Count > 0)
                 {
-                    id = groupId,
-                    displayName = $"Group {groups.Count + 1}",
-                    representativeColor = representative,
-                    targetColor = representative,
-                    colorEntryIds = groupColors.Select(color => color.id).ToList(),
-                    pixelCount = pixelCount,
-                    pixelRatio = totalPixels == 0 ? 0f : (float)pixelCount / totalPixels
-                });
+                    AddGroup(groups, nearbyColors, totalPixels);
+                }
+
+                foreach (PaletteColorEntry outlierColor in outlierColors)
+                {
+                    AddGroup(groups, new[] { outlierColor }, totalPixels);
+                }
             }
 
             return groups
                 .OrderByDescending(group => group.pixelCount)
                 .ThenBy(group => group.displayName)
                 .ToList();
+        }
+
+        private static void AddGroup(
+            List<ColorGroup> groups,
+            IReadOnlyList<PaletteColorEntry> groupColors,
+            int totalPixels)
+        {
+            string groupId = $"group_{groups.Count + 1:00}";
+            int pixelCount = groupColors.Sum(color => color.pixelCount);
+            Color32 representative = CalculateWeightedAverage(groupColors);
+
+            foreach (PaletteColorEntry color in groupColors)
+            {
+                color.groupId = groupId;
+            }
+
+            groups.Add(new ColorGroup
+            {
+                id = groupId,
+                displayName = $"Group {groups.Count + 1}",
+                representativeColor = representative,
+                targetColor = representative,
+                colorEntryIds = groupColors.Select(color => color.id).ToList(),
+                pixelCount = pixelCount,
+                pixelRatio = totalPixels == 0 ? 0f : (float)pixelCount / totalPixels
+            });
         }
 
         private Dictionary<int, List<PaletteColorEntry>> AssignColors(

@@ -43,6 +43,35 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             Assert.That(distance, Is.EqualTo(0f));
         }
 
+        [Test]
+        public void CreateGroupsSplitsOutliersWhenMaxColorDistanceIsStrict()
+        {
+            PaletteColorEntry[] colors =
+            {
+                NewEntry("#FF0000", new Color32(255, 0, 0, 255), 1),
+                NewEntry("#0000FF", new Color32(0, 0, 255, 255), 1)
+            };
+
+            GroupSettings broadSettings = new GroupSettings
+            {
+                targetGroupCount = 1,
+                distanceMode = ColorDistanceMode.Rgb,
+                maxColorDistance = 441f
+            };
+            GroupSettings strictSettings = new GroupSettings
+            {
+                targetGroupCount = 1,
+                distanceMode = ColorDistanceMode.Rgb,
+                maxColorDistance = 10f
+            };
+
+            var broadGroups = new ColorGroupingService().CreateGroups(colors, broadSettings).ToList();
+            var strictGroups = new ColorGroupingService().CreateGroups(colors, strictSettings).ToList();
+
+            Assert.That(broadGroups, Has.Count.EqualTo(1));
+            Assert.That(strictGroups, Has.Count.EqualTo(2));
+        }
+
         private static PaletteColorEntry NewEntry(string hex, Color32 color, int pixelCount)
         {
             return new PaletteColorEntry

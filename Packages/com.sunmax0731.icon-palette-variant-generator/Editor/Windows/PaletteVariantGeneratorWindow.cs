@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Models;
 using Sunmax0731.IconPaletteVariantGenerator.Services;
+using Sunmax0731.IconPaletteVariantGenerator.Utilities;
 using UnityEditor;
 using UnityEngine;
 
@@ -16,12 +18,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float RightPaneWidth = 330f;
         private const float PaneGap = 14f;
         private const float MinPreviewHeight = 260f;
+        private const float PaletteListHeight = 170f;
+        private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
         private static readonly Color SeparatorColor = new Color(0.25f, 0.25f, 0.25f, 0.8f);
+        private static readonly Color OverlayColor = new Color(0.1f, 0.65f, 1f, 0.34f);
+        private static readonly Color OverlayBorderColor = new Color(0.1f, 0.65f, 1f, 0.85f);
 
         private PaletteVariantSession session = new PaletteVariantSession();
         private readonly TextureAssetLoader textureAssetLoader = new TextureAssetLoader();
         private readonly ColorExtractionService colorExtractionService = new ColorExtractionService();
         private readonly ColorGroupingService colorGroupingService = new ColorGroupingService();
+        private readonly ColorQuantizationService colorQuantizationService = new ColorQuantizationService();
         private readonly ColorReplacementService colorReplacementService = new ColorReplacementService();
         private readonly PngExportService pngExportService = new PngExportService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
@@ -30,10 +37,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D afterPreview;
         private Texture2D checkerboardTexture;
         private Vector2 leftScroll;
+        private Vector2 paletteScroll;
         private Vector2 rightScroll;
         private string sourceAssetPath = string.Empty;
         private string reportMessage = "Select a project PNG or Texture2D asset, then click Analyze.";
         private MessageType reportType = MessageType.Info;
+        private PaletteVariantLanguageMode languageMode = PaletteVariantLanguageMode.Auto;
+        private PaletteVariantDisplayLanguage displayLanguage = PaletteVariantDisplayLanguage.English;
+        private ParameterHelpWindow parameterHelpWindow;
+        private string selectedGroupId = string.Empty;
+        private string selectedColorEntryId = string.Empty;
 
         [MenuItem("Tools/Icon Tools/Palette Variant Generator")]
         public static void Open()
@@ -47,6 +60,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private void OnEnable()
         {
             checkerboardTexture = CreateCheckerboardTexture();
+            LoadLanguageMode();
         }
 
         private void OnGUI()
@@ -70,11 +84,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
+                EditorGUILayout.LabelField(T("sourceImage", "Source Image"), GUILayout.Width(86f));
                 sourceImage = (Texture2D)EditorGUILayout.ObjectField(sourceImage, typeof(Texture2D), false, GUILayout.MinWidth(220f));
 
                 using (new EditorGUI.DisabledScope(sourceImage == null))
                 {
-                    if (GUILayout.Button("Analyze", EditorStyles.toolbarButton))
+                    if (GUILayout.Button(T("analyze", "Analyze"), EditorStyles.toolbarButton, GUILayout.Width(76f)))
                     {
                         AnalyzeSourceImage();
                     }
@@ -82,7 +97,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 using (new EditorGUI.DisabledScope(session.paletteColors.Count == 0))
                 {
-                    if (GUILayout.Button("Auto Group", EditorStyles.toolbarButton))
+                    if (GUILayout.Button(T("autoGroup", "Auto Group"), EditorStyles.toolbarButton, GUILayout.Width(88f)))
                     {
                         AutoGroupPalette();
                     }
@@ -90,7 +105,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 using (new EditorGUI.DisabledScope(afterPreview == null))
                 {
-                    if (GUILayout.Button("Export", EditorStyles.toolbarButton, GUILayout.Width(78f)))
+                    if (GUILayout.Button(T("export", "Export"), EditorStyles.toolbarButton, GUILayout.Width(70f)))
                     {
                         ExportPreview();
                     }
@@ -98,12 +113,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 using (new EditorGUI.DisabledScope(false))
                 {
-                    if (GUILayout.Button("Save Session", EditorStyles.toolbarButton, GUILayout.Width(104f)))
+                    if (GUILayout.Button(T("saveSession", "Save Session"), EditorStyles.toolbarButton, GUILayout.Width(104f)))
                     {
                         SaveSession();
                     }
 
-                    if (GUILayout.Button("Load Session", EditorStyles.toolbarButton, GUILayout.Width(104f)))
+                    if (GUILayout.Button(T("loadSession", "Load Session"), EditorStyles.toolbarButton, GUILayout.Width(104f)))
                     {
                         LoadSession();
                     }
@@ -111,12 +126,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 using (new EditorGUI.DisabledScope(readableSourceImage == null || session.colorGroups.Count == 0))
                 {
-                    if (GUILayout.Button("Preview", EditorStyles.toolbarButton, GUILayout.Width(78f)))
+                    if (GUILayout.Button(T("preview", "Preview"), EditorStyles.toolbarButton, GUILayout.Width(78f)))
                     {
                         RefreshAfterPreview();
                     }
                 }
 
+                if (GUILayout.Button(T("help", "Help"), EditorStyles.toolbarButton, GUILayout.Width(58f)))
+                {
+                    OpenHelpWindow();
+                }
+
+                DrawLanguagePopup();
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.LabelField(sourceAssetPath, EditorStyles.miniLabel, GUILayout.MinWidth(160f));
             }
@@ -127,47 +148,48 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(LeftPaneWidth)))
             {
                 leftScroll = EditorGUILayout.BeginScrollView(leftScroll);
-                DrawSectionHeader("Analyze Settings");
-                session.analyzeSettings.alphaThreshold = EditorGUILayout.IntSlider("Alpha Threshold", session.analyzeSettings.alphaThreshold, 0, 255);
-                session.analyzeSettings.minimumPixelCount = Mathf.Max(1, EditorGUILayout.IntField("Minimum Pixel Count", session.analyzeSettings.minimumPixelCount));
-                session.analyzeSettings.quantizeStep = EditorGUILayout.IntSlider("Quantize Step", session.analyzeSettings.quantizeStep, 1, 64);
-                session.analyzeSettings.maxPaletteColors = Mathf.Max(1, EditorGUILayout.IntField("Max Palette Colors", session.analyzeSettings.maxPaletteColors));
+                DrawSectionHeader(T("analyzeSettings", "Analyze Settings"));
+                session.analyzeSettings.alphaThreshold = EditorGUILayout.IntSlider(T("alphaThreshold", "Alpha Threshold"), session.analyzeSettings.alphaThreshold, 0, 255);
+                session.analyzeSettings.minimumPixelCount = Mathf.Max(1, EditorGUILayout.IntField(T("minimumPixelCount", "Minimum Pixel Count"), session.analyzeSettings.minimumPixelCount));
+                session.analyzeSettings.quantizeStep = EditorGUILayout.IntSlider(T("quantizeStep", "Quantize Step"), session.analyzeSettings.quantizeStep, 1, 64);
+                session.analyzeSettings.maxPaletteColors = Mathf.Max(1, EditorGUILayout.IntField(T("maxPaletteColors", "Max Palette Colors"), session.analyzeSettings.maxPaletteColors));
 
                 DrawSectionSeparator();
-                DrawSectionHeader("Group Settings");
-                session.groupSettings.targetGroupCount = EditorGUILayout.IntSlider("Target Group Count", session.groupSettings.targetGroupCount, 1, 64);
-                session.groupSettings.distanceMode = (ColorDistanceMode)EditorGUILayout.EnumPopup("Distance Mode", session.groupSettings.distanceMode);
-                session.groupSettings.preserveDarkOutline = EditorGUILayout.Toggle("Preserve Dark Outline", session.groupSettings.preserveDarkOutline);
-                session.groupSettings.preserveAlpha = EditorGUILayout.Toggle("Preserve Alpha", session.groupSettings.preserveAlpha);
+                DrawSectionHeader(T("groupSettings", "Group Settings"));
+                session.groupSettings.targetGroupCount = EditorGUILayout.IntSlider(T("targetGroupCount", "Target Group Count"), session.groupSettings.targetGroupCount, 1, 64);
+                session.groupSettings.distanceMode = (ColorDistanceMode)EditorGUILayout.EnumPopup(T("distanceMode", "Distance Mode"), session.groupSettings.distanceMode);
+                session.groupSettings.maxColorDistance = EditorGUILayout.Slider(T("maxColorDistance", "Max Color Distance"), session.groupSettings.maxColorDistance, 0f, 441f);
+                session.groupSettings.preserveDarkOutline = EditorGUILayout.Toggle(T("preserveDarkOutline", "Preserve Dark Outline"), session.groupSettings.preserveDarkOutline);
+                session.groupSettings.preserveAlpha = EditorGUILayout.Toggle(T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha);
 
                 DrawSectionSeparator();
-                DrawSectionHeader("Export Settings");
+                DrawSectionHeader(T("exportSettings", "Export Settings"));
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    session.exportSettings.outputFolder = EditorGUILayout.TextField("Output Folder", session.exportSettings.outputFolder);
+                    session.exportSettings.outputFolder = EditorGUILayout.TextField(T("outputFolder", "Output Folder"), session.exportSettings.outputFolder);
                     if (GUILayout.Button("...", GUILayout.Width(28f)))
                     {
                         SelectOutputFolder();
                     }
                 }
 
-                session.exportSettings.filePrefix = EditorGUILayout.TextField("File Prefix", session.exportSettings.filePrefix);
-                session.exportSettings.fileSuffix = EditorGUILayout.TextField("File Suffix", session.exportSettings.fileSuffix);
-                session.exportSettings.conflictMode = (ExportConflictMode)EditorGUILayout.EnumPopup("Conflict Mode", session.exportSettings.conflictMode);
-                session.exportSettings.refreshAssetDatabase = EditorGUILayout.Toggle("Refresh AssetDatabase", session.exportSettings.refreshAssetDatabase);
+                session.exportSettings.filePrefix = EditorGUILayout.TextField(T("filePrefix", "File Prefix"), session.exportSettings.filePrefix);
+                session.exportSettings.fileSuffix = EditorGUILayout.TextField(T("fileSuffix", "File Suffix"), session.exportSettings.fileSuffix);
+                session.exportSettings.conflictMode = (ExportConflictMode)EditorGUILayout.EnumPopup(T("conflictMode", "Conflict Mode"), session.exportSettings.conflictMode);
+                session.exportSettings.refreshAssetDatabase = EditorGUILayout.Toggle(T("refreshAssetDatabase", "Refresh AssetDatabase"), session.exportSettings.refreshAssetDatabase);
 
                 DrawSectionSeparator();
-                DrawSectionHeader("Source Info");
+                DrawSectionHeader(T("sourceInfo", "Source Info"));
                 if (readableSourceImage != null)
                 {
-                    EditorGUILayout.LabelField("Asset Path", sourceAssetPath);
-                    EditorGUILayout.LabelField("Size", $"{readableSourceImage.width} x {readableSourceImage.height}");
-                    EditorGUILayout.LabelField("Palette Colors", session.paletteColors.Count.ToString());
-                    EditorGUILayout.LabelField("Groups", session.colorGroups.Count.ToString());
+                    EditorGUILayout.LabelField(T("assetPath", "Asset Path"), sourceAssetPath);
+                    EditorGUILayout.LabelField(T("size", "Size"), $"{readableSourceImage.width} x {readableSourceImage.height}");
+                    EditorGUILayout.LabelField(T("paletteColors", "Palette Colors"), session.paletteColors.Count.ToString());
+                    EditorGUILayout.LabelField(T("groups", "Groups"), session.colorGroups.Count.ToString());
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox("No source image has been analyzed yet.", MessageType.None);
+                    EditorGUILayout.HelpBox(T("noAnalyzedImage", "No source image has been analyzed yet."), MessageType.None);
                 }
 
                 EditorGUILayout.EndScrollView();
@@ -178,18 +200,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             using (new EditorGUILayout.VerticalScope(GUILayout.MinWidth(360f), GUILayout.ExpandWidth(true)))
             {
-                DrawSectionHeader("Preview");
+                DrawSectionHeader(T("preview", "Preview"));
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    DrawPreviewPanel("Before", readableSourceImage);
-                    DrawPreviewPanel("After", afterPreview);
+                    DrawPreviewPanel(T("before", "Before"), readableSourceImage);
+                    DrawPreviewPanel(T("after", "After"), afterPreview);
                 }
 
                 DrawSectionSeparator();
-                DrawSectionHeader("Palette");
+                DrawSectionHeader(T("palette", "Palette"));
                 if (session.paletteColors.Count == 0)
                 {
-                    EditorGUILayout.HelpBox("Palette colors will appear here after analysis.", MessageType.None);
+                    EditorGUILayout.HelpBox(T("paletteEmpty", "Palette colors will appear here after analysis."), MessageType.None);
                     return;
                 }
 
@@ -202,15 +224,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(RightPaneWidth)))
             {
                 rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
-                DrawSectionHeader("Replacement Rules");
+                DrawSectionHeader(T("replacementRules", "Replacement Rules"));
                 if (session.colorGroups.Count == 0)
                 {
-                    EditorGUILayout.HelpBox("Color groups will appear here after Auto Group.", MessageType.None);
+                    EditorGUILayout.HelpBox(T("groupsEmpty", "Color groups will appear here after Auto Group."), MessageType.None);
                     EditorGUILayout.EndScrollView();
                     return;
                 }
 
                 DrawGroupList(session.colorGroups);
+                DrawSelectedColorRules();
                 EditorGUILayout.EndScrollView();
             }
         }
@@ -226,18 +249,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 if (texture == null)
                 {
-                    DrawCenteredLabel(previewRect, "No preview");
+                    DrawCenteredLabel(previewRect, T("noPreview", "No preview"));
                     return;
                 }
 
                 Rect imageRect = FitRect(previewRect, texture.width, texture.height);
                 GUI.DrawTexture(imageRect, texture, ScaleMode.StretchToFill, true);
+                DrawSelectionOverlay(imageRect);
             }
         }
 
         private void DrawPaletteList(IReadOnlyList<PaletteColorEntry> paletteColors)
         {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            paletteScroll = EditorGUILayout.BeginScrollView(paletteScroll, GUI.skin.box, GUILayout.Height(PaletteListHeight), GUILayout.ExpandWidth(true));
+            using (new EditorGUILayout.VerticalScope())
             {
                 foreach (PaletteColorEntry entry in paletteColors)
                 {
@@ -245,6 +270,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     {
                         Rect swatchRect = GUILayoutUtility.GetRect(22f, 18f, GUILayout.Width(22f));
                         EditorGUI.DrawRect(swatchRect, entry.color);
+                        bool isSelected = selectedColorEntryId == entry.id;
+                        bool nextSelected = GUILayout.Toggle(isSelected, string.Empty, GUILayout.Width(18f));
+                        if (nextSelected && !isSelected)
+                        {
+                            selectedColorEntryId = entry.id;
+                            selectedGroupId = entry.groupId;
+                            Repaint();
+                        }
+
                         EditorGUILayout.LabelField(entry.hex, GUILayout.Width(80f));
                         EditorGUILayout.LabelField($"{entry.color.r},{entry.color.g},{entry.color.b},{entry.color.a}", GUILayout.Width(120f));
                         EditorGUILayout.LabelField(entry.pixelCount.ToString(), GUILayout.Width(64f));
@@ -253,6 +287,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     }
                 }
             }
+
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawGroupList(IReadOnlyList<ColorGroup> colorGroups)
@@ -274,6 +310,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 {
                     Rect representativeRect = GUILayoutUtility.GetRect(20f, 18f, GUILayout.Width(20f));
                     EditorGUI.DrawRect(representativeRect, group.representativeColor);
+                    bool isSelected = selectedGroupId == group.id && string.IsNullOrEmpty(selectedColorEntryId);
+                    bool nextSelected = GUILayout.Toggle(isSelected, string.Empty, GUILayout.Width(18f));
+                    if (nextSelected && !isSelected)
+                    {
+                        selectedGroupId = group.id;
+                        selectedColorEntryId = string.Empty;
+                        Repaint();
+                    }
+
                     EditorGUILayout.LabelField(group.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField($"{group.colorEntryIds.Count} colors", GUILayout.Width(76f));
                     EditorGUILayout.LabelField($"{group.pixelRatio:P1}", GUILayout.Width(56f));
@@ -281,12 +326,69 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
                 using (var change = new EditorGUI.ChangeCheckScope())
                 {
-                    group.targetColor = EditorGUILayout.ColorField("Target Color", group.targetColor);
-                    group.blendRatio = EditorGUILayout.Slider("Blend Ratio", group.blendRatio, 0f, 1f);
-                    group.replacementMode = (ColorReplacementMode)EditorGUILayout.EnumPopup("Mode", group.replacementMode);
+                    group.targetColor = EditorGUILayout.ColorField(T("targetColor", "Target Color"), group.targetColor);
+                    group.blendRatio = EditorGUILayout.Slider(T("blendRatio", "Blend Ratio"), group.blendRatio, 0f, 1f);
+                    group.replacementMode = (ColorReplacementMode)EditorGUILayout.EnumPopup(T("mode", "Mode"), group.replacementMode);
                     if (change.changed && afterPreview != null)
                     {
                         RefreshAfterPreview();
+                    }
+                }
+            }
+        }
+
+        private void DrawSelectedColorRules()
+        {
+            if (string.IsNullOrEmpty(selectedGroupId))
+            {
+                return;
+            }
+
+            ColorGroup selectedGroup = session.colorGroups.FirstOrDefault(group => group.id == selectedGroupId);
+            if (selectedGroup == null)
+            {
+                return;
+            }
+
+            DrawSectionSeparator();
+            DrawSectionHeader(T("colorRules", "Color Rules"));
+            foreach (PaletteColorEntry entry in session.paletteColors.Where(color => color.groupId == selectedGroupId))
+            {
+                ColorReplacementRule rule = GetOrCreateColorRule(entry);
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        Rect swatchRect = GUILayoutUtility.GetRect(20f, 18f, GUILayout.Width(20f));
+                        EditorGUI.DrawRect(swatchRect, entry.color);
+                        bool isSelected = selectedColorEntryId == entry.id;
+                        bool nextSelected = GUILayout.Toggle(isSelected, string.Empty, GUILayout.Width(18f));
+                        if (nextSelected && !isSelected)
+                        {
+                            selectedColorEntryId = entry.id;
+                            selectedGroupId = entry.groupId;
+                            Repaint();
+                        }
+
+                        EditorGUILayout.LabelField(entry.hex, EditorStyles.boldLabel);
+                        using (var change = new EditorGUI.ChangeCheckScope())
+                        {
+                            rule.enabled = EditorGUILayout.ToggleLeft(T("enabled", "Enabled"), rule.enabled, GUILayout.Width(84f));
+                            if (change.changed && afterPreview != null)
+                            {
+                                RefreshAfterPreview();
+                            }
+                        }
+                    }
+
+                    using (var change = new EditorGUI.ChangeCheckScope())
+                    {
+                        rule.targetColor = EditorGUILayout.ColorField(T("targetColor", "Target Color"), rule.targetColor);
+                        rule.blendRatio = EditorGUILayout.Slider(T("blendRatio", "Blend Ratio"), rule.blendRatio, 0f, 1f);
+                        if (change.changed && afterPreview != null)
+                        {
+                            RefreshAfterPreview();
+                        }
                     }
                 }
             }
@@ -306,6 +408,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.sourceImageAssetPath = assetPath;
             session.paletteColors = new List<PaletteColorEntry>(colorExtractionService.Extract(readableSourceImage, session.analyzeSettings));
             session.colorGroups.Clear();
+            session.colorRules.Clear();
+            selectedGroupId = string.Empty;
+            selectedColorEntryId = string.Empty;
             DestroyAfterPreview();
             reportMessage = $"Analyzed {session.paletteColors.Count} palette colors from {assetPath}.";
             reportType = MessageType.Info;
@@ -314,6 +419,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private void AutoGroupPalette()
         {
             session.colorGroups = new List<ColorGroup>(colorGroupingService.CreateGroups(session.paletteColors, session.groupSettings));
+            selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
+            selectedColorEntryId = string.Empty;
             reportMessage = $"Created {session.colorGroups.Count} color groups.";
             reportType = session.colorGroups.Count == 0 ? MessageType.Warning : MessageType.Info;
             RefreshAfterPreview();
@@ -417,10 +524,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             session = result.Session;
+            session.colorRules ??= new List<ColorReplacementRule>();
             sourceAssetPath = session.sourceImageAssetPath;
             sourceImage = string.IsNullOrWhiteSpace(sourceAssetPath)
                 ? null
                 : AssetDatabase.LoadAssetAtPath<Texture2D>(sourceAssetPath);
+            selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
+            selectedColorEntryId = string.Empty;
 
             DestroyReadableSourceImage();
             DestroyAfterPreview();
@@ -461,6 +571,224 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             session.exportSettings.outputFolder = ToProjectRelativePath(selectedFolder);
+        }
+
+        private ColorReplacementRule GetOrCreateColorRule(PaletteColorEntry entry)
+        {
+            session.colorRules ??= new List<ColorReplacementRule>();
+            ColorReplacementRule rule = session.colorRules.FirstOrDefault(candidate =>
+                candidate != null
+                && candidate.scope == ColorReplacementScope.ColorEntry
+                && candidate.colorEntryId == entry.id);
+
+            if (rule != null)
+            {
+                return rule;
+            }
+
+            rule = new ColorReplacementRule
+            {
+                id = $"rule_{entry.id}",
+                groupId = entry.groupId,
+                colorEntryId = entry.id,
+                scope = ColorReplacementScope.ColorEntry,
+                targetColor = entry.color,
+                blendRatio = 1f,
+                enabled = false
+            };
+            session.colorRules.Add(rule);
+            return rule;
+        }
+
+        private void DrawSelectionOverlay(Rect imageRect)
+        {
+            if (Event.current.type != EventType.Repaint || readableSourceImage == null)
+            {
+                return;
+            }
+
+            HashSet<uint> selectedKeys = GetSelectedColorKeys();
+            if (selectedKeys.Count == 0)
+            {
+                return;
+            }
+
+            int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
+            Color32[] pixels = readableSourceImage.GetPixels32();
+            float pixelWidth = imageRect.width / readableSourceImage.width;
+            float pixelHeight = imageRect.height / readableSourceImage.height;
+            float drawWidth = Mathf.Max(1f, pixelWidth);
+            float drawHeight = Mathf.Max(1f, pixelHeight);
+
+            for (int y = 0; y < readableSourceImage.height; y++)
+            {
+                int sourceY = readableSourceImage.height - 1 - y;
+                for (int x = 0; x < readableSourceImage.width; x++)
+                {
+                    Color32 pixel = pixels[(sourceY * readableSourceImage.width) + x];
+                    if (pixel.a <= session.analyzeSettings.alphaThreshold)
+                    {
+                        continue;
+                    }
+
+                    uint key = ColorCodeUtility.ToRgbKey(colorQuantizationService.Quantize(pixel, quantizeStep));
+                    if (!selectedKeys.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    Rect pixelRect = new Rect(
+                        imageRect.x + (x * pixelWidth),
+                        imageRect.y + (y * pixelHeight),
+                        drawWidth,
+                        drawHeight);
+                    EditorGUI.DrawRect(pixelRect, OverlayColor);
+                }
+            }
+
+            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, imageRect.width, 1f), OverlayBorderColor);
+            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.yMax - 1f, imageRect.width, 1f), OverlayBorderColor);
+            EditorGUI.DrawRect(new Rect(imageRect.x, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
+            EditorGUI.DrawRect(new Rect(imageRect.xMax - 1f, imageRect.y, 1f, imageRect.height), OverlayBorderColor);
+        }
+
+        private HashSet<uint> GetSelectedColorKeys()
+        {
+            HashSet<uint> selectedKeys = new HashSet<uint>();
+            foreach (PaletteColorEntry entry in session.paletteColors)
+            {
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                bool selected = !string.IsNullOrEmpty(selectedColorEntryId)
+                    ? entry.id == selectedColorEntryId
+                    : !string.IsNullOrEmpty(selectedGroupId) && entry.groupId == selectedGroupId;
+
+                if (selected)
+                {
+                    selectedKeys.Add(ColorCodeUtility.ToRgbKey(entry.color));
+                }
+            }
+
+            return selectedKeys;
+        }
+
+        private void DrawLanguagePopup()
+        {
+            PaletteVariantLanguageMode nextMode = (PaletteVariantLanguageMode)EditorGUILayout.EnumPopup(
+                languageMode,
+                EditorStyles.toolbarPopup,
+                GUILayout.Width(92f));
+
+            if (nextMode == languageMode)
+            {
+                return;
+            }
+
+            languageMode = nextMode;
+            displayLanguage = ResolveDisplayLanguage(languageMode);
+            EditorPrefs.SetInt(LanguageModePrefsKey, (int)languageMode);
+            Repaint();
+            parameterHelpWindow?.Repaint();
+        }
+
+        private void OpenHelpWindow()
+        {
+            parameterHelpWindow = GetWindow<ParameterHelpWindow>("Palette Variant Help");
+            parameterHelpWindow.SetOwner(this);
+            parameterHelpWindow.minSize = new Vector2(420f, 360f);
+            parameterHelpWindow.Show();
+            parameterHelpWindow.Focus();
+        }
+
+        private void LoadLanguageMode()
+        {
+            int rawMode = EditorPrefs.GetInt(LanguageModePrefsKey, (int)PaletteVariantLanguageMode.Auto);
+            languageMode = System.Enum.IsDefined(typeof(PaletteVariantLanguageMode), rawMode)
+                ? (PaletteVariantLanguageMode)rawMode
+                : PaletteVariantLanguageMode.Auto;
+            displayLanguage = ResolveDisplayLanguage(languageMode);
+        }
+
+        private static PaletteVariantDisplayLanguage ResolveDisplayLanguage(PaletteVariantLanguageMode mode)
+        {
+            if (mode == PaletteVariantLanguageMode.Japanese)
+            {
+                return PaletteVariantDisplayLanguage.Japanese;
+            }
+
+            if (mode == PaletteVariantLanguageMode.English)
+            {
+                return PaletteVariantDisplayLanguage.English;
+            }
+
+            return Application.systemLanguage == SystemLanguage.Japanese
+                ? PaletteVariantDisplayLanguage.Japanese
+                : PaletteVariantDisplayLanguage.English;
+        }
+
+        internal string T(string key, string english)
+        {
+            if (displayLanguage != PaletteVariantDisplayLanguage.Japanese)
+            {
+                return english;
+            }
+
+            return key switch
+            {
+                "sourceImage" => "Source Image",
+                "analyze" => "Analyze",
+                "autoGroup" => "Auto Group",
+                "export" => "Export",
+                "saveSession" => "Save Session",
+                "loadSession" => "Load Session",
+                "preview" => "Preview",
+                "help" => "Help",
+                "analyzeSettings" => "解析設定",
+                "alphaThreshold" => "透明度しきい値",
+                "minimumPixelCount" => "最小ピクセル数",
+                "quantizeStep" => "量子化ステップ",
+                "maxPaletteColors" => "最大パレット色数",
+                "groupSettings" => "グループ設定",
+                "targetGroupCount" => "目標グループ数",
+                "distanceMode" => "距離計算",
+                "maxColorDistance" => "近傍色しきい値",
+                "preserveDarkOutline" => "暗色輪郭を保持",
+                "preserveAlpha" => "アルファを保持",
+                "exportSettings" => "書き出し設定",
+                "outputFolder" => "出力フォルダ",
+                "filePrefix" => "ファイル接頭辞",
+                "fileSuffix" => "ファイル接尾辞",
+                "conflictMode" => "競合時の処理",
+                "refreshAssetDatabase" => "AssetDatabase更新",
+                "sourceInfo" => "ソース情報",
+                "assetPath" => "アセットパス",
+                "size" => "サイズ",
+                "paletteColors" => "パレット色数",
+                "groups" => "グループ数",
+                "noAnalyzedImage" => "まだソース画像が解析されていません。",
+                "before" => "Before",
+                "after" => "After",
+                "palette" => "パレット",
+                "paletteEmpty" => "解析後にパレット色がここに表示されます。",
+                "replacementRules" => "置換ルール",
+                "groupsEmpty" => "Auto Group後にカラーグループがここに表示されます。",
+                "noPreview" => "プレビューなし",
+                "targetColor" => "置換色",
+                "blendRatio" => "ブレンド率",
+                "mode" => "モード",
+                "colorRules" => "色別ルール",
+                "enabled" => "有効",
+                "helpOverview" => "画像を解析し、近い色をグループ化して、置換色のプレビューとPNG書き出しを行います。",
+                "helpAnalysis" => "透明度しきい値、最小ピクセル数、量子化ステップで抽出するパレット色を調整します。",
+                "helpGrouping" => "目標グループ数と近傍色しきい値で、似た色をどこまで同じグループに含めるかを調整します。",
+                "helpPalette" => "パレット行またはグループ行を選択すると、プレビュー上で該当色がハイライトされます。",
+                "helpRules" => "Group Uniformはグループ単位、Per Colorは色別ルールのみ、Hybridは色別ルールを優先して不足分をグループ設定で補います。",
+                "helpExport" => "Previewを更新してからExportすると、設定したフォルダにPNGを書き出します。",
+                _ => english
+            };
         }
 
         private void OnDisable()
@@ -619,6 +947,55 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             Selection.activeObject = asset;
             EditorGUIUtility.PingObject(asset);
+        }
+    }
+
+    internal enum PaletteVariantLanguageMode
+    {
+        Auto,
+        English,
+        Japanese
+    }
+
+    internal enum PaletteVariantDisplayLanguage
+    {
+        English,
+        Japanese
+    }
+
+    internal sealed class ParameterHelpWindow : EditorWindow
+    {
+        private PaletteVariantGeneratorWindow owner;
+        private Vector2 scroll;
+
+        public void SetOwner(PaletteVariantGeneratorWindow window)
+        {
+            owner = window;
+        }
+
+        private void OnGUI()
+        {
+            if (owner == null)
+            {
+                EditorGUILayout.HelpBox("Open Palette Variant Generator first.", MessageType.Info);
+                return;
+            }
+
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            DrawHelpSection("Overview", owner.T("helpOverview", "Analyze an image, group nearby colors, preview replacement colors, and export a PNG variant."));
+            DrawHelpSection("Analyze", owner.T("helpAnalysis", "Adjust alpha threshold, minimum pixel count, and quantize step to control extracted palette colors."));
+            DrawHelpSection("Grouping", owner.T("helpGrouping", "Use target group count and max color distance to control how far nearby colors can be merged into the same group."));
+            DrawHelpSection("Palette", owner.T("helpPalette", "Select a palette row or group row to highlight the matching pixels in the preview."));
+            DrawHelpSection("Rules", owner.T("helpRules", "Group Uniform uses group rules, Per Color uses individual color rules only, and Hybrid lets color rules override the group fallback."));
+            DrawHelpSection("Export", owner.T("helpExport", "Update Preview before Export to write the generated PNG into the configured output folder."));
+            EditorGUILayout.EndScrollView();
+        }
+
+        private static void DrawHelpSection(string title, string body)
+        {
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(body, MessageType.None);
+            EditorGUILayout.Space(4f);
         }
     }
 }

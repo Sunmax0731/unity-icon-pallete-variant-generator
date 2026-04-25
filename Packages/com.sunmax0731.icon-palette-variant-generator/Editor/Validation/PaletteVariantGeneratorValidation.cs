@@ -32,12 +32,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateColorReplacement();
             ValidatePngExport();
             ValidateSessionJson();
+            ValidateIssue10UiPolish();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
             Debug.Log("ISSUE3_COLOR_GROUPING_VALIDATION=PASS");
             Debug.Log("ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS");
             Debug.Log("ISSUE5_PNG_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE6_SESSION_JSON_VALIDATION=PASS");
+            Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
         }
 
         private static void ValidateColorExtraction()
@@ -218,6 +220,101 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 {
                     System.IO.Directory.Delete(tempRoot, true);
                 }
+            }
+        }
+
+        private static void ValidateIssue10UiPolish()
+        {
+            ValidateMaxColorDistance();
+            ValidatePerColorHybridReplacement();
+        }
+
+        private static void ValidateMaxColorDistance()
+        {
+            var colors = new[]
+            {
+                new PaletteColorEntry { id = "#FF0000", hex = "#FF0000", color = new Color32(255, 0, 0, 255), pixelCount = 1 },
+                new PaletteColorEntry { id = "#0000FF", hex = "#0000FF", color = new Color32(0, 0, 255, 255), pixelCount = 1 }
+            };
+
+            var broadGroups = new ColorGroupingService().CreateGroups(
+                colors,
+                new GroupSettings
+                {
+                    targetGroupCount = 1,
+                    distanceMode = ColorDistanceMode.Rgb,
+                    maxColorDistance = 441f
+                });
+
+            var strictGroups = new ColorGroupingService().CreateGroups(
+                colors,
+                new GroupSettings
+                {
+                    targetGroupCount = 1,
+                    distanceMode = ColorDistanceMode.Rgb,
+                    maxColorDistance = 10f
+                });
+
+            if (broadGroups.Count != 1 || strictGroups.Count != 2)
+            {
+                throw new System.InvalidOperationException("Max color distance validation failed.");
+            }
+        }
+
+        private static void ValidatePerColorHybridReplacement()
+        {
+            Texture2D source = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            source.SetPixels32(new[] { new Color32(255, 0, 0, 255) });
+            source.Apply();
+
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                analyzeSettings = new AnalyzeSettings { alphaThreshold = 0, quantizeStep = 1 },
+                groupSettings = new GroupSettings { preserveAlpha = true },
+                paletteColors = new System.Collections.Generic.List<PaletteColorEntry>
+                {
+                    new PaletteColorEntry
+                    {
+                        id = "#FF0000",
+                        hex = "#FF0000",
+                        color = new Color32(255, 0, 0, 255),
+                        pixelCount = 1,
+                        groupId = "group_01"
+                    }
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        targetColor = new Color32(0, 0, 255, 255),
+                        blendRatio = 1f,
+                        replacementMode = ColorReplacementMode.Hybrid
+                    }
+                },
+                colorRules = new System.Collections.Generic.List<ColorReplacementRule>
+                {
+                    new ColorReplacementRule
+                    {
+                        id = "rule_01",
+                        groupId = "group_01",
+                        colorEntryId = "#FF0000",
+                        scope = ColorReplacementScope.ColorEntry,
+                        targetColor = new Color32(0, 255, 0, 255),
+                        blendRatio = 1f,
+                        enabled = true
+                    }
+                }
+            };
+
+            Texture2D output = new ColorReplacementService().Apply(source, session);
+            Color32 pixel = output.GetPixels32()[0];
+            Object.DestroyImmediate(source);
+            Object.DestroyImmediate(output);
+
+            if (pixel.g != 255 || pixel.b != 0)
+            {
+                throw new System.InvalidOperationException("Hybrid color replacement validation failed.");
             }
         }
     }

@@ -35,7 +35,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 throw new System.ArgumentNullException(nameof(session));
             }
 
-            Dictionary<uint, ColorGroup> groupsByColorKey = BuildGroupLookup(session);
+            Dictionary<uint, ReplacementTarget> replacementsByColorKey = BuildReplacementLookup(session);
             Texture2D output = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false)
             {
                 name = $"{source.name}_Preview",
@@ -60,15 +60,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
                 Color32 quantized = quantizationService.Quantize(pixel, quantizeStep);
                 uint colorKey = ColorCodeUtility.ToRgbKey(quantized);
-                if (!groupsByColorKey.TryGetValue(colorKey, out ColorGroup group))
+                if (!replacementsByColorKey.TryGetValue(colorKey, out ReplacementTarget replacementTarget))
                 {
                     outputPixels[index] = pixel;
                     continue;
                 }
 
-                float ratio = Mathf.Clamp01(group.blendRatio);
-                Color32 replacement = Lerp(pixel, group.targetColor, ratio);
-                replacement.a = session.groupSettings.preserveAlpha ? pixel.a : group.targetColor.a;
+                float ratio = Mathf.Clamp01(replacementTarget.BlendRatio);
+                Color32 replacement = Lerp(pixel, replacementTarget.TargetColor, ratio);
+                replacement.a = session.groupSettings.preserveAlpha ? pixel.a : replacementTarget.TargetColor.a;
                 outputPixels[index] = replacement;
             }
 
@@ -77,12 +77,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             return output;
         }
 
-        private static Dictionary<uint, ColorGroup> BuildGroupLookup(PaletteVariantSession session)
+        private static Dictionary<uint, ReplacementTarget> BuildReplacementLookup(PaletteVariantSession session)
         {
             Dictionary<string, ColorGroup> groupsById = session.colorGroups
                 .Where(group => group != null && !string.IsNullOrEmpty(group.id))
                 .ToDictionary(group => group.id, group => group);
-            Dictionary<uint, ColorGroup> groupsByColorKey = new Dictionary<uint, ColorGroup>();
+            Dictionary<string, ColorReplacementRule> colorRulesByEntryId = new Dictionary<string, ColorReplacementRule>();
+            foreach (ColorReplacementRule rule in session.colorRules ?? new List<ColorReplacementRule>())
+            {
+                if (rule == null
+                    || !rule.enabled
+                    || rule.scope != ColorReplacementScope.ColorEntry
+                    || string.IsNullOrEmpty(rule.colorEntryId))
+                {
+                    continue;
+                }
+
+                colorRulesByEntryId[rule.colorEntryId] = rule;
+            }
+
+            Dictionary<uint, ReplacementTarget> replacementsByColorKey = new Dictionary<uint, ReplacementTarget>();
 
             foreach (PaletteColorEntry entry in session.paletteColors)
             {
@@ -96,10 +110,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                     continue;
                 }
 
-                groupsByColorKey[ColorCodeUtility.ToRgbKey(entry.color)] = group;
+                bool canUseColorRule = group.replacementMode == ColorReplacementMode.PerColor
+                    || group.replacementMode == ColorReplacementMode.Hybrid;
+                if (canUseColorRule && colorRulesByEntryId.TryGetValue(entry.id, out ColorReplacementRule colorRule))
+                {
+                    replacementsByColorKey[ColorCodeUtility.ToRgbKey(entry.color)] = new ReplacementTarget(colorRule.targetColor, colorRule.blendRatio);
+                    continue;
+                }
+
+                if (group.replacementMode == ColorReplacementMode.PerColor)
+                {
+                    continue;
+                }
+
+                replacementsByColorKey[ColorCodeUtility.ToRgbKey(entry.color)] = new ReplacementTarget(group.targetColor, group.blendRatio);
             }
 
-            return groupsByColorKey;
+            return replacementsByColorKey;
         }
 
         private static Color32 Lerp(Color32 from, Color32 to, float ratio)
@@ -109,6 +136,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 (byte)Mathf.Clamp(Mathf.RoundToInt(from.g + ((to.g - from.g) * ratio)), 0, 255),
                 (byte)Mathf.Clamp(Mathf.RoundToInt(from.b + ((to.b - from.b) * ratio)), 0, 255),
                 (byte)Mathf.Clamp(Mathf.RoundToInt(from.a + ((to.a - from.a) * ratio)), 0, 255));
+        }
+
+        private readonly struct ReplacementTarget
+        {
+            public ReplacementTarget(Color32 targetColor, float blendRatio)
+            {
+                TargetColor = targetColor;
+                BlendRatio = blendRatio;
+            }
+
+            public Color32 TargetColor { get; }
+            public float BlendRatio { get; }
         }
     }
 }
