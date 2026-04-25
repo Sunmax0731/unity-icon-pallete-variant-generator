@@ -418,6 +418,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 session.groupSettings.preserveAlpha = EditorGUILayout.Toggle(T("preserveAlpha", "Preserve Alpha"), session.groupSettings.preserveAlpha);
 
                 DrawSectionSeparator();
+                DrawSectionHeader(T("noiseRemoval", "Noise Removal"));
+                session.noiseRemovalSettings ??= new NoiseRemovalSettings();
+                using (var change = new EditorGUI.ChangeCheckScope())
+                {
+                    session.noiseRemovalSettings.enabled = EditorGUILayout.Toggle(T("noiseRemovalEnabled", "Enable Noise Removal"), session.noiseRemovalSettings.enabled);
+                    using (new EditorGUI.DisabledScope(!session.noiseRemovalSettings.enabled))
+                    {
+                        session.noiseRemovalSettings.maxRegionPixels = Mathf.Max(1, EditorGUILayout.IntSlider(T("maxNoiseRegionPixels", "Max Noise Size"), session.noiseRemovalSettings.maxRegionPixels, 1, 64));
+                        session.noiseRemovalSettings.neighborDistanceThreshold = EditorGUILayout.Slider(T("noiseNeighborThreshold", "Neighbor Threshold"), session.noiseRemovalSettings.neighborDistanceThreshold, 0f, 441f);
+                        session.noiseRemovalSettings.sameGroupOnly = EditorGUILayout.Toggle(T("sameGroupOnly", "Same Group Only"), session.noiseRemovalSettings.sameGroupOnly);
+                    }
+
+                    EditorGUILayout.HelpBox(T("noiseRemovalHint", "Fills small color islands surrounded by the same group with a nearby surrounding color."), MessageType.None);
+                    if (change.changed && afterPreview != null)
+                    {
+                        HandlePreviewSettingChanged();
+                    }
+                }
+
+                DrawSectionSeparator();
                 DrawSectionHeader(T("exportSettings", "Export Settings"));
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -967,7 +987,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyAfterPreview();
             afterPreview = colorReplacementService.Apply(readableSourceImage, session);
-            reportMessage = "After preview updated.";
+            NoiseRemovalResult noiseResult = colorReplacementService.LastNoiseRemovalResult;
+            reportMessage = noiseResult.FilledRegionCount > 0
+                ? $"After preview updated. Noise Removal filled {noiseResult.FilledRegionCount} region(s), {noiseResult.FilledPixelCount} pixel(s)."
+                : "After preview updated.";
             reportType = MessageType.Info;
         }
 
@@ -1922,6 +1945,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "maxColorDistance" => "近傍色しきい値",
                 "preserveDarkOutline" => "暗色輪郭を保持",
                 "preserveAlpha" => "アルファを保持",
+                "noiseRemoval" => "ノイズ削除",
+                "noiseRemovalEnabled" => "ノイズ削除を有効化",
+                "maxNoiseRegionPixels" => "最大ノイズサイズ",
+                "noiseNeighborThreshold" => "近傍判定しきい値",
+                "sameGroupOnly" => "同一グループ内のみ",
+                "noiseRemovalHint" => "同一グループ内に囲まれた小さな色の塊を、周囲の近傍色で埋めます。",
                 "exportSettings" => "書き出し設定",
                 "outputFolder" => "出力フォルダ",
                 "filePrefix" => "ファイル接頭辞",
@@ -1966,6 +1995,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "helpOverview" => "画像を解析し、近い色をグループ化して、置換色のプレビューとPNG書き出しを行います。",
                 "helpAnalysis" => "透明度しきい値、最小ピクセル数、量子化ステップで抽出するパレット色を調整します。",
                 "helpGrouping" => "目標グループ数と近傍色しきい値で、似た色をどこまで同じグループに含めるかを調整します。",
+                "helpNoiseRemoval" => "同一グループ内に囲まれた小さな色領域を検出し、周囲の近傍色で補正します。元画像は変更しません。",
                 "helpPalette" => "パレット行またはグループ行を選択すると、プレビュー上で該当色がハイライトされます。",
                 "helpRules" => "Group Uniformはグループ単位、Per Colorは色別ルールのみ、Hybridは色別ルールを優先して不足分をグループ設定で補います。",
                 "helpExport" => "Previewを更新してからExportすると、設定したフォルダにPNGを書き出します。",
@@ -2176,6 +2206,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             DrawHelpSection("Overview", owner.T("helpOverview", "Analyze an image, group nearby colors, preview replacement colors, and export a PNG variant."));
             DrawHelpSection("Analyze", owner.T("helpAnalysis", "Adjust alpha threshold, minimum pixel count, and quantize step to control extracted palette colors."));
             DrawHelpSection("Grouping", owner.T("helpGrouping", "Use target group count and max color distance to control how far nearby colors can be merged into the same group."));
+            DrawHelpSection("Noise Removal", owner.T("helpNoiseRemoval", "Detects small color islands surrounded by the same group and fills them with nearby surrounding colors. The source image is not modified."));
             DrawHelpSection("Palette", owner.T("helpPalette", "Select a palette row or group row to highlight the matching pixels in the preview."));
             DrawHelpSection("Rules", owner.T("helpRules", "Group Uniform uses group rules, Per Color uses individual color rules only, and Hybrid lets color rules override the group fallback."));
             DrawHelpSection("Export", owner.T("helpExport", "Update Preview before Export to write the generated PNG into the configured output folder."));

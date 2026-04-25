@@ -36,6 +36,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             {
                 sourceImageAssetPath = "Assets/Icons/source.png",
                 analyzeSettings = new AnalyzeSettings { alphaThreshold = 16, quantizeStep = 8 },
+                noiseRemovalSettings = new NoiseRemovalSettings
+                {
+                    enabled = true,
+                    maxRegionPixels = 3,
+                    neighborDistanceThreshold = 24f,
+                    sameGroupOnly = true
+                },
                 paletteColors = new List<PaletteColorEntry>
                 {
                     new PaletteColorEntry
@@ -83,6 +90,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
 
             Assert.That(result.Success, Is.True);
             Assert.That(result.Session.analyzeSettings.alphaThreshold, Is.EqualTo(16));
+            Assert.That(result.Session.noiseRemovalSettings.enabled, Is.True);
+            Assert.That(result.Session.noiseRemovalSettings.maxRegionPixels, Is.EqualTo(3));
+            Assert.That(result.Session.noiseRemovalSettings.neighborDistanceThreshold, Is.EqualTo(24f));
+            Assert.That(result.Session.noiseRemovalSettings.sameGroupOnly, Is.True);
             Assert.That(result.Session.paletteColors, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups[0].blendRatio, Is.EqualTo(0.5f));

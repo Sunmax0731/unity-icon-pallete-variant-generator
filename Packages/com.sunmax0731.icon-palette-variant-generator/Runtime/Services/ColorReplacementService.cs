@@ -12,16 +12,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
     public sealed class ColorReplacementService
     {
         private readonly ColorQuantizationService quantizationService;
+        private readonly NoiseRemovalService noiseRemovalService;
 
         public ColorReplacementService()
-            : this(new ColorQuantizationService())
+            : this(new ColorQuantizationService(), new NoiseRemovalService())
         {
         }
 
         public ColorReplacementService(ColorQuantizationService quantizationService)
+            : this(quantizationService, new NoiseRemovalService())
+        {
+        }
+
+        public ColorReplacementService(ColorQuantizationService quantizationService, NoiseRemovalService noiseRemovalService)
         {
             this.quantizationService = quantizationService;
+            this.noiseRemovalService = noiseRemovalService;
         }
+
+        public NoiseRemovalResult LastNoiseRemovalResult { get; private set; }
 
         public Texture2D Apply(Texture2D source, PaletteVariantSession session)
         {
@@ -45,6 +54,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             };
 
             Color32[] sourcePixels = source.GetPixels32();
+            LastNoiseRemovalResult = noiseRemovalService.Apply(sourcePixels, source.width, source.height, session);
             Color32[] outputPixels = new Color32[sourcePixels.Length];
             int alphaThreshold = Mathf.Clamp(session.analyzeSettings.alphaThreshold, 0, 255);
             int quantizeStep = Mathf.Clamp(session.analyzeSettings.quantizeStep, 1, 64);
