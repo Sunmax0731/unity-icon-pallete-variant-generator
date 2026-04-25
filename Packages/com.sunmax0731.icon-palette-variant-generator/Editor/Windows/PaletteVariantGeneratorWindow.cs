@@ -785,17 +785,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         bool isActive = variation.id == session.activeVariationId;
-                        bool nextActive = GUILayout.Toggle(isActive, string.Empty, GUILayout.Width(18f));
-                        if (nextActive && !isActive)
+                        GUIStyle activeStyle = isActive ? EditorStyles.miniButtonMid : EditorStyles.miniButton;
+                        string activeLabel = isActive ? T("activeVariation", "Active") : T("useVariation", "Use");
+                        using (new EditorGUI.DisabledScope(isActive))
                         {
-                            variationService.SyncActiveVariation(session);
-                            variationService.ApplyVariation(session, variation.id);
-                            RefreshAfterPreview();
+                            if (GUILayout.Button(activeLabel, activeStyle, GUILayout.Width(58f)))
+                            {
+                                variationService.SyncActiveVariation(session);
+                                variationService.ApplyVariation(session, variation.id);
+                                RefreshAfterPreview();
+                            }
                         }
 
                         using (var change = new EditorGUI.ChangeCheckScope())
                         {
-                            variation.exportEnabled = EditorGUILayout.Toggle(variation.exportEnabled, GUILayout.Width(18f));
+                            string exportLabel = variation.exportEnabled ? T("export", "Export") : T("skip", "Skip");
+                            variation.exportEnabled = GUILayout.Toggle(
+                                variation.exportEnabled,
+                                exportLabel,
+                                EditorStyles.miniButton,
+                                GUILayout.Width(62f));
+
                             variation.displayName = EditorGUILayout.TextField(variation.displayName, GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true));
                             if (change.changed)
                             {
@@ -820,6 +830,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                         }
                     }
 
+                    EditorGUILayout.LabelField(
+                        T("outputFile", "Output File"),
+                        BuildVariationOutputFileName(session.exportSettings, variation),
+                        EditorStyles.miniLabel);
+
                     EditorGUIUtility.labelWidth = previousLabelWidth;
                 }
             }
@@ -837,6 +852,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 conflictMode = session.exportSettings.conflictMode,
                 refreshAssetDatabase = false
             };
+        }
+
+        internal static string BuildVariationOutputFileName(ExportSettings settings, IconVariation variation)
+        {
+            string prefix = settings == null || string.IsNullOrWhiteSpace(settings.filePrefix)
+                ? "icon"
+                : settings.filePrefix.Trim();
+            string suffix = variation == null || string.IsNullOrWhiteSpace(variation.fileSuffix)
+                ? variation?.id ?? "variant"
+                : variation.fileSuffix.Trim();
+            string fileName = $"{prefix}_{suffix}";
+            return fileName.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase)
+                ? fileName
+                : fileName + ".png";
         }
 
         private ColorReplacementRule GetOrCreateColorRule(PaletteColorEntry entry)
@@ -1111,6 +1140,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 "replacementRules" => "置換ルール",
                 "variations" => "バリエーション",
                 "variationsEmpty" => "Auto Group後にバリエーションが表示されます。",
+                "activeVariation" => "選択中",
+                "useVariation" => "選択",
+                "skip" => "Skip",
+                "outputFile" => "出力ファイル",
                 "add" => "追加",
                 "duplicate" => "複製",
                 "remove" => "削除",

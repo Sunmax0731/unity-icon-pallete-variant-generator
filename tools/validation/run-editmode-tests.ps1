@@ -66,6 +66,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE10_UI_POLISH_VALIDATION=PA
     throw "Unity UI polish validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE12_VARIATION_UX_VALIDATION=PASS" -Quiet)) {
+    throw "Unity variation UX validation did not emit pass marker. Log: $logPath"
+}
+
 Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE1_SCAFFOLD_VALIDATION=PASS",
     "ISSUE2_IMAGE_PALETTE_VALIDATION=PASS",
@@ -75,6 +79,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE6_SESSION_JSON_VALIDATION=PASS",
     "ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS",
     "ISSUE8_SAMPLE_QA_VALIDATION=PASS",
-    "ISSUE10_UI_POLISH_VALIDATION=PASS"
+    "ISSUE10_UI_POLISH_VALIDATION=PASS",
+    "ISSUE12_VARIATION_UX_VALIDATION=PASS"
 ) -Encoding UTF8
 Write-Host "Unity scaffold validation completed: $resultsPath"

@@ -35,6 +35,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateSessionJson();
             ValidateIssue10UiPolish();
             ValidateIssue7Variations();
+            ValidateIssue12VariationUx();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
             Debug.Log("ISSUE2_IMAGE_PALETTE_VALIDATION=PASS");
@@ -45,6 +46,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS");
             Debug.Log("ISSUE8_SAMPLE_QA_VALIDATION=PASS");
             Debug.Log("ISSUE10_UI_POLISH_VALIDATION=PASS");
+            Debug.Log("ISSUE12_VARIATION_UX_VALIDATION=PASS");
         }
 
         private static void ValidateVersionLicenseMenus()
@@ -357,6 +359,48 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                         throw new System.InvalidOperationException($"Sample icon was modified during validation: {path}");
                     }
                 }
+            }
+        }
+
+        private static void ValidateIssue12VariationUx()
+        {
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                exportSettings = new ExportSettings
+                {
+                    filePrefix = "icon",
+                    fileSuffix = "blue"
+                },
+                colorGroups = new System.Collections.Generic.List<ColorGroup>
+                {
+                    new ColorGroup
+                    {
+                        id = "group_01",
+                        targetColor = new Color32(0, 0, 255, 255),
+                        blendRatio = 1f
+                    }
+                }
+            };
+
+            IconVariationService service = new IconVariationService();
+            IconVariation first = service.EnsureActiveVariation(session);
+            first.displayName = "Blue";
+            first.fileSuffix = "blue";
+            first.exportEnabled = true;
+            service.SyncActiveVariation(session);
+
+            IconVariation duplicate = service.DuplicateActiveVariation(session);
+            duplicate.exportEnabled = false;
+
+            string firstFileName = PaletteVariantGeneratorWindow.BuildVariationOutputFileName(session.exportSettings, first);
+            string duplicateFileName = PaletteVariantGeneratorWindow.BuildVariationOutputFileName(session.exportSettings, duplicate);
+
+            if (session.activeVariationId != duplicate.id
+                || firstFileName != "icon_blue.png"
+                || duplicateFileName != "icon_blue_copy.png"
+                || duplicate.exportEnabled)
+            {
+                throw new System.InvalidOperationException("Variation UX validation failed.");
             }
         }
 

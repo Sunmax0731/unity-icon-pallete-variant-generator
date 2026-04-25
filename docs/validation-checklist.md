@@ -53,6 +53,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 | Language menu / Help window | PASS | Covered by compile and window code path; visual check recommended before release. |
 | Palette scroll | PASS | Implemented in UI; visual check recommended before release. |
 | Variation Add / Duplicate / Remove | PASS | Covered by variation service validation. |
+| Variation Active / Export state display | PASS | Covered by issue 12 variation UX validation; visual check recommended. |
 | Export All | PASS | Covered by variation snapshot and export service validation. |
 
 ## Release Blockers

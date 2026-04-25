@@ -45,8 +45,9 @@ Tools > Palette Variant Generator > 開く
 - `Add`: creates a new variation snapshot.
 - `Duplicate`: copies the active variation into an independent variation.
 - `Remove`: removes the active variation when more than one variation exists.
-- `Export Enabled`: controls whether a variation is included in `Export All`.
+- `Export` / `Skip`: controls whether a variation is included in `Export All`.
 - `File Suffix`: controls the output file suffix for that variation.
+- `Output File`: previews the generated PNG file name before export.
 
 ## Samples
 
