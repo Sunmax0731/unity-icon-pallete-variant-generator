@@ -55,6 +55,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue27EdgeOutsideCleanup();
             ValidateIssue28ExportUiDisclosure();
             ValidateIssue29OpaqueEdgeOutsideCleanup();
+            ValidateIssue30ExportSettingsWindow();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
             Debug.Log("ISSUE1_SCAFFOLD_VALIDATION=PASS");
@@ -84,6 +85,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS");
             Debug.Log("ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS");
             Debug.Log("ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS");
+            Debug.Log("ISSUE30_EXPORT_SETTINGS_WINDOW_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
 
@@ -1165,6 +1167,26 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             {
                 throw new System.InvalidOperationException("Opaque image edge outside cleanup validation failed.");
             }
+        }
+
+        private static void ValidateIssue30ExportSettingsWindow()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow owner = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (owner == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for export settings window validation.");
+            }
+
+            owner.OpenExportSettingsWindow();
+            PaletteVariantExportSettingsWindow exportWindow = EditorWindow.GetWindow<PaletteVariantExportSettingsWindow>();
+            if (exportWindow == null || exportWindow.titleContent == null || string.IsNullOrEmpty(exportWindow.titleContent.text))
+            {
+                throw new System.InvalidOperationException("Export settings window could not be opened.");
+            }
+
+            exportWindow.Close();
+            owner.Close();
         }
 
         private static void WriteValidationPng(string assetPath, Color32 color)

@@ -237,8 +237,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             toolbar.Add(CreateToolbarButton(T("analyze", "Analyze"), () => AnalyzeSourceImage(), () => sourceImage != null));
             toolbar.Add(CreateToolbarButton(T("autoGroup", "Auto Group"), () => AutoGroupPalette(), () => session.paletteColors.Count > 0));
             toolbar.Add(CreateToolbarButton(T("preview", "Preview"), () => RefreshAfterPreview(), () => readableSourceImage != null && session.colorGroups.Count > 0));
-            toolbar.Add(CreateToolbarButton(T("export", "Export"), () => { showExportOptions = true; ExportPreview(); }, () => afterPreview != null));
-            toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => { showExportOptions = true; ExportAllVariations(); }, () => readableSourceImage != null && session.variations.Count > 0));
+            toolbar.Add(CreateToolbarButton(T("export", "Export"), () => OpenExportSettingsWindow(), () => true));
+            toolbar.Add(CreateToolbarButton(T("exportAll", "Export All"), () => OpenExportSettingsWindow(), () => true));
             toolbar.Add(CreateToolbarButton(T("saveSession", "Save Session"), () => SaveSession(), () => true));
             toolbar.Add(CreateToolbarButton(T("loadSession", "Load Session"), () => LoadSession(), () => true));
             toolbar.Add(CreateToolbarButton(T("help", "Help"), () => OpenHelpWindow(), () => true));
@@ -339,18 +339,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private VisualElement BuildExportSection()
         {
             VisualElement section = CreateUiSection("export-section", T("exportSettings", "Export Settings"));
-            Button toggle = new Button(() =>
+            Button toggle = new Button(() => OpenExportSettingsWindow())
             {
-                showExportOptions = !showExportOptions;
-                RefreshUiToolkitContent();
-            })
-            {
-                text = showExportOptions ? T("hideExportOptions", "Hide Export Options") : T("showExportOptions", "Show Export Options")
+                text = T("showExportOptions", "Show Export Options")
             };
             section.Add(toggle);
 
             VisualElement details = new VisualElement { name = "export-details" };
-            details.style.display = showExportOptions ? DisplayStyle.Flex : DisplayStyle.None;
+            details.style.display = DisplayStyle.None;
             VisualElement folderRow = new VisualElement { name = "export-folder-row" };
             folderRow.style.flexDirection = FlexDirection.Row;
             TextField outputField = CreateTextField("export-folder-field", T("outputFolder", "Output Folder"), session.exportSettings.outputFolder, value => session.exportSettings.outputFolder = value);
@@ -3000,6 +2996,60 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return texture;
         }
 
+        internal ExportSettings CurrentExportSettings => session.exportSettings;
+
+        internal string CurrentBatchSourceFolder
+        {
+            get => batchSourceFolder;
+            set => batchSourceFolder = value ?? string.Empty;
+        }
+
+        internal IReadOnlyList<BatchSourceExportItem> CurrentBatchResults => batchResults;
+
+        internal bool CanExportPreview => afterPreview != null;
+
+        internal bool CanExportAllVariations => readableSourceImage != null && session.variations.Count > 0;
+
+        internal bool CanExportBatchFolder => session.colorGroups.Count > 0 && session.variations.Count > 0;
+
+        internal void OpenExportSettingsWindow()
+        {
+            PaletteVariantExportSettingsWindow window = GetWindow<PaletteVariantExportSettingsWindow>(T("exportSettings", "Export Settings"));
+            window.SetOwner(this);
+            window.Show();
+            window.Focus();
+        }
+
+        internal void SelectOutputFolderFromSettingsWindow()
+        {
+            SelectOutputFolder();
+            RefreshUiToolkitContent();
+        }
+
+        internal void SelectBatchSourceFolderFromSettingsWindow()
+        {
+            SelectBatchSourceFolder();
+            RefreshUiToolkitContent();
+        }
+
+        internal void ExportPreviewFromSettingsWindow()
+        {
+            ExportPreview();
+            RefreshUiToolkitContent();
+        }
+
+        internal void ExportAllVariationsFromSettingsWindow()
+        {
+            ExportAllVariations();
+            RefreshUiToolkitContent();
+        }
+
+        internal void ExportBatchSourceFolderFromSettingsWindow()
+        {
+            ExportBatchSourceFolder();
+            RefreshUiToolkitContent();
+        }
+
         private static string GetProjectRoot()
         {
             return System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, ".."));
@@ -3071,6 +3121,91 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     {
         English,
         Japanese
+    }
+
+    internal sealed class PaletteVariantExportSettingsWindow : EditorWindow
+    {
+        private PaletteVariantGeneratorWindow owner;
+        private Vector2 scroll;
+
+        public void SetOwner(PaletteVariantGeneratorWindow window)
+        {
+            owner = window;
+            minSize = new Vector2(440f, 360f);
+        }
+
+        private void OnGUI()
+        {
+            if (owner == null)
+            {
+                EditorGUILayout.HelpBox("Open Palette Variant Generator first.", MessageType.Info);
+                return;
+            }
+
+            ExportSettings settings = owner.CurrentExportSettings;
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            EditorGUILayout.LabelField(owner.T("exportSettings", "Export Settings"), EditorStyles.boldLabel);
+
+            EditorGUILayout.BeginHorizontal();
+            settings.outputFolder = EditorGUILayout.TextField(owner.T("outputFolder", "Output Folder"), settings.outputFolder);
+            if (GUILayout.Button("...", GUILayout.Width(32f)))
+            {
+                owner.SelectOutputFolderFromSettingsWindow();
+            }
+
+            EditorGUILayout.EndHorizontal();
+            settings.filePrefix = EditorGUILayout.TextField(owner.T("filePrefix", "File Prefix"), settings.filePrefix);
+            settings.fileSuffix = EditorGUILayout.TextField(owner.T("fileSuffix", "File Suffix"), settings.fileSuffix);
+            settings.conflictMode = (ExportConflictMode)EditorGUILayout.EnumPopup(owner.T("conflictMode", "Conflict Mode"), settings.conflictMode);
+            settings.refreshAssetDatabase = EditorGUILayout.Toggle(owner.T("refreshAssetDatabase", "Refresh AssetDatabase"), settings.refreshAssetDatabase);
+
+            EditorGUILayout.Space(8f);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUI.BeginDisabledGroup(!owner.CanExportPreview);
+                if (GUILayout.Button(owner.T("export", "Export"), GUILayout.Height(28f)))
+                {
+                    owner.ExportPreviewFromSettingsWindow();
+                    Repaint();
+                }
+
+                EditorGUI.EndDisabledGroup();
+                EditorGUI.BeginDisabledGroup(!owner.CanExportAllVariations);
+                if (GUILayout.Button(owner.T("exportAll", "Export All"), GUILayout.Height(28f)))
+                {
+                    owner.ExportAllVariationsFromSettingsWindow();
+                    Repaint();
+                }
+
+                EditorGUI.EndDisabledGroup();
+            }
+
+            EditorGUILayout.Space(12f);
+            EditorGUILayout.LabelField(owner.T("batchExport", "Batch Export"), EditorStyles.boldLabel);
+            EditorGUILayout.BeginHorizontal();
+            owner.CurrentBatchSourceFolder = EditorGUILayout.TextField(owner.T("sourceFolder", "Source Folder"), owner.CurrentBatchSourceFolder);
+            if (GUILayout.Button("...", GUILayout.Width(32f)))
+            {
+                owner.SelectBatchSourceFolderFromSettingsWindow();
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUI.BeginDisabledGroup(!owner.CanExportBatchFolder);
+            if (GUILayout.Button(owner.T("exportFolder", "Export Folder"), GUILayout.Height(28f)))
+            {
+                owner.ExportBatchSourceFolderFromSettingsWindow();
+                Repaint();
+            }
+
+            EditorGUI.EndDisabledGroup();
+
+            foreach (BatchSourceExportItem item in owner.CurrentBatchResults.Take(20))
+            {
+                EditorGUILayout.LabelField($"{item.Status}: {item.AssetPath} / {item.VariationName}", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
     }
 
     internal sealed class ParameterHelpWindow : EditorWindow
