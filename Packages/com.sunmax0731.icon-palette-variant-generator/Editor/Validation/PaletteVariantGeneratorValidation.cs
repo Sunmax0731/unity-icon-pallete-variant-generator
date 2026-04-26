@@ -1778,7 +1778,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
 
             string alphaHelp = window.ParameterHelpText("alphaThreshold");
             string groupHelp = window.ParameterHelpText("maxColorDistance");
-            if (!alphaHelp.Contains("Increase") || !alphaHelp.Contains("Decrease") || !groupHelp.Contains("Visually"))
+            bool alphaHelpDescribesChange = (alphaHelp.Contains("Increase") && alphaHelp.Contains("Decrease"))
+                || (alphaHelp.Contains("値を上げる") && alphaHelp.Contains("下げる"));
+            bool groupHelpDescribesVisualImpact = groupHelp.Contains("Visually")
+                || groupHelp.Contains("見た目");
+            if (!alphaHelpDescribesChange || !groupHelpDescribesVisualImpact)
             {
                 throw new System.InvalidOperationException("Parameter focus help text does not describe increase/decrease visual impact.");
             }
