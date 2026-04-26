@@ -1,4 +1,4 @@
-﻿# 検証チェックリスト
+# 検証チェックリスト
 
 ## 実行条件
 
@@ -44,7 +44,7 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 
 | ワークフロー | 結果 | 備考 |
 |---|---|---|
-| `Tools > Palette Variant Generator > 開く` から開く | PASS | headless で EditorWindow 作成を検証。リリース前に目視確認を推奨。 |
+| `Tools > Palette Variant Generator > メイン画面` から開く | PASS | headless で EditorWindow 作成を検証。リリース前に目視確認を推奨。 |
 | サンプル PNG を Analyze する | PASS | サンプル抽出 validation で検証。 |
 | Auto Group | PASS | グルーピング validation で検証。 |
 | Preview replacement | PASS | 置換 validation で検証。 |

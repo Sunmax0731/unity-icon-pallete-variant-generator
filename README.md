@@ -35,8 +35,14 @@
 Unity Editor のメニューから起動します。
 
 ```text
-Tools > Palette Variant Generator > 開く
+Tools > Palette Variant Generator > メイン画面
+Tools > Palette Variant Generator > ライセンス
+Tools > Palette Variant Generator > バージョン情報
 ```
+
+## ライセンス
+
+Unity Icon Palette Variant Generator は MIT License で提供します。詳細は [LICENSE.md](Packages/com.sunmax0731.icon-palette-variant-generator/LICENSE.md) を確認してください。
 
 ## 検証
 

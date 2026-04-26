@@ -28,7 +28,7 @@
 
 ### 完了条件
 
-- `Tools > Palette Variant Generator > 開く` から空ウィンドウが開く。
+- `Tools > Palette Variant Generator > メイン画面` から空ウィンドウが開く。
 - コンパイルエラーがない。
 
 ## Phase 1: 画像読み込み・プレビュー

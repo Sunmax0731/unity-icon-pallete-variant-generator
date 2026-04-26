@@ -35,6 +35,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal const string PackageVersion = "1.0.3";
         internal const string ValidatedUnityVersion = "6000.4.0f1";
         internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.3";
+        internal const string RepositoryUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator";
         internal const string MainWindowRootName = "palette-variant-main-root";
         internal const string MainWindowScrollName = "palette-variant-main-scroll";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
@@ -149,7 +150,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private List<int> lastNoiseEffectHighlightIndices = new List<int>();
         private List<int> lastEdgeEffectHighlightIndices = new List<int>();
 
-        [MenuItem("Tools/Palette Variant Generator/開く")]
+        [MenuItem("Tools/Palette Variant Generator/メイン画面")]
         public static void Open()
         {
             OpenWindow();
@@ -4975,40 +4976,31 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private static void DrawVersionInfo()
         {
             EditorGUILayout.LabelField(PaletteVariantGeneratorWindow.ProductName, EditorStyles.boldLabel);
-            EditorGUILayout.Space(4f);
+            EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("パッケージ", PaletteVariantGeneratorWindow.PackageName);
             EditorGUILayout.LabelField("バージョン", PaletteVariantGeneratorWindow.PackageVersion);
             EditorGUILayout.LabelField("検証済み Unity", PaletteVariantGeneratorWindow.ValidatedUnityVersion);
-            EditorGUILayout.LabelField("メニュー", "Tools > Palette Variant Generator");
+            EditorGUILayout.LabelField("メニュー", "Tools > Palette Variant Generator > メイン画面");
+            EditorGUILayout.LabelField("ライセンス", "MIT License");
             EditorGUILayout.Space(8f);
+            EditorGUILayout.TextField("リポジトリ", PaletteVariantGeneratorWindow.RepositoryUrl);
             EditorGUILayout.TextField("リリース", PaletteVariantGeneratorWindow.ReleaseUrl);
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.HelpBox(
-                "このエディタ拡張は、元画像を変更せずにアイコンのパレット抽出、近傍色グループ化、色置換プレビュー、PNG バリエーション出力を行います。",
-                MessageType.None);
         }
 
         private static void DrawLicense()
         {
-            EditorGUILayout.LabelField("ライセンスと利用条件", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("ライセンス", EditorStyles.boldLabel);
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("ライセンス種別", "MIT License");
+            EditorGUILayout.LabelField("対象パッケージ", PaletteVariantGeneratorWindow.PackageName);
+            EditorGUILayout.Space(8f);
             EditorGUILayout.HelpBox(
-                "個人・商用の Unity プロジェクトで本ツールを利用できます。本ツールで生成した PNG アセットは配布できます。また、自身のプロジェクト向けにパッケージを改変できます。",
+                "本 Unity エディタ拡張は MIT License で提供されます。利用、改変、再配布、商用利用が可能です。",
                 MessageType.None);
             EditorGUILayout.HelpBox(
-                "許可なく本パッケージを競合する単体製品として再配布したり、元のパッケージを自身の著作物として主張したりすることはできません。",
-                MessageType.Warning);
-
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("免責事項", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "本パッケージは現状有姿で提供されます。本パッケージの利用により発生したプロジェクトデータの消失、制作遅延、その他の損害について、作者は責任を負いません。元画像とプロジェクトデータは必ずバックアップしてください。",
-                MessageType.None);
-
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("元画像の扱い", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "本ツールは元画像を上書きしない設計です。出力先とファイル競合時の設定は、利用者が確認してください。",
+                "再配布時は、パッケージに含まれる LICENSE.md の著作権表示とライセンス本文を保持してください。",
                 MessageType.Info);
+            EditorGUILayout.TextField("LICENSE", $"Packages/{PaletteVariantGeneratorWindow.PackageName}/LICENSE.md");
         }
 
         private enum InfoMode

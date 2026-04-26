@@ -1,4 +1,4 @@
-﻿# マニュアル
+# マニュアル
 
 ## 概要
 
@@ -19,7 +19,7 @@ GitHub Releases から `PaletteVariantGenerator_v1.0.3.zip` をダウンロー�
 ## 起動方法
 
 ```text
-Tools > Palette Variant Generator > 開く
+Tools > Palette Variant Generator > メイン画面
 ```
 
 ## 基本操作

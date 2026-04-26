@@ -1,4 +1,4 @@
-﻿# リリースチェックリスト
+# リリースチェックリスト
 
 ## 前提
 
@@ -33,7 +33,7 @@ GitHub Release には ZIP と `.unitypackage` 単体の両方を添付する。Z
 
 ## 手動 QA
 
-- `Tools > Palette Variant Generator > 開く` からウィンドウを開ける。
+- `Tools > Palette Variant Generator > メイン画面` からウィンドウを開ける。
 - サンプル PNG を Analyze / Auto Group / Preview / Export できる。
 - Export All と Folder Batch Export が元画像を上書きしない。
 - Preset Asset の作成、更新、読み込みができる。

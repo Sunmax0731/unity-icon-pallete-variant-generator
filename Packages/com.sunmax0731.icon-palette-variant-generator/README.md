@@ -5,7 +5,9 @@
 ## 起動方法
 
 ```text
-Tools > Palette Variant Generator > 開く
+Tools > Palette Variant Generator > メイン画面
+Tools > Palette Variant Generator > ライセンス
+Tools > Palette Variant Generator > バージョン情報
 ```
 
 ## 主な機能
@@ -34,3 +36,7 @@ Samples~/SampleIcons
 ## Unity バージョン
 
 Unity `6000.4.0f1` で検証しています。
+
+## ライセンス
+
+Unity Icon Palette Variant Generator は MIT License で提供します。詳細は `LICENSE.md` を確認してください。

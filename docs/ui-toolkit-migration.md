@@ -20,7 +20,7 @@
 
 ## 維持する操作
 
-- `Tools > Palette Variant Generator > 開く` からの起動
+- `Tools > Palette Variant Generator > メイン画面` からの起動
 - Source Image の選択と Analyze
 - Auto Group と近傍色しきい値の調整
 - エッジ外側クリーンアップとノイズ削除の有効化、しきい値、対象サイズの調整
