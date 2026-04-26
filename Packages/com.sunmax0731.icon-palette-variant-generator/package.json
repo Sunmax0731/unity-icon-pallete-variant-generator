@@ -1,7 +1,7 @@
 {
   "name": "com.sunmax0731.icon-palette-variant-generator",
   "displayName": "Unity Icon Palette Variant Generator",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "unity": "6000.0",
   "description": "Unity Editor extension for extracting icon palettes and generating multiple color variant PNGs.",
   "keywords": [

@@ -87,5 +87,5 @@ Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
 
 - 初回リリースの UI は IMGUI ベースです。
 - 色距離は RGB / HSV / Lab から選択できます。Lab 色距離は知覚差に近い近傍色判定として検証対象です。
-- SpriteAtlas の直接編集は v1.0.3 の対象外です。
+- SpriteAtlas の直接編集は v1.0.4 の対象外です。
 - フォルダ単位の一括処理は Texture2D アセットを対象に検証します。

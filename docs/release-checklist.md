@@ -17,11 +17,11 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ## 配布 ZIP 生成
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.3
-powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.3
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.4
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.4
 ```
 
-`ReleaseBuilds/PaletteVariantGenerator_v1.0.3.zip` と `ReleaseBuilds/PaletteVariantGenerator_v1.0.3.unitypackage` が生成されることを確認する。
+`ReleaseBuilds/PaletteVariantGenerator_v1.0.4.zip` と `ReleaseBuilds/PaletteVariantGenerator_v1.0.4.unitypackage` が生成されることを確認する。
 
 GitHub Release には ZIP と `.unitypackage` 単体の両方を添付する。ZIP には `Assets/`、`Library/`、`Logs/`、`Temp/`、`Validation/`、`ReleaseBuilds/` が含まれないことを確認する。
 

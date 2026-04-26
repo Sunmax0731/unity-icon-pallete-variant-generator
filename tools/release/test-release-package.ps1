@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.3"
+    [string]$Version = "1.0.4"
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +30,7 @@ try {
         "Packages/com.sunmax0731.icon-palette-variant-generator/package.json",
         "Packages/com.sunmax0731.icon-palette-variant-generator/Editor/Windows/PaletteVariantGeneratorWindow.cs",
         "README.md",
+        "LICENSE.md",
         "CHANGELOG.md",
         "docs/manual.md",
         "docs/release-checklist.md",

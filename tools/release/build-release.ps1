@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.3",
+    [string]$Version = "1.0.4",
     [string]$UnityPath = "C:\Program Files\Unity\6000.4.0f1\Editor\Unity.exe",
     [switch]$SkipUnityPackage
 )
@@ -26,6 +26,7 @@ $trackedPaths = @(
     $packageRoot,
     "docs",
     "README.md",
+    "LICENSE.md",
     "CHANGELOG.md",
     "Agents.md",
     "Skill.md"

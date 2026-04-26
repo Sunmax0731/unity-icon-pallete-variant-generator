@@ -43,3 +43,10 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 - `tools\release\build-release.ps1 -Version <version>` は `ReleaseBuilds/PaletteVariantGenerator_v<version>.zip` と `ReleaseBuilds/PaletteVariantGenerator_v<version>.unitypackage` を生成する。
 - `tools\release\test-release-package.ps1 -Version <version>` で ZIP と `.unitypackage` の両方を検証してから Release を公開する。
 - Release asset の追加・差し替え後は `gh release view <tag> --json assets` または `gh release list` で添付状態を確認する。
+
+## Shared Unity Editor Extension Convention
+
+- Public menu entries use `Tools > Palette Variant Generator > メイン画面`, `Tools > Palette Variant Generator > ライセンス`, and `Tools > Palette Variant Generator > バージョン情報`.
+- Keep developer-only or helper commands under a secondary group such as `Developer` or `Utilities`.
+- The license is MIT License. Keep `README.md`, package README, docs, release notes, and the Unity Editor license window aligned with MIT.
+- When menu or license text changes, update README, manual, validation checklist, release notes, BOOTH/GitHub release copy, and release package contents in the same change.
