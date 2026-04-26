@@ -36,3 +36,10 @@
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
+
+## Release Artifact Policy
+
+- GitHub Release には ZIP と `.unitypackage` 単体の両方を必ず添付する。
+- `tools\release\build-release.ps1 -Version <version>` は `ReleaseBuilds/PaletteVariantGenerator_v<version>.zip` と `ReleaseBuilds/PaletteVariantGenerator_v<version>.unitypackage` を生成する。
+- `tools\release\test-release-package.ps1 -Version <version>` で ZIP と `.unitypackage` の両方を検証してから Release を公開する。
+- Release asset の追加・差し替え後は `gh release view <tag> --json assets` または `gh release list` で添付状態を確認する。

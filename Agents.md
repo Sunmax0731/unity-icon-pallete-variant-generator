@@ -187,3 +187,10 @@ ISSUE10_UI_POLISH_VALIDATION=PASS
 ## 12. 残タスク方針
 
 GitHub Issue の open 状態を確認し、優先度と実行可能性が高いものから進める。
+
+## 13. Release Artifact Policy
+
+- GitHub Release には ZIP と `.unitypackage` 単体の両方を必ず添付する。
+- `tools\release\build-release.ps1 -Version <version>` で `ReleaseBuilds/PaletteVariantGenerator_v<version>.zip` と `ReleaseBuilds/PaletteVariantGenerator_v<version>.unitypackage` を生成する。
+- `tools\release\test-release-package.ps1 -Version <version>` で ZIP と `.unitypackage` の両方を検証してから公開する。
+- 既存 Release に後から成果物を追加した場合も、`gh release view <tag> --json assets` で ZIP と `.unitypackage` の両方が表示されることを確認する。

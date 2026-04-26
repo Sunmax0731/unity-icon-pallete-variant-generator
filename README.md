@@ -107,6 +107,7 @@ powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 
 
 ```text
 ReleaseBuilds/PaletteVariantGenerator_v1.0.3.zip
+ReleaseBuilds/PaletteVariantGenerator_v1.0.3.unitypackage
 ```
 
 GitHub Actions の `Release Package` workflow でも tracked files から同じ ZIP を生成します。

@@ -31,6 +31,8 @@ powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Versio
 powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.3
 ```
 
+Release には `PaletteVariantGenerator_v1.0.3.zip` と `PaletteVariantGenerator_v1.0.3.unitypackage` を添付します。
+
 marker:
 
 ```text
