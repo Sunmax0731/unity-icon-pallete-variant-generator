@@ -1,4 +1,4 @@
-# リリースチェックリスト
+﻿# リリースチェックリスト
 
 ## 前提
 
@@ -17,11 +17,11 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ## 配布 ZIP 生成
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.2
-powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.2
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.3
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.3
 ```
 
-`ReleaseBuilds/PaletteVariantGenerator_v1.0.2.zip` が生成され、`Assets/`、`Library/`、`Logs/`、`Temp/`、`Validation/`、`ReleaseBuilds/` が ZIP に含まれないことを確認する。
+`ReleaseBuilds/PaletteVariantGenerator_v1.0.3.zip` が生成され、`Assets/`、`Library/`、`Logs/`、`Temp/`、`Validation/`、`ReleaseBuilds/` が ZIP に含まれないことを確認する。
 
 ## GitHub Actions
 

@@ -1,4 +1,4 @@
-# Unity Icon Palette Variant Generator
+﻿# Unity Icon Palette Variant Generator
 
 アイコン画像からパレット色を抽出し、近傍色グループと置換ルールを使って色違い PNG を生成する Unity Editor 拡張です。
 
@@ -9,7 +9,7 @@
 ## パッケージ
 
 - Package: `com.sunmax0731.icon-palette-variant-generator`
-- Version: `1.0.2`
+- Version: `1.0.3`
 - 配布形式: UPM package ZIP
 
 ## 現在の対応範囲
@@ -93,20 +93,20 @@ ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
 
 - マニュアル: `docs/manual.md`
 - 利用条件: `docs/terms.md`
-- リリースノート: `docs/release-notes-v1.0.2.md`
+- リリースノート: `docs/release-notes-v1.0.3.md`
 - BOOTH 商品説明文案: `docs/booth-copy.md`
 
 ## リリースビルド
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.2
-powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.2
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.3
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.3
 ```
 
 出力先:
 
 ```text
-ReleaseBuilds/PaletteVariantGenerator_v1.0.2.zip
+ReleaseBuilds/PaletteVariantGenerator_v1.0.3.zip
 ```
 
 GitHub Actions の `Release Package` workflow でも tracked files から同じ ZIP を生成します。

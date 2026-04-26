@@ -32,9 +32,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const int LargeImageAutoPreviewPixelCount = 1024 * 1024;
         internal const string ProductName = "Unity Icon Palette Variant Generator";
         internal const string PackageName = "com.sunmax0731.icon-palette-variant-generator";
-        internal const string PackageVersion = "1.0.2";
+        internal const string PackageVersion = "1.0.3";
         internal const string ValidatedUnityVersion = "6000.4.0f1";
-        internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.2";
+        internal const string ReleaseUrl = "https://github.com/Sunmax0731/unity-icon-pallete-variant-generator/releases/tag/v1.0.3";
         internal const string MainWindowRootName = "palette-variant-main-root";
         internal const string MainWindowScrollName = "palette-variant-main-scroll";
         private const string LanguageModePrefsKey = "Sunmax.IconPaletteVariantGenerator.LanguageMode";
