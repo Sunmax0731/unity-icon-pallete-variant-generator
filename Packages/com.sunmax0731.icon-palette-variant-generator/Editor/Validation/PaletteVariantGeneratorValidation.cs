@@ -20,10 +20,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue48DirectSourceEraser();
             ValidateIssue48RgbSourceBufferEraser();
             ValidateIssue48JpegSourceEraser();
+            ValidateIssue48JpegWindowEraser();
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
+            Debug.Log("ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS");
         }
 
         public static void RunScaffoldValidation()
@@ -89,6 +91,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue48DirectSourceEraser();
             ValidateIssue48RgbSourceBufferEraser();
             ValidateIssue48JpegSourceEraser();
+            ValidateIssue48JpegWindowEraser();
             ValidateIssue48ToolPopupSync();
             ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
@@ -142,6 +145,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
+            Debug.Log("ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
@@ -1947,6 +1951,101 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 if (readable != null)
                 {
                     Object.DestroyImmediate(readable);
+                }
+
+                if (source != null)
+                {
+                    Object.DestroyImmediate(source);
+                }
+
+                AssetDatabase.DeleteAsset(assetPath);
+            }
+        }
+
+        private static void ValidateIssue48JpegWindowEraser()
+        {
+            const string assetPath = "Assets/__PaletteVariantGeneratorIssue48JpegWindowValidation.jpg";
+            string absolutePath = Path.Combine(Directory.GetCurrentDirectory(), assetPath);
+            Texture2D source = null;
+            Texture2D roundTripPng = null;
+            PaletteVariantGeneratorWindow window = null;
+
+            try
+            {
+                AssetDatabase.DeleteAsset(assetPath);
+                source = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                source.SetPixels32(new[]
+                {
+                    new Color32(255, 220, 64, 255),
+                    new Color32(255, 220, 64, 255),
+                    new Color32(255, 220, 64, 255),
+                    new Color32(255, 220, 64, 255)
+                });
+                source.Apply(false, false);
+                File.WriteAllBytes(absolutePath, source.EncodeToJPG(90));
+                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+
+                Texture2D imported = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+                if (imported == null)
+                {
+                    throw new System.InvalidOperationException("JPG window validation asset could not be imported.");
+                }
+
+                PaletteVariantGeneratorWindow.Open();
+                window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+                if (window == null)
+                {
+                    throw new System.InvalidOperationException("Main window could not be opened for JPG window eraser validation.");
+                }
+
+                window.AnalyzeSourceImageForValidation(imported);
+                window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
+                window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
+                window.SetDrawToolForValidation(DrawToolKind.Eraser);
+                window.SetBrushSettingsForValidation(1, 1f);
+
+                Color32 before = window.GetSourcePixelForValidation(0, 0);
+                if (before.a != 255)
+                {
+                    throw new System.InvalidOperationException("JPG window validation expected opaque pixel before erasing.");
+                }
+
+                Color32 beforePreview = window.GetPrimaryPreviewPixelForValidation(0, 0);
+                window.ApplyPaintAtSourcePixelForValidation(0, 0);
+
+                Color32 erased = window.GetSourcePixelForValidation(0, 0);
+                if (erased.a != 0)
+                {
+                    throw new System.InvalidOperationException($"JPG window eraser did not clear source alpha. Actual alpha: {erased.a}");
+                }
+
+                Color32 afterPreview = window.GetPrimaryPreviewPixelForValidation(0, 0);
+                if (SamePixel(beforePreview, afterPreview))
+                {
+                    throw new System.InvalidOperationException("JPG window eraser did not update preview display.");
+                }
+
+                roundTripPng = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!ImageConversion.LoadImage(roundTripPng, window.GetReadableSourcePngBytesForValidation(), false))
+                {
+                    throw new System.InvalidOperationException("JPG window erased source could not be encoded as PNG.");
+                }
+
+                if (roundTripPng.GetPixels32()[0].a != 0)
+                {
+                    throw new System.InvalidOperationException("JPG window erased alpha was not preserved in PNG bytes.");
+                }
+            }
+            finally
+            {
+                if (window != null)
+                {
+                    window.Close();
+                }
+
+                if (roundTripPng != null)
+                {
+                    Object.DestroyImmediate(roundTripPng);
                 }
 
                 if (source != null)

@@ -5116,6 +5116,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             RefreshUiToolkitContent();
         }
 
+        internal void AnalyzeSourceImageForValidation(Texture2D texture)
+        {
+            sourceImage = texture;
+            AnalyzeSourceImage();
+            RefreshUiToolkitContent();
+        }
+
         internal void SetSelectionHighlightForValidation(bool enabled)
         {
             selectionHighlightEnabled = enabled;
@@ -5208,6 +5215,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             return readableSourceImage.GetPixels32()[(y * readableSourceImage.width) + x];
+        }
+
+        internal byte[] GetReadableSourcePngBytesForValidation()
+        {
+            return readableSourceImage == null
+                ? System.Array.Empty<byte>()
+                : readableSourceImage.EncodeToPNG();
         }
 
         internal Color32 GetPrimaryPreviewPixelForValidation(int x, int y)
