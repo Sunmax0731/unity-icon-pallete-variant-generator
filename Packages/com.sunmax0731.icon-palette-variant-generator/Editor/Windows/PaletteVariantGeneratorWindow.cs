@@ -84,6 +84,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D zoomedAfterPreviewTexture;
         private Texture2D zoomedSplitPreviewTexture;
         private Texture2D diffPreviewTexture;
+        private Texture2D sourceEditingPreviewTexture;
         private string highlightedBeforePreviewKey = string.Empty;
         private string highlightedAfterPreviewKey = string.Empty;
         private string highlightedSplitPreviewKey = string.Empty;
@@ -92,6 +93,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private string zoomedSplitPreviewKey = string.Empty;
         private string diffPreviewKey = string.Empty;
         private string splitPreviewCacheKey = string.Empty;
+        private string sourceEditingPreviewKey = string.Empty;
         private Texture2D checkerboardTexture;
         private Texture2D selectionOverlayTexture;
         private string selectionOverlayCacheKey = string.Empty;
@@ -1800,7 +1802,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             if (ShouldUseSourceEditingPreviewOnly())
             {
-                return GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+                return GetDisplayPreviewTexture(GetSourceEditingPreviewTexture(), HighlightPreviewSlot.Before);
             }
 
             return previewCompareMode == PreviewCompareMode.Difference
@@ -1856,6 +1858,59 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             diffPreviewTexture.SetPixels32(outputPixels);
             diffPreviewTexture.Apply(false, false);
             return diffPreviewTexture;
+        }
+
+        private Texture2D GetSourceEditingPreviewTexture()
+        {
+            if (readableSourceImage == null)
+            {
+                return null;
+            }
+
+            string cacheKey = GetTextureCacheId(readableSourceImage);
+            if (sourceEditingPreviewTexture != null && sourceEditingPreviewKey == cacheKey)
+            {
+                return sourceEditingPreviewTexture;
+            }
+
+            DestroyTexture(ref sourceEditingPreviewTexture);
+            sourceEditingPreviewKey = cacheKey;
+            Color32[] sourcePixels = readableSourceImage.GetPixels32();
+            Color32[] outputPixels = new Color32[sourcePixels.Length];
+            int width = readableSourceImage.width;
+            int height = readableSourceImage.height;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int index = (y * width) + x;
+                    outputPixels[index] = BlendWithCheckerboard(sourcePixels[index], x, y);
+                }
+            }
+
+            sourceEditingPreviewTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = "PaletteVariantGenerator_SourceEditingPreview",
+                filterMode = readableSourceImage.filterMode,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            sourceEditingPreviewTexture.SetPixels32(outputPixels);
+            sourceEditingPreviewTexture.Apply(false, false);
+            return sourceEditingPreviewTexture;
+        }
+
+        private static Color32 BlendWithCheckerboard(Color32 foreground, int x, int y)
+        {
+            bool light = ((x / 4) + (y / 4)) % 2 == 0;
+            Color background = light ? new Color(0.72f, 0.72f, 0.72f, 1f) : new Color(0.48f, 0.48f, 0.48f, 1f);
+            float alpha = foreground.a / 255f;
+            return new Color32(
+                (byte)Mathf.RoundToInt(Mathf.Lerp(background.r * 255f, foreground.r, alpha)),
+                (byte)Mathf.RoundToInt(Mathf.Lerp(background.g * 255f, foreground.g, alpha)),
+                (byte)Mathf.RoundToInt(Mathf.Lerp(background.b * 255f, foreground.b, alpha)),
+                255);
         }
 
         private void DestroySplitPreviewTexture()
@@ -2402,6 +2457,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void InvalidateSourcePreviewPresentationCaches()
         {
+            DestroyTexture(ref sourceEditingPreviewTexture);
+            sourceEditingPreviewKey = string.Empty;
             DestroySplitPreviewTexture();
             DestroyDiffPreviewTexture();
             DestroyUiToolkitHighlightTextures();
