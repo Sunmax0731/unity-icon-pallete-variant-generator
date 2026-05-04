@@ -22,7 +22,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
-        public void DirectSourceEraserClearsAlphaAndPersistsAfterPreviewRefresh()
+        public void DirectSourceBrushThenEraserClearsAlphaAndPersistsAfterPreviewRefresh()
         {
             PaletteVariantGeneratorWindow.Open();
             PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
@@ -55,6 +55,15 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
 
             window.SetValidationSession(texture, session);
             window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
+            window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
+            window.SetDrawToolForValidation(DrawToolKind.Brush);
+            window.SetBrushSettingsForValidation(1, 1f);
+            window.ApplyPaintAtSourcePixelForValidation(0, 0);
+
+            Assert.That(window.GetSourcePixelForValidation(0, 0).r, Is.EqualTo(255));
+            Assert.That(window.GetSourcePixelForValidation(0, 0).g, Is.EqualTo(64));
+            Assert.That(window.GetSourcePixelForValidation(0, 0).a, Is.EqualTo(255));
+
             window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
             window.SetDrawToolForValidation(DrawToolKind.Eraser);
             window.SetBrushSettingsForValidation(1, 1f);

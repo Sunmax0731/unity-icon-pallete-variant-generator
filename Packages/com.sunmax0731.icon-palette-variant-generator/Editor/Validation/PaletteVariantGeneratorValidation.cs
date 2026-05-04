@@ -1751,6 +1751,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             window.SetValidationSession(texture, session);
             window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
             window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
+            window.SetDrawToolForValidation(DrawToolKind.Brush);
+            window.SetBrushSettingsForValidation(1, 1f);
+            window.ApplyPaintAtSourcePixelForValidation(0, 0);
+
+            Color32 painted = window.GetSourcePixelForValidation(0, 0);
+            if (painted.r != 255 || painted.g != 64 || painted.a != 255)
+            {
+                throw new System.InvalidOperationException($"Direct source brush setup failed before eraser validation. Actual RGBA: {painted.r},{painted.g},{painted.b},{painted.a}");
+            }
+
+            window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
             window.SetDrawToolForValidation(DrawToolKind.Eraser);
             window.SetBrushSettingsForValidation(1, 1f);
 

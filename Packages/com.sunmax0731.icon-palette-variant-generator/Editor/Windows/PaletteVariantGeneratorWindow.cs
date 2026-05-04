@@ -66,6 +66,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly LayerCompositingService layerCompositingService = new LayerCompositingService();
         private readonly LayerTextureSerializationService layerTextureSerializationService = new LayerTextureSerializationService();
         private readonly RasterPaintService rasterPaintService = new RasterPaintService();
+        private readonly PaintStrokeSessionService paintStrokeSessionService;
         private readonly IconVariationService variationService = new IconVariationService();
         private readonly PngExportService pngExportService = new PngExportService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
@@ -173,13 +174,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private bool isRefreshingUiToolkit;
         private List<int> lastNoiseEffectHighlightIndices = new List<int>();
         private List<int> lastEdgeEffectHighlightIndices = new List<int>();
-        private Color32[] activePaintPixels;
-        private int activePaintWidth;
-        private int activePaintHeight;
-        private bool activePaintDirty;
-        private PaintEditTarget activePaintTarget;
-        private bool activePaintHasLastPoint;
-        private Vector2Int activePaintLastPoint;
+        private PaintStrokeSession activePaintSession;
+
+        public PaletteVariantGeneratorWindow()
+        {
+            paintStrokeSessionService = new PaintStrokeSessionService(layerTextureSerializationService, rasterPaintService);
+        }
 
         [MenuItem("Tools/Palette Variant Generator/メイン画面")]
         public static void Open()
@@ -2443,7 +2443,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void ApplySessionSourcePixelsToReadableImageIfAvailable()
         {
-            if (activePaintPixels != null && activePaintTarget == PaintEditTarget.SourceImage)
+            if (activePaintSession != null && activePaintSession.Target == PaintEditTarget.SourceImage)
             {
                 return;
             }
@@ -2588,7 +2588,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void BeginPaintStroke()
         {
-            if (activePaintPixels != null)
+            if (activePaintSession != null)
             {
                 return;
             }
@@ -2596,52 +2596,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             EnsureLayerSessionState();
             undoSnapshots.Push(JsonUtility.ToJson(session));
             redoSnapshots.Clear();
-            activePaintDirty = false;
-            activePaintTarget = session.drawingToolSettings.paintTarget;
-            activePaintHasLastPoint = false;
-            activePaintLastPoint = default;
-
-            if (activePaintTarget == PaintEditTarget.SourceImage)
-            {
-                EnsureSourcePixelDataMatchesReadableSource();
-                activePaintPixels = layerTextureSerializationService.Deserialize(session.sourcePixelData);
-                activePaintWidth = session.sourcePixelData.width;
-                activePaintHeight = session.sourcePixelData.height;
-                return;
-            }
-
-            RasterLayer activeLayer = GetActiveLayer();
-            if (activeLayer?.pixelData == null)
-            {
-                activePaintPixels = null;
-                activePaintWidth = 0;
-                activePaintHeight = 0;
-                return;
-            }
-
-            activePaintPixels = layerTextureSerializationService.Deserialize(activeLayer.pixelData);
-            if (activePaintPixels.Length == 0)
-            {
-                activePaintPixels = new Color32[activeLayer.pixelData.width * activeLayer.pixelData.height];
-            }
-
-            activePaintWidth = activeLayer.pixelData.width;
-            activePaintHeight = activeLayer.pixelData.height;
+            EnsureSourcePixelDataMatchesReadableSource();
+            activePaintSession = paintStrokeSessionService.Begin(session, readableSourceImage, GetActiveLayer());
         }
 
         private void CommitPaintStroke()
         {
-            if (activePaintPixels == null)
+            if (activePaintSession == null)
             {
                 return;
             }
 
-            if (activePaintDirty)
+            PaintStrokeCommitResult commitResult = paintStrokeSessionService.Commit(activePaintSession, session, GetActiveLayer());
+            if (commitResult.Changed)
             {
-                if (activePaintTarget == PaintEditTarget.SourceImage)
+                if (commitResult.Target == PaintEditTarget.SourceImage)
                 {
-                    session.sourcePixelData = layerTextureSerializationService.Serialize(activePaintPixels, activePaintWidth, activePaintHeight);
-                    ApplyPixelsToTexture(readableSourceImage, activePaintPixels);
+                    ApplyPixelsToTexture(readableSourceImage, commitResult.Pixels);
                     InvalidateSourcePreviewPresentationCaches();
                     if (session.colorGroups.Count > 0)
                     {
@@ -2654,21 +2625,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
                 else
                 {
-                    RasterLayer activeLayer = GetActiveLayer();
-                    if (activeLayer?.pixelData != null)
-                    {
-                        activeLayer.pixelData = layerTextureSerializationService.Serialize(activePaintPixels, activePaintWidth, activePaintHeight);
-                        RebuildCompositePreview();
-                    }
+                    RebuildCompositePreview();
                 }
             }
 
-            activePaintPixels = null;
-            activePaintWidth = 0;
-            activePaintHeight = 0;
-            activePaintDirty = false;
-            activePaintHasLastPoint = false;
-            activePaintLastPoint = default;
+            activePaintSession = null;
         }
 
         private void ApplyActivePaintToolFromPreview(Image image, Vector2 localPosition)
@@ -2683,10 +2644,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
-            if (activePaintPixels == null || activePaintWidth <= 0 || activePaintHeight <= 0)
+            if (activePaintSession == null || activePaintSession.Width <= 0 || activePaintSession.Height <= 0)
             {
                 BeginPaintStroke();
-                if (activePaintPixels == null)
+                if (activePaintSession == null)
                 {
                     return;
                 }
@@ -2697,35 +2658,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void ApplyActivePaintToolAtPixel(int centerX, int centerY)
         {
-            Vector2Int currentPoint = new Vector2Int(centerX, centerY);
-            if (ShouldInterpolateContinuousStroke() && activePaintHasLastPoint)
-            {
-                rasterPaintService.ApplyStroke(
-                    activePaintPixels,
-                    activePaintWidth,
-                    activePaintHeight,
-                    activePaintLastPoint,
-                    currentPoint,
-                    session.drawingToolSettings);
-            }
-            else
-            {
-                rasterPaintService.ApplyTool(
-                    activePaintPixels,
-                    activePaintWidth,
-                    activePaintHeight,
-                    centerX,
-                    centerY,
-                    session.drawingToolSettings);
-            }
+            paintStrokeSessionService.Apply(activePaintSession, session.drawingToolSettings, centerX, centerY);
 
-            activePaintDirty = true;
-            activePaintHasLastPoint = true;
-            activePaintLastPoint = currentPoint;
-
-            if (activePaintTarget == PaintEditTarget.SourceImage)
+            if (activePaintSession.Target == PaintEditTarget.SourceImage)
             {
-                ApplyPixelsToTexture(readableSourceImage, activePaintPixels);
+                ApplyPixelsToTexture(readableSourceImage, activePaintSession.Pixels);
                 InvalidateSourcePreviewPresentationCaches();
                 UpdatePreviewImagesImmediately();
                 return;
@@ -2743,18 +2680,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
             else
             {
-                layerCompositingService.UpdateCompositeTexture(afterPreview, replacementPreview, session.layers, activeLayer.id, activePaintPixels, activePaintWidth, activePaintHeight);
+                layerCompositingService.UpdateCompositeTexture(afterPreview, replacementPreview, session.layers, activeLayer.id, activePaintSession.Pixels, activePaintSession.Width, activePaintSession.Height);
                 InvalidateAfterPreviewPresentationCaches();
             }
 
             UpdatePreviewImagesImmediately();
             Repaint();
-        }
-
-        private bool ShouldInterpolateContinuousStroke()
-        {
-            return session.drawingToolSettings.activeTool == DrawToolKind.Brush
-                || session.drawingToolSettings.activeTool == DrawToolKind.Eraser;
         }
 
         private bool TryAddBrushPaletteColorAtSourcePixel(int x, int y)
@@ -5156,7 +5087,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         internal void ApplyPaintAtSourcePixelForValidation(int x, int y)
         {
             BeginPaintStroke();
-            if (activePaintPixels == null)
+            if (activePaintSession == null)
             {
                 return;
             }
