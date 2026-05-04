@@ -9,6 +9,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
     /// </summary>
     public sealed class TextureAssetLoader
     {
+        /// <summary>
+        /// Loads a Unity project texture as an editable RGBA32 texture.
+        /// </summary>
         public bool TryLoadReadableTexture(Texture2D source, out Texture2D readableTexture, out string assetPath, out string error)
         {
             readableTexture = null;
@@ -52,7 +55,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
                     return false;
                 }
 
-                readableTexture = texture;
+                readableTexture = CreateEditableRgbaTexture(texture, source.name);
+                Object.DestroyImmediate(texture);
                 return true;
             }
             catch (IOException ex)
@@ -65,6 +69,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
                 error = ex.Message;
                 return false;
             }
+        }
+
+        private static Texture2D CreateEditableRgbaTexture(Texture2D decodedTexture, string sourceName)
+        {
+            Color32[] pixels = decodedTexture.GetPixels32();
+            Texture2D editableTexture = new Texture2D(decodedTexture.width, decodedTexture.height, TextureFormat.RGBA32, false)
+            {
+                name = $"{sourceName}_Readable",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            editableTexture.SetPixels32(pixels);
+            editableTexture.Apply(false, false);
+            return editableTexture;
         }
     }
 }

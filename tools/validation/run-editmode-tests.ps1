@@ -214,6 +214,14 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE48_DIRECT_SOURCE_ERASER_VA
     throw "Unity direct source eraser validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS" -Quiet)) {
+    throw "Unity RGB source eraser validation did not emit pass marker. Log: $logPath"
+}
+
+if (-not (Select-String -Path $logPath -Pattern "ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS" -Quiet)) {
+    throw "Unity JPG source eraser validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS" -Quiet)) {
     throw "Unity tool popup sync validation did not emit pass marker. Log: $logPath"
 }
@@ -273,6 +281,8 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS",
     "ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS",
     "ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS",
+    "ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS",
+    "ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS",
     "ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS",
     "FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"

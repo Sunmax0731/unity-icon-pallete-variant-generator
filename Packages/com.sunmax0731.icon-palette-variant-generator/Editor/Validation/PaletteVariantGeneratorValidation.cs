@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Services;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Windows;
@@ -17,7 +18,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
         public static void RunIssue48DirectSourceEraserValidation()
         {
             ValidateIssue48DirectSourceEraser();
+            ValidateIssue48RgbSourceBufferEraser();
+            ValidateIssue48JpegSourceEraser();
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
         }
 
         public static void RunScaffoldValidation()
@@ -81,6 +86,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue46BoundaryTrimCleanup();
             ValidateIssue47PreviewBrushSelection();
             ValidateIssue48DirectSourceEraser();
+            ValidateIssue48RgbSourceBufferEraser();
+            ValidateIssue48JpegSourceEraser();
             ValidateIssue48ToolPopupSync();
             ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
@@ -131,6 +138,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS");
             Debug.Log("ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS");
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
@@ -1802,6 +1811,130 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             }
 
             window.Close();
+        }
+
+        private static void ValidateIssue48RgbSourceBufferEraser()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for RGB source eraser validation.");
+            }
+
+            Texture2D texture = new Texture2D(2, 2, TextureFormat.RGB24, false)
+            {
+                name = "Issue48RgbSourceBufferValidation"
+            };
+            texture.SetPixels32(new[]
+            {
+                new Color32(255, 0, 0, 255),
+                new Color32(255, 255, 0, 255),
+                new Color32(0, 255, 0, 255),
+                new Color32(0, 0, 255, 255)
+            });
+            texture.Apply(false, false);
+
+            window.SetValidationSession(
+                texture,
+                new PaletteVariantSession
+                {
+                    drawingToolSettings = new DrawingToolSettings
+                    {
+                        paintTarget = PaintEditTarget.SourceImage,
+                        activeTool = DrawToolKind.Eraser,
+                        brushSize = 1,
+                        strength = 1f
+                    }
+                });
+            window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
+            window.ApplyPaintAtSourcePixelForValidation(0, 0);
+
+            Color32 erased = window.GetSourcePixelForValidation(0, 0);
+            if (erased.a != 0)
+            {
+                throw new System.InvalidOperationException($"RGB source eraser did not normalize editable buffer alpha. Actual alpha: {erased.a}");
+            }
+
+            window.Close();
+            Object.DestroyImmediate(texture);
+        }
+
+        private static void ValidateIssue48JpegSourceEraser()
+        {
+            const string assetPath = "Assets/__PaletteVariantGeneratorIssue48JpegValidation.jpg";
+            string absolutePath = Path.Combine(Directory.GetCurrentDirectory(), assetPath);
+            Texture2D source = null;
+            Texture2D readable = null;
+
+            try
+            {
+                AssetDatabase.DeleteAsset(assetPath);
+                source = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                source.SetPixels32(new[]
+                {
+                    new Color32(255, 0, 0, 255),
+                    new Color32(255, 255, 0, 255),
+                    new Color32(0, 255, 0, 255),
+                    new Color32(0, 0, 255, 255)
+                });
+                source.Apply(false, false);
+                File.WriteAllBytes(absolutePath, source.EncodeToJPG(90));
+                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+
+                Texture2D imported = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+                if (imported == null)
+                {
+                    throw new System.InvalidOperationException("JPG validation asset could not be imported.");
+                }
+
+                TextureAssetLoader loader = new TextureAssetLoader();
+                if (!loader.TryLoadReadableTexture(imported, out readable, out _, out string error))
+                {
+                    throw new System.InvalidOperationException($"JPG validation asset could not be loaded: {error}");
+                }
+
+                if (readable.format != TextureFormat.RGBA32)
+                {
+                    throw new System.InvalidOperationException($"JPG validation asset was not normalized to RGBA32. Actual format: {readable.format}");
+                }
+
+                Color32[] pixels = readable.GetPixels32();
+                new RasterPaintService().ApplyTool(
+                    pixels,
+                    readable.width,
+                    readable.height,
+                    0,
+                    0,
+                    new DrawingToolSettings
+                    {
+                        activeTool = DrawToolKind.Eraser,
+                        brushSize = 1,
+                        strength = 1f
+                    });
+                readable.SetPixels32(pixels);
+                readable.Apply(false, false);
+
+                Color32 erased = readable.GetPixels32()[0];
+                if (erased.a != 0)
+                {
+                    throw new System.InvalidOperationException($"JPG source eraser did not preserve transparent alpha. Actual alpha: {erased.a}");
+                }
+            }
+            finally
+            {
+                if (readable != null)
+                {
+                    Object.DestroyImmediate(readable);
+                }
+
+                if (source != null)
+                {
+                    Object.DestroyImmediate(source);
+                }
+
+                AssetDatabase.DeleteAsset(assetPath);
+            }
         }
 
         private static void ValidateIssue48ToolPopupSync()

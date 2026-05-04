@@ -2429,6 +2429,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
+            EnsureReadableSourceImageEditableFormat();
+
             if (session.sourcePixelData != null
                 && session.sourcePixelData.width == readableSourceImage.width
                 && session.sourcePixelData.height == readableSourceImage.height
@@ -2438,6 +2440,34 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             session.sourcePixelData = layerTextureSerializationService.Serialize(readableSourceImage.GetPixels32(), readableSourceImage.width, readableSourceImage.height);
+        }
+
+        private void EnsureReadableSourceImageEditableFormat()
+        {
+            if (readableSourceImage == null || readableSourceImage.format == TextureFormat.RGBA32)
+            {
+                return;
+            }
+
+            Texture2D original = readableSourceImage;
+            Color32[] pixels = original.GetPixels32();
+            Texture2D editableTexture = new Texture2D(original.width, original.height, TextureFormat.RGBA32, false)
+            {
+                name = $"{original.name}_EditableRgba",
+                filterMode = original.filterMode,
+                wrapMode = original.wrapMode,
+                hideFlags = original.hideFlags
+            };
+            editableTexture.SetPixels32(pixels);
+            editableTexture.Apply(false, false);
+            readableSourceImage = editableTexture;
+
+            if (!ReferenceEquals(original, sourceImage))
+            {
+                DestroyImmediate(original);
+            }
+
+            InvalidateSourcePreviewPresentationCaches();
         }
 
         private static void ApplyPixelsToTexture(Texture2D texture, Color32[] pixels)
