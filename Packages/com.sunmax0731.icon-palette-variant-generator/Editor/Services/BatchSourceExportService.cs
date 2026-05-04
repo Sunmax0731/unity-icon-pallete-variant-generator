@@ -18,6 +18,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
         private readonly ColorGroupingService colorGroupingService;
         private readonly ColorReplacementService colorReplacementService;
         private readonly PngExportService pngExportService;
+        private readonly ExportedTextureImportSettingsService exportedTextureImportSettingsService;
 
         public BatchSourceExportService()
             : this(
@@ -25,7 +26,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
                 new ColorExtractionService(),
                 new ColorGroupingService(),
                 new ColorReplacementService(),
-                new PngExportService())
+                new PngExportService(),
+                new ExportedTextureImportSettingsService())
         {
         }
 
@@ -35,12 +37,30 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
             ColorGroupingService colorGroupingService,
             ColorReplacementService colorReplacementService,
             PngExportService pngExportService)
+            : this(
+                textureAssetLoader,
+                colorExtractionService,
+                colorGroupingService,
+                colorReplacementService,
+                pngExportService,
+                new ExportedTextureImportSettingsService())
+        {
+        }
+
+        public BatchSourceExportService(
+            TextureAssetLoader textureAssetLoader,
+            ColorExtractionService colorExtractionService,
+            ColorGroupingService colorGroupingService,
+            ColorReplacementService colorReplacementService,
+            PngExportService pngExportService,
+            ExportedTextureImportSettingsService exportedTextureImportSettingsService)
         {
             this.textureAssetLoader = textureAssetLoader;
             this.colorExtractionService = colorExtractionService;
             this.colorGroupingService = colorGroupingService;
             this.colorReplacementService = colorReplacementService;
             this.pngExportService = pngExportService;
+            this.exportedTextureImportSettingsService = exportedTextureImportSettingsService;
         }
 
         public BatchSourceExportSummary ExportFolder(string folderAssetPath, PaletteVariantSession baseSession, string projectRoot)
@@ -119,6 +139,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
                     PaletteVariantSession sourceSession = CreateSourceSession(assetPath, baseSession, variation, paletteColors, sourceGroups);
                     Texture2D preview = colorReplacementService.Apply(readableTexture, sourceSession);
                     PngExportResult result = pngExportService.Export(preview, sourceSession.exportSettings, projectRoot);
+                    ApplyExportedTextureImportSettings(result, projectRoot);
                     Object.DestroyImmediate(preview);
                     summary.Add(assetPath, variation.displayName, result);
                 }
@@ -127,6 +148,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
             {
                 Object.DestroyImmediate(readableTexture);
             }
+        }
+
+        private void ApplyExportedTextureImportSettings(PngExportResult result, string projectRoot)
+        {
+            if (result == null || result.Status != PngExportStatus.Exported)
+            {
+                return;
+            }
+
+            exportedTextureImportSettingsService.ApplyAlphaIsTransparency(result.OutputPath, projectRoot, out _);
         }
 
         private static PaletteVariantSession CreateSourceSession(

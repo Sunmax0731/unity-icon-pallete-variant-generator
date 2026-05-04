@@ -21,11 +21,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue48RgbSourceBufferEraser();
             ValidateIssue48JpegSourceEraser();
             ValidateIssue48JpegWindowEraser();
+            ValidateIssue48ExportAlphaTransparency();
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS");
         }
 
         public static void RunScaffoldValidation()
@@ -92,6 +94,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue48RgbSourceBufferEraser();
             ValidateIssue48JpegSourceEraser();
             ValidateIssue48JpegWindowEraser();
+            ValidateIssue48ExportAlphaTransparency();
             ValidateIssue48ToolPopupSync();
             ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
@@ -146,6 +149,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS");
             Debug.Log("ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
@@ -2054,6 +2058,76 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 }
 
                 AssetDatabase.DeleteAsset(assetPath);
+            }
+        }
+
+        private static void ValidateIssue48ExportAlphaTransparency()
+        {
+            const string folderPath = "Assets/__PaletteVariantGeneratorIssue48ExportAlphaValidation";
+            const string assetPath = folderPath + "/issue48_alpha_export.png";
+            Texture2D texture = null;
+
+            try
+            {
+                AssetDatabase.DeleteAsset(folderPath);
+                AssetDatabase.CreateFolder("Assets", "__PaletteVariantGeneratorIssue48ExportAlphaValidation");
+
+                texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                texture.SetPixels32(new[]
+                {
+                    new Color32(255, 0, 0, 0),
+                    new Color32(255, 0, 0, 255),
+                    new Color32(255, 0, 0, 128),
+                    new Color32(255, 0, 0, 255)
+                });
+                texture.Apply(false, false);
+
+                ExportSettings settings = new ExportSettings
+                {
+                    outputFolder = folderPath,
+                    filePrefix = "issue48",
+                    fileSuffix = "alpha_export",
+                    conflictMode = ExportConflictMode.Overwrite,
+                    refreshAssetDatabase = false
+                };
+
+                PngExportResult result = new PngExportService().Export(texture, settings, Directory.GetCurrentDirectory());
+                if (result.Status != PngExportStatus.Exported || !File.Exists(result.OutputPath))
+                {
+                    throw new System.InvalidOperationException("Issue 48 alpha export PNG could not be written.");
+                }
+
+                bool applied = new ExportedTextureImportSettingsService()
+                    .ApplyAlphaIsTransparency(result.OutputPath, Directory.GetCurrentDirectory(), out string message);
+                if (!applied)
+                {
+                    throw new System.InvalidOperationException(message);
+                }
+
+                TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+                if (importer == null)
+                {
+                    throw new System.InvalidOperationException("Issue 48 alpha export TextureImporter was not found.");
+                }
+
+                if (!importer.alphaIsTransparency)
+                {
+                    throw new System.InvalidOperationException("Issue 48 alpha export did not enable Alpha Is Transparency.");
+                }
+
+                if (importer.alphaSource != TextureImporterAlphaSource.FromInput)
+                {
+                    throw new System.InvalidOperationException("Issue 48 alpha export did not preserve alpha input source.");
+                }
+            }
+            finally
+            {
+                if (texture != null)
+                {
+                    Object.DestroyImmediate(texture);
+                }
+
+                AssetDatabase.DeleteAsset(folderPath);
             }
         }
 

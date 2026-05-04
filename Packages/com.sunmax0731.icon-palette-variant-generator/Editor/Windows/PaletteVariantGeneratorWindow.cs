@@ -69,6 +69,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly PaintStrokeSessionService paintStrokeSessionService;
         private readonly IconVariationService variationService = new IconVariationService();
         private readonly PngExportService pngExportService = new PngExportService();
+        private readonly ExportedTextureImportSettingsService exportedTextureImportSettingsService = new ExportedTextureImportSettingsService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
         private readonly RulePresetJsonService rulePresetJsonService = new RulePresetJsonService();
         private readonly BatchSourceExportService batchSourceExportService = new BatchSourceExportService();
@@ -4323,6 +4324,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             variationService.SyncActiveVariation(session);
             PngExportResult result = pngExportService.Export(afterPreview, session.exportSettings, GetProjectRoot());
+            ApplyExportedTextureImportSettings(result);
             if (session.exportSettings.refreshAssetDatabase)
             {
                 AssetDatabase.Refresh();
@@ -4380,6 +4382,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 Texture2D compositePreview = layerCompositingService.Compose(preview, session.layers);
                 ExportSettings exportSettings = CreateExportSettingsForVariation(variation);
                 PngExportResult result = pngExportService.Export(compositePreview, exportSettings, GetProjectRoot());
+                ApplyExportedTextureImportSettings(result);
                 DestroyImmediate(compositePreview);
                 DestroyImmediate(preview);
 
@@ -4414,6 +4417,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 reportMessage = $"Batch export completed. Exported: {exported}, Skipped: {skipped}.";
                 reportType = skipped > 0 ? MessageType.Warning : MessageType.Info;
             }
+        }
+
+        private void ApplyExportedTextureImportSettings(PngExportResult result)
+        {
+            if (result == null || result.Status != PngExportStatus.Exported)
+            {
+                return;
+            }
+
+            exportedTextureImportSettingsService.ApplyAlphaIsTransparency(result.OutputPath, GetProjectRoot(), out _);
         }
 
         private void SaveSession()
