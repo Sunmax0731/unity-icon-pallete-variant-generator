@@ -2692,6 +2692,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
             }
 
+            ApplyActivePaintToolAtPixel(centerX, centerY);
+        }
+
+        private void ApplyActivePaintToolAtPixel(int centerX, int centerY)
+        {
             Vector2Int currentPoint = new Vector2Int(centerX, centerY);
             if (ShouldInterpolateContinuousStroke() && activePaintHasLastPoint)
             {
@@ -5126,6 +5131,49 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             previewInteractionMode = mode;
             RefreshUiToolkitContent();
+        }
+
+        internal void SetPaintTargetForValidation(PaintEditTarget target)
+        {
+            session.drawingToolSettings.paintTarget = target;
+            EnsurePreviewModeMatchesActiveTool();
+            RefreshUiToolkitContent();
+        }
+
+        internal void SetDrawToolForValidation(DrawToolKind tool)
+        {
+            session.drawingToolSettings.activeTool = tool;
+            EnsurePreviewModeMatchesActiveTool();
+            RefreshUiToolkitContent();
+        }
+
+        internal void SetBrushSettingsForValidation(int brushSize, float strength)
+        {
+            session.drawingToolSettings.brushSize = Mathf.Max(1, brushSize | 1);
+            session.drawingToolSettings.strength = Mathf.Clamp01(strength);
+        }
+
+        internal void ApplyPaintAtSourcePixelForValidation(int x, int y)
+        {
+            BeginPaintStroke();
+            if (activePaintPixels == null)
+            {
+                return;
+            }
+
+            ApplyActivePaintToolAtPixel(x, y);
+            CommitPaintStroke();
+            RefreshUiToolkitContent();
+        }
+
+        internal Color32 GetSourcePixelForValidation(int x, int y)
+        {
+            if (readableSourceImage == null || x < 0 || y < 0 || x >= readableSourceImage.width || y >= readableSourceImage.height)
+            {
+                return default;
+            }
+
+            return readableSourceImage.GetPixels32()[(y * readableSourceImage.width) + x];
         }
 
         internal bool AddBrushSelectionAtSourcePixelForValidation(int x, int y)

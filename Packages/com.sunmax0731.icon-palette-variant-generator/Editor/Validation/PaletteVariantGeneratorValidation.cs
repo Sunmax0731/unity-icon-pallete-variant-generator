@@ -14,6 +14,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
     /// </summary>
     public static class PaletteVariantGeneratorValidation
     {
+        public static void RunIssue48DirectSourceEraserValidation()
+        {
+            ValidateIssue48DirectSourceEraser();
+            Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
+        }
+
         public static void RunScaffoldValidation()
         {
             PaletteVariantGeneratorWindow.Open();
@@ -74,6 +80,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue45ExportPrecheck();
             ValidateIssue46BoundaryTrimCleanup();
             ValidateIssue47PreviewBrushSelection();
+            ValidateIssue48DirectSourceEraser();
             ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
@@ -122,6 +129,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS");
             Debug.Log("ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS");
             Debug.Log("ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS");
+            Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
@@ -1724,6 +1732,46 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (session.colorGroups.Any(group => group.replacementMode == ColorReplacementMode.GroupUniform))
             {
                 throw new System.InvalidOperationException("Preview brush did not switch affected groups to color-rule-compatible mode.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue48DirectSourceEraser()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for direct source eraser validation.");
+            }
+
+            PaletteVariantSession session = CreatePreviewPickValidationSession();
+            Texture2D texture = CreatePreviewPickValidationTexture();
+            window.SetValidationSession(texture, session);
+            window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
+            window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
+            window.SetDrawToolForValidation(DrawToolKind.Eraser);
+            window.SetBrushSettingsForValidation(1, 1f);
+
+            Color32 before = window.GetSourcePixelForValidation(0, 0);
+            if (before.a != 255)
+            {
+                throw new System.InvalidOperationException("Validation setup expected opaque source pixel before erasing.");
+            }
+
+            window.ApplyPaintAtSourcePixelForValidation(0, 0);
+            Color32 erased = window.GetSourcePixelForValidation(0, 0);
+            if (erased.a != 0)
+            {
+                throw new System.InvalidOperationException($"Direct source eraser did not clear alpha. Actual alpha: {erased.a}");
+            }
+
+            window.RefreshAfterPreviewForValidation();
+            Color32 afterRefresh = window.GetSourcePixelForValidation(0, 0);
+            if (afterRefresh.a != 0)
+            {
+                throw new System.InvalidOperationException($"Direct source eraser alpha rolled back after preview refresh. Actual alpha: {afterRefresh.a}");
             }
 
             window.Close();
