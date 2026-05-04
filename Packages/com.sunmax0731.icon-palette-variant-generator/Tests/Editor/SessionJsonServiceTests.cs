@@ -49,6 +49,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
                     neighborDistanceThreshold = 24f,
                     sameGroupOnly = true
                 },
+                drawingToolSettings = new DrawingToolSettings
+                {
+                    activeTool = DrawToolKind.Blur,
+                    brushSize = 11,
+                    strength = 0.6f,
+                    paintOpacity = 0.7f
+                },
                 paletteColors = new List<PaletteColorEntry>
                 {
                     new PaletteColorEntry
@@ -69,6 +76,23 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
                         blendRatio = 0.5f
                     }
                 },
+                layers = new List<RasterLayer>
+                {
+                    new RasterLayer
+                    {
+                        id = "layer_01",
+                        displayName = "Paint Layer 1",
+                        kind = LayerKind.Paint,
+                        opacity = 0.5f,
+                        pixelData = new LayerPixelData
+                        {
+                            width = 1,
+                            height = 1,
+                            rgbaBytesBase64 = Convert.ToBase64String(new byte[] { 255, 0, 0, 128 })
+                        }
+                    }
+                },
+                activeLayerId = "layer_01",
                 variations = new List<IconVariation>
                 {
                     new IconVariation
@@ -103,9 +127,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             Assert.That(result.Session.noiseRemovalSettings.maxRegionPixels, Is.EqualTo(3));
             Assert.That(result.Session.noiseRemovalSettings.neighborDistanceThreshold, Is.EqualTo(24f));
             Assert.That(result.Session.noiseRemovalSettings.sameGroupOnly, Is.True);
+            Assert.That(result.Session.drawingToolSettings.activeTool, Is.EqualTo(DrawToolKind.Blur));
+            Assert.That(result.Session.drawingToolSettings.brushSize, Is.EqualTo(11));
             Assert.That(result.Session.paletteColors, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups[0].blendRatio, Is.EqualTo(0.5f));
+            Assert.That(result.Session.layers, Has.Count.EqualTo(1));
+            Assert.That(result.Session.activeLayerId, Is.EqualTo("layer_01"));
             Assert.That(result.Session.variations, Has.Count.EqualTo(1));
             Assert.That(result.Session.variations[0].fileSuffix, Is.EqualTo("blue"));
         }

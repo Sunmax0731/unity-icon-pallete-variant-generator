@@ -10,7 +10,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
     /// </summary>
     public sealed class SessionJsonService
     {
-        public const string CurrentSchemaVersion = "1.0.0";
+        public const string CurrentSchemaVersion = "1.1.0";
 
         public void Save(string path, PaletteVariantSession session)
         {
@@ -77,11 +77,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             session.groupSettings ??= new GroupSettings();
             session.edgeOutsideCleanupSettings ??= new EdgeOutsideCleanupSettings();
             session.noiseRemovalSettings ??= new NoiseRemovalSettings();
+            session.drawingToolSettings ??= new DrawingToolSettings();
             session.exportSettings ??= new ExportSettings();
             session.paletteColors ??= new List<PaletteColorEntry>();
             session.colorGroups ??= new List<ColorGroup>();
             session.colorRules ??= new List<ColorReplacementRule>();
             session.variations ??= new List<IconVariation>();
+            session.layers ??= new List<RasterLayer>();
 
             return warnings;
         }

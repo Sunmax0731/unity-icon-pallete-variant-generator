@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Sunmax0731.IconPaletteVariantGenerator.Editor.Services;
@@ -26,6 +27,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float MinPreviewZoom = 1f;
         private const float MaxPreviewZoom = 8f;
         private const float PaletteListHeight = 170f;
+        private const float LayerListHeight = 150f;
         private const float VariationListHeight = 126f;
         private const double AutoPreviewDebounceSeconds = 0.25d;
         private const double LargeImageAutoPreviewDebounceSeconds = 0.75d;
@@ -58,6 +60,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private readonly ColorGroupingService colorGroupingService = new ColorGroupingService();
         private readonly ColorQuantizationService colorQuantizationService = new ColorQuantizationService();
         private readonly ColorReplacementService colorReplacementService = new ColorReplacementService();
+        private readonly LayerCompositingService layerCompositingService = new LayerCompositingService();
+        private readonly LayerTextureSerializationService layerTextureSerializationService = new LayerTextureSerializationService();
+        private readonly RasterPaintService rasterPaintService = new RasterPaintService();
         private readonly IconVariationService variationService = new IconVariationService();
         private readonly PngExportService pngExportService = new PngExportService();
         private readonly SessionJsonService sessionJsonService = new SessionJsonService();
@@ -67,6 +72,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Texture2D sourceImage;
         private Texture2D readableSourceImage;
         private Texture2D afterPreview;
+        private Texture2D replacementPreview;
         private Texture2D splitPreviewTexture;
         private Texture2D highlightedBeforePreviewTexture;
         private Texture2D highlightedAfterPreviewTexture;
@@ -117,6 +123,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private bool previewDragActive;
         private bool previewDragMoved;
         private bool previewBrushActive;
+        private bool previewPaintActive;
         private int previewDragPointerId = -1;
         private Vector2 previewDragStartPosition;
         private Vector2 previewDragStartPan;
@@ -140,6 +147,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Label sourcePaletteLabel;
         private Image beforePreviewImage;
         private Image afterPreviewImage;
+        private ScrollView layerListElement;
         private ScrollView paletteListElement;
         private ScrollView groupListElement;
         private ScrollView variationListElement;
@@ -242,6 +250,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             leftColumn.Add(CreateCollapsibleSection("source-foldout", T("sourceInfo", "Source Info"), showSourceSection, value => showSourceSection = value, BuildSourceSection));
             leftColumn.Add(CreateCollapsibleSection("analyze-foldout", T("analyzeSettings", "Analyze Settings"), showAnalyzeSection, value => showAnalyzeSection = value, BuildAnalyzeSection));
             leftColumn.Add(CreateCollapsibleSection("group-foldout", T("groupSettings", "Group Settings"), showGroupSection, value => showGroupSection = value, BuildGroupSection));
+            leftColumn.Add(BuildToolSection());
             leftColumn.Add(CreateCollapsibleSection("export-foldout", T("exportSettings", "Export Settings"), showExportSection, value => showExportSection = value, BuildExportSection));
             leftColumn.Add(CreateCollapsibleSection("preset-foldout", T("presetAsset", "Preset Asset"), showPresetSection, value => showPresetSection = value, BuildPresetSection));
 
@@ -250,6 +259,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             centerColumn.Add(BuildPaletteSection());
 
             VisualElement rightColumn = CreateUiColumn("rules-column", 420f, 1f);
+            rightColumn.Add(BuildLayerSection());
             rightColumn.Add(BuildVariationSection());
             rightColumn.Add(BuildReplacementRuleSection());
             rightColumn.Add(BuildColorRuleSection());
@@ -315,11 +325,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
+            EnsureLayerSessionState();
             undoSnapshots.Push(JsonUtility.ToJson(session));
             redoSnapshots.Clear();
             edit.Invoke();
             variationService.SyncActiveVariation(session);
             HandlePreviewSettingChanged();
+        }
+
+        private void EnsureLayerSessionState()
+        {
+            session.drawingToolSettings ??= new DrawingToolSettings();
+            session.layers ??= new List<RasterLayer>();
+            if (!string.IsNullOrWhiteSpace(session.activeLayerId)
+                && session.layers.Any(layer => layer != null && layer.id == session.activeLayerId))
+            {
+                return;
+            }
+
+            session.activeLayerId = session.layers.FirstOrDefault(layer => layer != null)?.id ?? string.Empty;
         }
 
         private void ApplyAnalysisCategoryPreset(AnalysisCategoryPreset preset)
@@ -587,6 +611,69 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return section;
         }
 
+        private VisualElement BuildToolSection()
+        {
+            EnsureLayerSessionState();
+            VisualElement section = CreateUiSection("tool-section", "Tool Settings");
+            section.Add(CreateEnumField("draw-tool-popup", "Tool", session.drawingToolSettings.activeTool, value =>
+            {
+                session.drawingToolSettings.activeTool = (DrawToolKind)value;
+            }));
+            section.Add(CreateSliderInt("draw-brush-size-slider", "Brush Size", session.drawingToolSettings.brushSize, 1, 64, value =>
+            {
+                session.drawingToolSettings.brushSize = Mathf.Max(1, value | 1);
+            }));
+            section.Add(CreateSlider("draw-strength-slider", "Strength", session.drawingToolSettings.strength, 0.05f, 1f, value =>
+            {
+                session.drawingToolSettings.strength = value;
+            }));
+            section.Add(CreateSlider("draw-opacity-slider", "Paint Opacity", session.drawingToolSettings.paintOpacity, 0f, 1f, value =>
+            {
+                session.drawingToolSettings.paintOpacity = value;
+            }));
+            section.Add(CreateColorField("draw-color-field", "Paint Color", session.drawingToolSettings.paintColor, value =>
+            {
+                session.drawingToolSettings.paintColor = ToColor32(value);
+            }));
+            section.Add(CreateSliderInt("draw-noise-size-slider", "Noise Region", session.drawingToolSettings.noiseRegionPixels, 1, 32, value =>
+            {
+                session.drawingToolSettings.noiseRegionPixels = value;
+            }));
+            section.Add(CreateSlider("draw-noise-threshold-slider", "Noise Threshold", session.drawingToolSettings.noiseThreshold, 0f, 255f, value =>
+            {
+                session.drawingToolSettings.noiseThreshold = value;
+            }));
+            section.Add(CreateSliderInt("draw-blur-radius-slider", "Blur Radius", session.drawingToolSettings.blurRadius, 1, 8, value =>
+            {
+                session.drawingToolSettings.blurRadius = value;
+            }));
+            section.Add(CreateSliderInt("draw-smooth-iterations-slider", "Smooth Iterations", session.drawingToolSettings.smoothIterations, 1, 4, value =>
+            {
+                session.drawingToolSettings.smoothIterations = value;
+            }));
+            section.Add(CreateWrappingLabel("Use Preview Mode = Paint to edit the active layer directly on the preview."));
+            return section;
+        }
+
+        private VisualElement BuildLayerSection()
+        {
+            EnsureLayerSessionState();
+            VisualElement section = CreateUiSection("layer-section", "Layers");
+            section.Add(CreateButtonRow(
+                ("Add Paint Layer", AddPaintLayer, readableSourceImage != null),
+                ("Add Image Layer", AddImageLayer, readableSourceImage != null),
+                ("Duplicate Layer", DuplicateActiveLayer, GetActiveLayer() != null)));
+            section.Add(CreateButtonRow(
+                ("Move Up", MoveActiveLayerUp, CanMoveActiveLayer(-1)),
+                ("Move Down", MoveActiveLayerDown, CanMoveActiveLayer(1)),
+                ("Delete Layer", RemoveActiveLayer, GetActiveLayer() != null)));
+            layerListElement = new ScrollView(ScrollViewMode.Vertical) { name = "layer-scroll-view" };
+            layerListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            layerListElement.style.height = LayerListHeight;
+            section.Add(layerListElement);
+            return section;
+        }
+
         private VisualElement BuildBatchSection()
         {
             VisualElement section = CreateUiSection("batch-export-section", T("batchExport", "Batch Export"));
@@ -800,6 +887,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             RefreshSelectedColorInfoElement();
             RefreshPaletteListElement();
+            RefreshLayerListElement();
             RefreshVariationListElement();
             RefreshReplacementRuleElement();
             RefreshColorRuleElement();
@@ -945,6 +1033,68 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     SelectPaletteEntry(entry, "Palette");
                 });
                 paletteListElement.Add(row);
+            }
+        }
+
+        private void RefreshLayerListElement()
+        {
+            if (layerListElement == null)
+            {
+                return;
+            }
+
+            EnsureLayerSessionState();
+            layerListElement.Clear();
+            if (session.layers.Count == 0)
+            {
+                layerListElement.Add(CreateWrappingLabel("No layers. Add a paint or image layer."));
+                return;
+            }
+
+            foreach (RasterLayer layer in session.layers.AsEnumerable().Reverse())
+            {
+                if (layer == null)
+                {
+                    continue;
+                }
+
+                VisualElement row = CreateSelectableRow(layer.id == session.activeLayerId);
+                row.style.alignItems = Align.Center;
+                Toggle visibleToggle = new Toggle { value = layer.visible };
+                visibleToggle.RegisterValueChangedCallback(evt =>
+                {
+                    layer.visible = evt.newValue;
+                    RebuildCompositePreview();
+                    RefreshUiToolkitContent();
+                });
+                row.Add(visibleToggle);
+
+                Toggle lockToggle = new Toggle { value = layer.locked };
+                lockToggle.RegisterValueChangedCallback(evt => layer.locked = evt.newValue);
+                row.Add(lockToggle);
+
+                TextField nameField = new TextField { value = layer.displayName };
+                nameField.style.minWidth = 110f;
+                nameField.RegisterValueChangedCallback(evt => layer.displayName = evt.newValue);
+                row.Add(nameField);
+
+                Slider opacitySlider = new Slider(0f, 1f) { value = layer.opacity };
+                opacitySlider.style.minWidth = 90f;
+                opacitySlider.RegisterValueChangedCallback(evt =>
+                {
+                    layer.opacity = evt.newValue;
+                    RebuildCompositePreview();
+                    RefreshUiToolkitContent();
+                });
+                row.Add(opacitySlider);
+
+                row.RegisterCallback<PointerDownEvent>(_ =>
+                {
+                    session.activeLayerId = layer.id;
+                    RefreshUiToolkitContent();
+                });
+
+                layerListElement.Add(row);
             }
         }
 
@@ -1136,6 +1286,197 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 ? new Color32(entry.color.r, entry.color.g, entry.color.b, 255)
                 : new Color32(entry.color.r, entry.color.g, entry.color.b, 0);
             EnsureGroupSupportsColorRule(entry);
+        }
+
+        private RasterLayer GetActiveLayer()
+        {
+            EnsureLayerSessionState();
+            return session.layers.FirstOrDefault(layer => layer != null && layer.id == session.activeLayerId);
+        }
+
+        private int GetCanvasWidth()
+        {
+            return replacementPreview != null ? replacementPreview.width : readableSourceImage != null ? readableSourceImage.width : 0;
+        }
+
+        private int GetCanvasHeight()
+        {
+            return replacementPreview != null ? replacementPreview.height : readableSourceImage != null ? readableSourceImage.height : 0;
+        }
+
+        private bool CanMoveActiveLayer(int delta)
+        {
+            RasterLayer activeLayer = GetActiveLayer();
+            if (activeLayer == null)
+            {
+                return false;
+            }
+
+            int index = session.layers.FindIndex(layer => layer != null && layer.id == activeLayer.id);
+            int targetIndex = index + delta;
+            return index >= 0 && targetIndex >= 0 && targetIndex < session.layers.Count;
+        }
+
+        private void AddPaintLayer()
+        {
+            int width = GetCanvasWidth();
+            int height = GetCanvasHeight();
+            if (width <= 0 || height <= 0)
+            {
+                reportMessage = "Analyze and preview a source image before adding layers.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            RecordSessionEdit(() =>
+            {
+                string id = Guid.NewGuid().ToString("N");
+                session.layers.Add(layerCompositingService.CreatePaintLayer(id, $"Paint Layer {session.layers.Count + 1}", width, height));
+                session.activeLayerId = id;
+                RebuildCompositePreview();
+            });
+            reportMessage = "Paint layer added.";
+            reportType = MessageType.Info;
+        }
+
+        private void AddImageLayer()
+        {
+            int width = GetCanvasWidth();
+            int height = GetCanvasHeight();
+            if (width <= 0 || height <= 0)
+            {
+                reportMessage = "Analyze and preview a source image before adding layers.";
+                reportType = MessageType.Warning;
+                return;
+            }
+
+            string path = EditorUtility.OpenFilePanel("Add Image Layer", Application.dataPath, "png,jpg,jpeg");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            byte[] bytes = System.IO.File.ReadAllBytes(path);
+            Texture2D tempTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                if (!ImageConversion.LoadImage(tempTexture, bytes))
+                {
+                    reportMessage = $"Could not load image layer: {path}";
+                    reportType = MessageType.Error;
+                    return;
+                }
+
+                RecordSessionEdit(() =>
+                {
+                    string id = Guid.NewGuid().ToString("N");
+                    session.layers.Add(layerCompositingService.CreateImageLayer(id, System.IO.Path.GetFileNameWithoutExtension(path), tempTexture, path, width, height));
+                    session.activeLayerId = id;
+                    RebuildCompositePreview();
+                });
+                reportMessage = $"Image layer added: {System.IO.Path.GetFileName(path)}";
+                reportType = MessageType.Info;
+            }
+            finally
+            {
+                DestroyImmediate(tempTexture);
+            }
+        }
+
+        private void DuplicateActiveLayer()
+        {
+            RasterLayer activeLayer = GetActiveLayer();
+            if (activeLayer == null)
+            {
+                return;
+            }
+
+            RecordSessionEdit(() =>
+            {
+                RasterLayer copy = new RasterLayer
+                {
+                    id = Guid.NewGuid().ToString("N"),
+                    displayName = $"{activeLayer.displayName} Copy",
+                    kind = activeLayer.kind,
+                    visible = activeLayer.visible,
+                    locked = activeLayer.locked,
+                    opacity = activeLayer.opacity,
+                    blendMode = activeLayer.blendMode,
+                    offsetX = activeLayer.offsetX,
+                    offsetY = activeLayer.offsetY,
+                    sourceAssetPath = activeLayer.sourceAssetPath,
+                    pixelData = new LayerPixelData
+                    {
+                        width = activeLayer.pixelData?.width ?? 0,
+                        height = activeLayer.pixelData?.height ?? 0,
+                        rgbaBytesBase64 = activeLayer.pixelData?.rgbaBytesBase64 ?? string.Empty
+                    }
+                };
+                int index = session.layers.FindIndex(layer => layer != null && layer.id == activeLayer.id);
+                session.layers.Insert(index + 1, copy);
+                session.activeLayerId = copy.id;
+                RebuildCompositePreview();
+            });
+        }
+
+        private void RemoveActiveLayer()
+        {
+            RasterLayer activeLayer = GetActiveLayer();
+            if (activeLayer == null)
+            {
+                return;
+            }
+
+            RecordSessionEdit(() =>
+            {
+                session.layers.RemoveAll(layer => layer != null && layer.id == activeLayer.id);
+                session.activeLayerId = session.layers.LastOrDefault(layer => layer != null)?.id ?? string.Empty;
+                RebuildCompositePreview();
+            });
+        }
+
+        private void MoveActiveLayerUp()
+        {
+            MoveActiveLayer(1);
+        }
+
+        private void MoveActiveLayerDown()
+        {
+            MoveActiveLayer(-1);
+        }
+
+        private void MoveActiveLayer(int delta)
+        {
+            RasterLayer activeLayer = GetActiveLayer();
+            if (activeLayer == null)
+            {
+                return;
+            }
+
+            RecordSessionEdit(() =>
+            {
+                int index = session.layers.FindIndex(layer => layer != null && layer.id == activeLayer.id);
+                int targetIndex = index + delta;
+                if (index < 0 || targetIndex < 0 || targetIndex >= session.layers.Count)
+                {
+                    return;
+                }
+
+                session.layers.RemoveAt(index);
+                session.layers.Insert(targetIndex, activeLayer);
+                RebuildCompositePreview();
+            });
+        }
+
+        private void RebuildCompositePreview()
+        {
+            if (replacementPreview == null)
+            {
+                return;
+            }
+
+            DestroyAfterPreview();
+            afterPreview = layerCompositingService.Compose(replacementPreview, session.layers);
         }
 
         private void RunUiToolkitAction(System.Action action)
@@ -1641,6 +1982,22 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
+            if (previewInteractionMode == PreviewInteractionMode.Paint)
+            {
+                if (!CanPaintActiveLayer())
+                {
+                    evt.StopPropagation();
+                    return;
+                }
+
+                previewPaintActive = true;
+                previewDragPointerId = evt.pointerId;
+                image.CapturePointer(evt.pointerId);
+                ApplyActivePaintToolFromPreview(image, evt.localPosition);
+                evt.StopPropagation();
+                return;
+            }
+
             if (previewInteractionMode == PreviewInteractionMode.BrushSelect)
             {
                 previewBrushActive = true;
@@ -1662,6 +2019,13 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void HandlePreviewDrag(PointerMoveEvent evt)
         {
+            if (previewPaintActive && evt.pointerId == previewDragPointerId && evt.currentTarget is Image paintImage)
+            {
+                ApplyActivePaintToolFromPreview(paintImage, evt.localPosition);
+                evt.StopPropagation();
+                return;
+            }
+
             if (previewBrushActive && evt.pointerId == previewDragPointerId && evt.currentTarget is Image brushImage)
             {
                 AddBrushSelectionFromPreview(brushImage, evt.localPosition);
@@ -1694,6 +2058,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void EndPreviewDrag(Image image, PointerUpEvent evt)
         {
+            if (previewPaintActive && evt.pointerId == previewDragPointerId)
+            {
+                ApplyActivePaintToolFromPreview(image, evt.localPosition);
+                previewPaintActive = false;
+                previewDragPointerId = -1;
+                image.ReleasePointer(evt.pointerId);
+                RefreshUiToolkitContent();
+                evt.StopPropagation();
+                return;
+            }
+
             if (previewBrushActive && evt.pointerId == previewDragPointerId)
             {
                 AddBrushSelectionFromPreview(image, evt.localPosition);
@@ -1725,6 +2100,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void CancelPreviewDrag()
         {
+            previewPaintActive = false;
             previewDragActive = false;
             previewDragMoved = false;
             previewDragPointerId = -1;
@@ -1779,6 +2155,72 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                     TryAddBrushPaletteColorAtSourcePixel(x, y);
                 }
             }
+        }
+
+        private bool CanPaintActiveLayer()
+        {
+            RasterLayer activeLayer = GetActiveLayer();
+            if (activeLayer == null)
+            {
+                reportMessage = "Select or create an active layer before painting.";
+                reportType = MessageType.Warning;
+                return false;
+            }
+
+            if (activeLayer.locked)
+            {
+                reportMessage = "Unlock the active layer before painting.";
+                reportType = MessageType.Warning;
+                return false;
+            }
+
+            if (replacementPreview == null)
+            {
+                reportMessage = "Preview is required before painting.";
+                reportType = MessageType.Warning;
+                return false;
+            }
+
+            return true;
+        }
+
+        private void ApplyActivePaintToolFromPreview(Image image, Vector2 localPosition)
+        {
+            if (!CanPaintActiveLayer())
+            {
+                return;
+            }
+
+            if (!TryGetPreviewPixelCoordinate(image, localPosition, readableSourceImage, previewZoom, previewPan, out int centerX, out int centerY))
+            {
+                return;
+            }
+
+            RasterLayer activeLayer = GetActiveLayer();
+            if (activeLayer == null || activeLayer.pixelData == null)
+            {
+                return;
+            }
+
+            Color32[] pixels = layerTextureSerializationService.Deserialize(activeLayer.pixelData);
+            if (pixels.Length == 0)
+            {
+                pixels = new Color32[activeLayer.pixelData.width * activeLayer.pixelData.height];
+            }
+
+            rasterPaintService.ApplyTool(
+                pixels,
+                activeLayer.pixelData.width,
+                activeLayer.pixelData.height,
+                centerX,
+                centerY,
+                session.drawingToolSettings);
+
+            activeLayer.pixelData = layerTextureSerializationService.Serialize(
+                pixels,
+                activeLayer.pixelData.width,
+                activeLayer.pixelData.height);
+            RebuildCompositePreview();
         }
 
         private bool TryAddBrushPaletteColorAtSourcePixel(int x, int y)
@@ -2971,11 +3413,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.colorGroups.Clear();
             session.colorRules.Clear();
             session.variations.Clear();
+            session.layers.Clear();
             session.activeVariationId = string.Empty;
+            session.activeLayerId = string.Empty;
             selectedGroupId = string.Empty;
             selectedColorEntryId = string.Empty;
             InvalidateSelectionOverlay();
             DestroyAfterPreview();
+            DestroyReplacementPreview();
             reportMessage = $"Analyzed {session.paletteColors.Count} palette colors from {assetPath}.";
             reportType = MessageType.Info;
         }
@@ -2985,7 +3430,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.colorGroups = new List<ColorGroup>(colorGroupingService.CreateGroups(session.paletteColors, session.groupSettings));
             session.colorRules.Clear();
             session.variations.Clear();
+            session.layers.Clear();
             session.activeVariationId = string.Empty;
+            session.activeLayerId = string.Empty;
             variationService.EnsureActiveVariation(session);
             variationService.SyncActiveVariation(session);
             selectedGroupId = session.colorGroups.Count > 0 ? session.colorGroups[0].id : string.Empty;
@@ -3012,8 +3459,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
-            DestroyAfterPreview();
-            afterPreview = colorReplacementService.Apply(readableSourceImage, session);
+            DestroyReplacementPreview();
+            replacementPreview = colorReplacementService.Apply(readableSourceImage, session);
+            RebuildCompositePreview();
             EdgeOutsideCleanupResult edgeResult = colorReplacementService.LastEdgeOutsideCleanupResult;
             NoiseRemovalResult noiseResult = colorReplacementService.LastNoiseRemovalResult;
             lastEdgeEffectHighlightIndices = edgeResult.ClearedPixelIndices?.ToList() ?? new List<int>();
@@ -3318,8 +3766,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             {
                 variationService.ApplyVariation(session, variation.id);
                 Texture2D preview = colorReplacementService.Apply(readableSourceImage, session);
+                Texture2D compositePreview = layerCompositingService.Compose(preview, session.layers);
                 ExportSettings exportSettings = CreateExportSettingsForVariation(variation);
-                PngExportResult result = pngExportService.Export(preview, exportSettings, GetProjectRoot());
+                PngExportResult result = pngExportService.Export(compositePreview, exportSettings, GetProjectRoot());
+                DestroyImmediate(compositePreview);
                 DestroyImmediate(preview);
 
                 if (result.Status == PngExportStatus.Exported)
@@ -3401,6 +3851,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session = result.Session;
             session.colorRules ??= new List<ColorReplacementRule>();
             session.variations ??= new List<IconVariation>();
+            session.layers ??= new List<RasterLayer>();
+            session.drawingToolSettings ??= new DrawingToolSettings();
             if (session.variations.Count > 0)
             {
                 variationService.ApplyVariation(session, string.IsNullOrWhiteSpace(session.activeVariationId)
@@ -3422,6 +3874,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyReadableSourceImage();
             DestroyAfterPreview();
+            DestroyReplacementPreview();
             string loadError = string.Empty;
             if (sourceImage != null && textureAssetLoader.TryLoadReadableTexture(sourceImage, out Texture2D loadedTexture, out _, out loadError))
             {
@@ -4537,6 +4990,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             CancelScheduledAutoPreview();
             CancelQueuedPreviewRefresh();
             DestroyReadableSourceImage();
+            DestroyReplacementPreview();
             DestroyAfterPreview();
             DestroySplitPreviewTexture();
             DestroySelectionOverlayTexture();
@@ -4557,9 +5011,21 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(readableSourceImage);
             readableSourceImage = null;
+            DestroyReplacementPreview();
             DestroySplitPreviewTexture();
             DestroyUiToolkitHighlightTextures();
             InvalidateSelectionOverlay();
+        }
+
+        private void DestroyReplacementPreview()
+        {
+            if (replacementPreview == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(replacementPreview);
+            replacementPreview = null;
         }
 
         private void DestroyAfterPreview()
@@ -4746,7 +5212,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             string assetPath = System.IO.Path.GetRelativePath(projectRoot, fullOutputPath).Replace('\\', '/');
-            Object asset = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
+            UnityEngine.Object asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
             if (asset == null)
             {
                 return;
@@ -4781,7 +5247,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
     {
         Pick,
         Pan,
-        BrushSelect
+        BrushSelect,
+        Paint
     }
 
     internal enum AnalysisCategoryPreset

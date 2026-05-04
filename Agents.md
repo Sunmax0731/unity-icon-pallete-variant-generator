@@ -201,3 +201,8 @@ GitHub Issue の open 状態を確認し、優先度と実行可能性が高い�
 - Keep developer-only or helper commands under a secondary group such as `Developer` or `Utilities`.
 - The license is MIT License. Keep `README.md`, package README, docs, release notes, and the Unity Editor license window aligned with MIT.
 - When menu or license text changes, update README, manual, validation checklist, release notes, BOOTH/GitHub release copy, and release package contents in the same change.
+
+## Layered Editing Extension Notes
+
+- レイヤー/描画拡張を行う場合は `docs/requirements-layered-editing.md`、`docs/specification-layered-editing.md`、`docs/architecture-layered-editing.md` を先に確認する。
+- UI 改修時は `D:\Claude\UnityEditor-Dev\workspace-guides\UnityEditorDesign.md` を参照し、Toolbar / Settings / Preview Workspace / Inspector / Report の責務分離を優先する。
