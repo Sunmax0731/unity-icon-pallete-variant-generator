@@ -4,7 +4,7 @@
 
 - Unity `6000.4.0f1`
 - リポジトリ: `unity-icon-pallete-variant-generator`
-- 実行コマンド:
+- 検証コマンド:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
@@ -14,7 +14,7 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 1. Unity でプロジェクトを開く。
 2. `Tools > Palette Variant Generator > メイン画面` を開く。
-3. `Assets/9cA7K7cS_400x400.jpg` または `Samples~/SampleIcons/pixel_art_64.png` を `Source` に設定する。
+3. `Assets/9cA7K7cS_400x400.jpg` または `Samples~/SampleIcons/pixel_art_64.png` を `Source Image` に設定する。
 4. `Analyze` を実行する。
 5. `Auto Group` を実行する。
 6. `Preview` を実行する。
@@ -25,7 +25,16 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 1. Toolbar に主要操作が並んでいることを確認する。
 2. 左に Settings、中央に Preview、右に Inspector / Layer / Variation があることを確認する。
-3. 未選択時でも遷移不能なメッセージまたは説明文が表示されることを確認する。
+3. `Tool Settings` が折りたたみ可能であることを確認する。
+4. 日本語モード時、主要な設定項目と選択肢が日本語で表示されることを確認する。
+
+### TC-UI-02 Preview サイズ変更
+
+1. Preview 画像の直下にあるリサイズハンドルをドラッグする。
+
+期待結果:
+- Preview の表示キャンバス高さが追従して変わる
+- ドラッグ後も Preview 操作が継続できる
 
 ### TC-LYR-01 Paint Layer 追加
 
@@ -33,12 +42,25 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 2. Layers に新規レイヤーが追加されることを確認する。
 3. 新規レイヤーが active になることを確認する。
 
+### TC-DRW-00 読み込み画像へ直接編集
+
+1. `Tool Settings` の `編集対象` を `読み込み画像` にする。
+2. `Preview Mode` を `Paint` にする。
+3. `Tool` を `Brush` にする。
+4. Preview 上をドラッグする。
+
+期待結果:
+- レイヤーを追加しなくても描画できる
+- 読み込み画像そのものに対して描画結果が反映される
+
 ### TC-DRW-01 Brush
 
-1. `Preview Mode` を `Paint` にする。
-2. Tool を `Brush` にする。
-3. Color を赤、不透明度を `0.5` 以上に設定する。
-4. Preview 上をドラッグする。
+1. `編集対象` を `アクティブレイヤー` にする。
+2. `Preview Mode` を `Paint` にする。
+3. Tool を `Brush` にする。
+4. `Add Paint Layer` でレイヤーを追加して active にする。
+5. Color を赤、不透明度を `0.5` 以上に設定する。
+6. Preview 上をドラッグする。
 
 期待結果:
 - ドラッグ中も Preview が白くならず、ストロークがリアルタイムで見える
@@ -80,6 +102,7 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 期待結果:
 - 小さな孤立ピクセルが周辺色で埋まる
+- 透明に囲まれたノイズは透明へ戻せる
 
 ### TC-LYR-02 Image Layer
 
@@ -105,10 +128,11 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ### TC-SES-01 Session Save / Load
 
 1. 描画済みの状態で `Save Session` を押す。
-2. Unity を閉じずに `Load Session` を押し、保存した JSON を読み込む。
+2. `Load Session` を押し、保存した JSON を読み込む。
 
 期待結果:
 - Layer 構成、active layer、描画結果、Tool 設定が復元される
+- 読み込み画像への直接編集内容も復元される
 
 ### TC-EXP-01 Export
 
@@ -117,4 +141,4 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 期待結果:
 - Preview と同じ見た目で PNG が出力される
-- 元画像は変更されていない
+- 元画像ファイルは変更されていない

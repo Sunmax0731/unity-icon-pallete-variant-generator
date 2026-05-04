@@ -9,7 +9,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
     [Serializable]
     public sealed class PaletteVariantSession
     {
-        public string schemaVersion = "1.0.0";
+        public string schemaVersion = "1.2.0";
         public string sourceImageAssetPath = string.Empty;
         public AnalyzeSettings analyzeSettings = new AnalyzeSettings();
         public GroupSettings groupSettings = new GroupSettings();
@@ -17,6 +17,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
         public NoiseRemovalSettings noiseRemovalSettings = new NoiseRemovalSettings();
         public DrawingToolSettings drawingToolSettings = new DrawingToolSettings();
         public ExportSettings exportSettings = new ExportSettings();
+        public LayerPixelData sourcePixelData = new LayerPixelData();
         public List<PaletteColorEntry> paletteColors = new List<PaletteColorEntry>();
         public List<ColorGroup> colorGroups = new List<ColorGroup>();
         public List<ColorReplacementRule> colorRules = new List<ColorReplacementRule>();

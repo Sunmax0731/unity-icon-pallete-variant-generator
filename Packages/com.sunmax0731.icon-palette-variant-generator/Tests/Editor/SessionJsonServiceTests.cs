@@ -51,10 +51,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
                 },
                 drawingToolSettings = new DrawingToolSettings
                 {
+                    paintTarget = PaintEditTarget.SourceImage,
                     activeTool = DrawToolKind.Blur,
                     brushSize = 11,
                     strength = 0.6f,
                     paintOpacity = 0.7f
+                },
+                sourcePixelData = new LayerPixelData
+                {
+                    width = 1,
+                    height = 1,
+                    rgbaBytesBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3, 255 })
                 },
                 paletteColors = new List<PaletteColorEntry>
                 {
@@ -127,8 +134,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             Assert.That(result.Session.noiseRemovalSettings.maxRegionPixels, Is.EqualTo(3));
             Assert.That(result.Session.noiseRemovalSettings.neighborDistanceThreshold, Is.EqualTo(24f));
             Assert.That(result.Session.noiseRemovalSettings.sameGroupOnly, Is.True);
+            Assert.That(result.Session.drawingToolSettings.paintTarget, Is.EqualTo(PaintEditTarget.SourceImage));
             Assert.That(result.Session.drawingToolSettings.activeTool, Is.EqualTo(DrawToolKind.Blur));
             Assert.That(result.Session.drawingToolSettings.brushSize, Is.EqualTo(11));
+            Assert.That(result.Session.sourcePixelData.width, Is.EqualTo(1));
             Assert.That(result.Session.paletteColors, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups, Has.Count.EqualTo(1));
             Assert.That(result.Session.colorGroups[0].blendRatio, Is.EqualTo(0.5f));

@@ -43,6 +43,18 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
         public void UpdateCompositeTexture(Texture2D targetTexture, Texture2D baseTexture, IReadOnlyList<RasterLayer> layers)
         {
+            UpdateCompositeTexture(targetTexture, baseTexture, layers, null, null, 0, 0);
+        }
+
+        public void UpdateCompositeTexture(
+            Texture2D targetTexture,
+            Texture2D baseTexture,
+            IReadOnlyList<RasterLayer> layers,
+            string overrideLayerId,
+            Color32[] overridePixels,
+            int overrideWidth,
+            int overrideHeight)
+        {
             if (targetTexture == null)
             {
                 throw new ArgumentNullException(nameof(targetTexture));
@@ -68,6 +80,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 {
                     if (layer == null || !layer.visible || layer.opacity <= 0f)
                     {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(overrideLayerId)
+                        && layer.id == overrideLayerId
+                        && overridePixels != null
+                        && overridePixels.Length > 0
+                        && overrideWidth > 0
+                        && overrideHeight > 0)
+                    {
+                        BlendPixels(composedPixels, baseTexture.width, baseTexture.height, overridePixels, overrideWidth, overrideHeight, layer.offsetX, layer.offsetY, layer.opacity);
                         continue;
                     }
 
@@ -116,13 +139,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 return;
             }
 
-            int sourceWidth = layer.pixelData.width;
-            int sourceHeight = layer.pixelData.height;
-            float opacity = Mathf.Clamp01(layer.opacity);
+            BlendPixels(destinationPixels, destinationWidth, destinationHeight, sourcePixels, layer.pixelData.width, layer.pixelData.height, layer.offsetX, layer.offsetY, layer.opacity);
+        }
+
+        private static void BlendPixels(Color32[] destinationPixels, int destinationWidth, int destinationHeight, Color32[] sourcePixels, int sourceWidth, int sourceHeight, int offsetX, int offsetY, float opacityValue)
+        {
+            float opacity = Mathf.Clamp01(opacityValue);
 
             for (int y = 0; y < sourceHeight; y++)
             {
-                int destinationY = y + layer.offsetY;
+                int destinationY = y + offsetY;
                 if (destinationY < 0 || destinationY >= destinationHeight)
                 {
                     continue;
@@ -130,7 +156,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
                 for (int x = 0; x < sourceWidth; x++)
                 {
-                    int destinationX = x + layer.offsetX;
+                    int destinationX = x + offsetX;
                     if (destinationX < 0 || destinationX >= destinationWidth)
                     {
                         continue;

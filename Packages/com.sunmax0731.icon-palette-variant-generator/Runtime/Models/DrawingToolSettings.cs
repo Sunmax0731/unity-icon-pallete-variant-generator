@@ -9,6 +9,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Models
     [Serializable]
     public sealed class DrawingToolSettings
     {
+        public PaintEditTarget paintTarget = PaintEditTarget.ActiveLayer;
         public DrawToolKind activeTool = DrawToolKind.Brush;
         public int brushSize = 5;
         public float strength = 1f;
