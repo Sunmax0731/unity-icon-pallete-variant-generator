@@ -37,6 +37,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 hideFlags = HideFlags.HideAndDontSave
             };
 
+            UpdateCompositeTexture(output, baseTexture, layers);
+            return output;
+        }
+
+        public void UpdateCompositeTexture(Texture2D targetTexture, Texture2D baseTexture, IReadOnlyList<RasterLayer> layers)
+        {
+            if (targetTexture == null)
+            {
+                throw new ArgumentNullException(nameof(targetTexture));
+            }
+
+            if (baseTexture == null)
+            {
+                throw new ArgumentNullException(nameof(baseTexture));
+            }
+
+            if (targetTexture.width != baseTexture.width || targetTexture.height != baseTexture.height)
+            {
+                throw new ArgumentException("Target texture size must match the base texture.", nameof(targetTexture));
+            }
+
             Color32[] basePixels = baseTexture.GetPixels32();
             Color32[] composedPixels = new Color32[basePixels.Length];
             Array.Copy(basePixels, composedPixels, basePixels.Length);
@@ -54,9 +75,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 }
             }
 
-            output.SetPixels32(composedPixels);
-            output.Apply(false, false);
-            return output;
+            targetTexture.SetPixels32(composedPixels);
+            targetTexture.Apply(false, false);
         }
 
         public RasterLayer CreatePaintLayer(string id, string displayName, int width, int height)

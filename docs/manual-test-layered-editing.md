@@ -14,7 +14,7 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 1. Unity でプロジェクトを開く。
 2. `Tools > Palette Variant Generator > メイン画面` を開く。
-3. `Assets/9cA7K7cS_400x400.jpg` か `Samples~/SampleIcons/pixel_art_64.png` を Source に指定する。
+3. `Assets/9cA7K7cS_400x400.jpg` または `Samples~/SampleIcons/pixel_art_64.png` を `Source` に設定する。
 4. `Analyze` を実行する。
 5. `Auto Group` を実行する。
 6. `Preview` を実行する。
@@ -24,8 +24,8 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ### TC-UI-01 画面構成
 
 1. Toolbar に主要操作が並んでいることを確認する。
-2. 左に Settings、中央に Preview、右に Inspector/Layer 情報、下部に Report があることを確認する。
-3. 未選択状態で空状態メッセージまたは誘導文が表示されることを確認する。
+2. 左に Settings、中央に Preview、右に Inspector / Layer / Variation があることを確認する。
+3. 未選択時でも遷移不能なメッセージまたは説明文が表示されることを確認する。
 
 ### TC-LYR-01 Paint Layer 追加
 
@@ -35,13 +35,15 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 ### TC-DRW-01 Brush
 
-1. Tool を `Brush` にする。
-2. Color を赤、不透明度を 0.5 以上に設定する。
-3. Preview 上をドラッグする。
+1. `Preview Mode` を `Paint` にする。
+2. Tool を `Brush` にする。
+3. Color を赤、不透明度を `0.5` 以上に設定する。
+4. Preview 上をドラッグする。
 
 期待結果:
-- active layer に赤い塗りが乗る
-- Composite Preview に即時反映される
+- ドラッグ中も Preview が白くならず、ストロークがリアルタイムで見える
+- active layer に描画が反映される
+- Composite Preview に結果が反映される
 
 ### TC-DRW-02 Eraser
 
@@ -49,6 +51,7 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 2. 塗った箇所をドラッグする。
 
 期待結果:
+- ドラッグ中も Preview が白くならず、消去範囲がリアルタイムで見える
 - 該当部分の alpha が減る
 - 下のベース画像が見える
 
@@ -58,63 +61,58 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 2. 塗り境界付近をドラッグする。
 
 期待結果:
-- 境界が平均化されてにじむ
+- 境界が平滑化されてにじむ
 
 ### TC-DRW-04 Smooth
 
 1. Tool を `Smooth` にする。
-2. ざらついた箇所をドラッグする。
+2. ざらついた境界をドラッグする。
 
 期待結果:
-- Blur より輪郭を残しつつ色差が和らぐ
+- Blur より穏やかに境界がならされる
 
 ### TC-DRW-05 Noise Removal
 
-1. 小さな孤立ドットがある画像か、ブラシで人工的に 1px ノイズを作る。
+1. 小さな孤立ドットがある箇所か、ブラシで意図的に `1px` ノイズを作る。
 2. Tool を `NoiseRemoval` にする。
-3. ノイズ付近をドラッグする。
+3. ノイズ周辺をドラッグする。
 
 期待結果:
-- 小さな孤立ピクセルが近傍色で埋まる
+- 小さな孤立ピクセルが周辺色で埋まる
 
 ### TC-LYR-02 Image Layer
 
 1. `Add Image Layer` を押す。
-2. 任意の PNG を指定する。
-3. opacity を 0.5 に下げる。
+2. 追加用の PNG を選択する。
+3. opacity を `0.5` に下げる。
 
 期待結果:
-- レイヤー一覧に画像レイヤーが増える
-- Composite Preview で半透明に重なる
+- レイヤー一覧に画像レイヤーが追加される
+- Composite Preview で透過合成される
 
 ### TC-LYR-03 Visible / Lock
 
-1. active layer の visible を OFF にする。
-2. 再度 ON にする。
-3. lock を ON にする。
-4. Brush を使って描こうとする。
+1. Layer の visible を OFF にする。
+2. Preview から該当レイヤーの効果が消えることを確認する。
+3. visible を ON に戻す。
+4. lock を ON にして描画を試す。
 
 期待結果:
-- visible OFF 中はプレビューに反映されない
-- lock ON 中は編集されず、警告が出る
+- visible OFF で非表示になる
+- lock 中は描画できず、警告または無効化状態になる
 
 ### TC-SES-01 Session Save / Load
 
-1. レイヤーを 2 枚以上追加し、各レイヤーへ編集を加える。
-2. `Save Session` で JSON を保存する。
-3. Window を閉じて再度開く。
-4. `Load Session` で保存した JSON を開く。
+1. 描画済みの状態で `Save Session` を押す。
+2. Unity を閉じずに `Load Session` を押し、保存した JSON を読み込む。
 
 期待結果:
-- レイヤー数、順序、表示状態、描画結果が復元される
-- active layer と tool settings が復元される
+- Layer 構成、active layer、描画結果、Tool 設定が復元される
 
 ### TC-EXP-01 Export
 
-1. Paint Layer と Image Layer が重なった状態を作る。
-2. `Preview` を更新する。
-3. `Export` を実行する。
-4. 出力 PNG を Project ビューで選択し、内容を確認する。
+1. 描画とレイヤーを含んだ状態で `Export` を実行する。
+2. 出力 PNG を Unity または画像ビューアで確認する。
 
 期待結果:
 - Preview と同じ見た目で PNG が出力される

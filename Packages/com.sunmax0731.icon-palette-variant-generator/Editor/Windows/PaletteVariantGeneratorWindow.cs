@@ -1538,8 +1538,21 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 return;
             }
 
-            DestroyAfterPreview();
-            afterPreview = layerCompositingService.Compose(replacementPreview, session.layers);
+            if (afterPreview == null
+                || afterPreview.width != replacementPreview.width
+                || afterPreview.height != replacementPreview.height)
+            {
+                DestroyAfterPreview();
+                afterPreview = layerCompositingService.Compose(replacementPreview, session.layers);
+            }
+            else
+            {
+                layerCompositingService.UpdateCompositeTexture(afterPreview, replacementPreview, session.layers);
+                InvalidateAfterPreviewPresentationCaches();
+            }
+
+            UpdatePreviewImagesImmediately();
+            Repaint();
         }
 
         private void RunUiToolkitAction(System.Action action)
@@ -5093,8 +5106,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void DestroyAfterPreview()
         {
-            lastNoiseEffectHighlightIndices.Clear();
-            lastEdgeEffectHighlightIndices.Clear();
+            InvalidateAfterPreviewPresentationCaches();
             if (afterPreview == null)
             {
                 return;
@@ -5102,8 +5114,32 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyImmediate(afterPreview);
             afterPreview = null;
+        }
+
+        private void InvalidateAfterPreviewPresentationCaches()
+        {
+            lastNoiseEffectHighlightIndices.Clear();
+            lastEdgeEffectHighlightIndices.Clear();
             DestroySplitPreviewTexture();
+            DestroyDiffPreviewTexture();
             DestroyUiToolkitHighlightTextures();
+        }
+
+        private void UpdatePreviewImagesImmediately()
+        {
+            if (beforePreviewImage != null)
+            {
+                beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Difference
+                    ? GetDisplayPreviewTexture(GetDiffPreviewTexture(), HighlightPreviewSlot.Split)
+                    : previewCompareMode == PreviewCompareMode.Split
+                    ? GetDisplayPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
+                    : GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+            }
+
+            if (afterPreviewImage != null)
+            {
+                afterPreviewImage.image = GetDisplayPreviewTexture(afterPreview, HighlightPreviewSlot.After);
+            }
         }
 
         private void DrawSectionHeader(string title)
