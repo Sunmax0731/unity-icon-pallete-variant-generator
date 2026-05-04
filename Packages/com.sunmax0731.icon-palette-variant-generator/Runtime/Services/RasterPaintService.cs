@@ -10,6 +10,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
     /// </summary>
     public sealed class RasterPaintService
     {
+        private const uint TransparentNeighborKey = uint.MaxValue;
+
         public void ApplyTool(
             Color32[] pixels,
             int width,
@@ -148,6 +150,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
 
                     foreach (int index in region)
                     {
+                        if (fill.a == 0)
+                        {
+                            pixels[index] = default;
+                            continue;
+                        }
+
                         Color32 pixel = fill;
                         pixel.a = pixels[index].a;
                         pixels[index] = pixel;
@@ -192,8 +200,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             Color32 bestColor = default;
             foreach ((uint key, int count) in counts)
             {
-                Color32 candidate = FromRgbKey(key, regionColor.a);
-                if (count > bestCount && ColorDistance(regionColor, candidate) <= threshold)
+                Color32 candidate = key == TransparentNeighborKey
+                    ? default
+                    : FromRgbKey(key, regionColor.a);
+                if (count > bestCount && (candidate.a == 0 || ColorDistance(regionColor, candidate) <= threshold))
                 {
                     bestCount = count;
                     bestColor = candidate;
@@ -212,12 +222,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             }
 
             int index = (y * width) + x;
-            if (regionLookup.Contains(index) || pixels[index].a == 0)
+            if (regionLookup.Contains(index))
             {
                 return;
             }
 
-            uint key = ToRgbKey(pixels[index]);
+            uint key = pixels[index].a == 0 ? TransparentNeighborKey : ToRgbKey(pixels[index]);
             counts.TryGetValue(key, out int count);
             counts[key] = count + 1;
         }

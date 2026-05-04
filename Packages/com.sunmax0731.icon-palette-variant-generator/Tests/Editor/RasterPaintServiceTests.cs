@@ -115,5 +115,36 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             Assert.That(pixels[4].b, Is.EqualTo(0));
             Assert.That(pixels[4].a, Is.EqualTo(255));
         }
+
+        [Test]
+        public void NoiseRemovalErasesSinglePixelNoiseWhenSurroundedByTransparency()
+        {
+            Color32[] pixels =
+            {
+                default, default, default,
+                default, new Color32(255, 0, 0, 255), default,
+                default, default, default
+            };
+
+            RasterPaintService service = new RasterPaintService();
+            service.ApplyTool(
+                pixels,
+                3,
+                3,
+                1,
+                1,
+                new DrawingToolSettings
+                {
+                    activeTool = DrawToolKind.NoiseRemoval,
+                    brushSize = 3,
+                    noiseRegionPixels = 1,
+                    noiseThreshold = 442f
+                });
+
+            Assert.That(pixels[4].a, Is.EqualTo(0));
+            Assert.That(pixels[4].r, Is.EqualTo(0));
+            Assert.That(pixels[4].g, Is.EqualTo(0));
+            Assert.That(pixels[4].b, Is.EqualTo(0));
+        }
     }
 }
