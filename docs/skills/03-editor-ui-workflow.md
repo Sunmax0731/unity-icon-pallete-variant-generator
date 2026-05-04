@@ -2,42 +2,41 @@
 
 ## 目的
 
-Unity EditorWindow の UI、操作導線、プレビュー、ヘルプ、言語表示を整える工程の Skill。
+Unity EditorWindow の画面構成、操作導線、Preview、Palette、Layers、Language 表示を整理するための工程ガイドです。
 
 ## 基本レイアウト
 
-- 上部: Source / Analyze / Auto Group / Preview / Export / Session / Help / Language
-- 左: 解析設定 / グループ設定 / 出力設定 / 画像情報
-- 中央: Before / After preview / スクロール可能な Palette
-- 右: グループ置換ルール / 色別置換ルール / バリエーション
+- 上部: Source Image / Analyze / Auto Group / Preview / Export / Export All / Undo / Redo / Save Session / Load Session / Help / Language。
+- 左: Source 情報、解析設定、グループ設定、ツール設定、書き出し設定、プリセット。
+- 中央: Preview、選択色情報、Palette。
+- 右: Layers、Variations、置換ルール、色別ルール。
 
 ## UI 原則
 
-- IMGUI で Unity Editor らしい密度と操作感を保つ。
-- パネルの責務を混ぜない。
-- Palette と Group の選択状態は preview overlay と連動させる。
-- Help と Language は Analyze に近い上部 toolbar に置く。
-- Palette は色数が多くても操作できるようスクロール可能にする。
-- ボタンや field の表示文言は短く保つ。
-- ユーザー向け文言は日本語を基本にする。
+- Unity Editor 拡張として自然な Inspector 風パネルを使う。
+- 日本語モードでは、主要な UI 項目、ツール名、説明文を日本語で表示する。
+- API 名や mode 名が必要な箇所は、英語を残してもよい。
+- `Tool Settings` は折りたたみ可能にする。
+- Preview キャンバスはドラッグで高さを変更できる。
+- Paint モードではリアルタイム編集表示を優先する。
 
-## 言語設定
+## Preview 操作
 
-- `Auto` / `English` / `Japanese` を基本にする。
-- 表示言語は `EditorPrefs` に保存する。
-- コード識別子や enum 名は翻訳しない。
-- 日本語 UI でも `Analyze` など Unity 操作上わかりやすい英語は残してよい。
+- クリック: ピクセル色選択。
+- ドラッグ: pan、ブラシ選択、描画のいずれかを mode に応じて行う。
+- Wheel: zoom。
+- Split slider: Before / After の分割位置を変更する。
 
-## Help
+## 描画 UI
 
-- Help window は現在の操作導線を説明する。
-- 長文マニュアルではなく、パラメータの意味と操作順に絞る。
-- Release 前の詳細マニュアルは release packaging 工程で整備する。
+- `編集対象`: `読み込み画像` / `アクティブレイヤー`。
+- `ツール`: `ブラシ` / `消しゴム` / `塗りつぶし` / `ぼかし` / `スムース` / `ノイズ除去`。
+- Brush Size、強さ、描画不透明度、描画色、ノイズ領域、ノイズ閾値、ぼかし半径、スムース回数を表示する。
 
-## UI 変更時の確認
+## 確認観点
 
-- メニューから window が開く。
-- Analyze なしの状態で無効化すべき操作が壊れていない。
-- Palette がスクロールできる。
-- Preview が null のときに例外が出ない。
-- 選択 overlay が表示され、選択解除や切り替えで破綻しない。
+- メニューから Window が開く。
+- Source 未選択、Analyze 未実行、Layer 未作成などの空状態で例外が出ない。
+- 日本語 / 英語を切り替えても状態が壊れない。
+- Preview の比較モード変更後も Paint 入力が失われない。
+- レイヤーの visible / lock / opacity が Preview と Export に反映される。

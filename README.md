@@ -1,38 +1,16 @@
 # Unity Icon Palette Variant Generator
 
-アイコン画像からパレット色を抽出し、近傍色グループと置換ルールを使って色違い PNG を生成する Unity Editor 拡張です。
+Unity Editor 上でアイコン画像のパレットを解析し、近傍色グループ、色置換、レイヤー合成、描画ツールを使って色違い PNG を生成する Editor 拡張です。
 
-## Unity バージョン
+## 対応環境
 
-- Unity 6000.4.0f1
-
-## パッケージ
-
+- Unity: `6000.4.0f1`
 - Package: `com.sunmax0731.icon-palette-variant-generator`
-- Version: `1.0.4`
-- 配布形式: UPM package ZIP
-
-## 現在の対応範囲
-
-現在の実装では、MVP として以下の編集ワークフローに対応しています。
-
-- `Packages/com.sunmax0731.icon-palette-variant-generator` 配下の UPM パッケージ
-- 画像読み込みとパレット色抽出
-- RGB / HSV / Lab 色距離による近傍色の自動グルーピングと、距離しきい値の調整
-- パレット色の手動グループ移動と locked group 保護
-- グループ単位、色単位、Hybrid の置換ルール
-- Before / After プレビューと選択色 overlay
-- スクロール可能なパレット一覧
-- PNG 出力
-- セッション JSON の保存 / 読み込み
-- 置換ルールプリセット JSON の export / import と ScriptableObject プリセットアセット
-- 複数バリエーション管理と一括出力
-- フォルダ内の複数 Texture2D に対する一括バリエーション出力
-- Help、言語設定、Auto Preview
+- Version: `1.1.0`
+- 配布形式: UPM package ZIP / `.unitypackage`
+- License: MIT License
 
 ## 起動方法
-
-Unity Editor のメニューから起動します。
 
 ```text
 Tools > Palette Variant Generator > メイン画面
@@ -40,9 +18,48 @@ Tools > Palette Variant Generator > ライセンス
 Tools > Palette Variant Generator > バージョン情報
 ```
 
-## ライセンス
+## 主な機能
 
-Unity Icon Palette Variant Generator は MIT License で提供します。詳細は [LICENSE.md](LICENSE.md) を確認してください。
+- PNG / JPG / Texture2D アセットからのパレット抽出
+- RGB / HSV / Lab 距離による近傍色グルーピング
+- `GroupUniform` / `PerColor` / `Hybrid` 置換ルール
+- Before / After / Split / SideBySide / Difference Preview
+- Preview 上の色ピック、複数色ブラシ選択、選択色ハイライト
+- 読み込み画像への直接編集と、描画レイヤー / 画像レイヤーの合成
+- ブラシ、消しゴム、塗りつぶし、ぼかし、スムース、ノイズ除去
+- JPEG 読み込み画像の内部 RGBA 化と、消しゴムによる透過編集
+- Preview キャンバスのリサイズ、Zoom / Drag Pan
+- Export / Export All / Folder Batch Export
+- `Assets/` 配下に出力した PNG の `Alpha Is Transparency` 自動 ON
+- Session JSON 保存 / 読み込み、Rule Preset JSON / ScriptableObject Preset
+- 日本語 / 英語 UI、Help、Auto Preview、Undo / Redo
+
+## 基本操作
+
+1. `Source Image` に画像を指定します。
+2. `Analyze` でパレットを抽出します。
+3. `Auto Group` で近傍色をグループ化します。
+4. 右側の置換ルールで色とブレンド率を調整します。
+5. `Preview` で結果を確認します。
+6. 必要に応じて `ツール設定 > 編集対象` を選び、Preview 上でブラシや塗りつぶしを使います。
+7. `Export` または `Export All` で PNG を出力します。
+8. 再利用する設定は `Save Session` または Preset として保存します。
+
+## 描画とレイヤー
+
+- `編集対象 = 読み込み画像`: 元アセットを上書きせず、セッション内の RGBA バッファへ直接描画します。JPEG でも内部的に PNG 相当の透過バッファとして扱うため、消しゴムで alpha を 0 にできます。
+- `編集対象 = アクティブレイヤー`: Paint Layer / Image Layer に対して非破壊で描画します。
+- `塗りつぶし`: クリックしたピクセルと同じ RGBA の上下左右連結領域だけを一括で塗りつぶします。透明ピクセルの連結領域も対象です。
+- `消しゴム`: 対象の alpha を減算します。書き出し時は PNG の透明部分として保持されます。
+- `ぼかし` / `スムース` / `ノイズ除去`: 局所的な仕上げや小さなノイズ除去に使います。
+
+## サンプル
+
+Package Manager から以下のサンプルを import できます。
+
+```text
+Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
+```
 
 ## 検証
 
@@ -50,7 +67,7 @@ Unity Icon Palette Variant Generator は MIT License で提供します。詳細
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-期待される marker:
+主要 marker:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
@@ -61,89 +78,44 @@ ISSUE5_PNG_EXPORT_VALIDATION=PASS
 ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
 ISSUE8_SAMPLE_QA_VALIDATION=PASS
-ISSUE10_UI_POLISH_VALIDATION=PASS
-ISSUE12_VARIATION_UX_VALIDATION=PASS
-ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
-ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS
-ISSUE18_RULE_PRESET_VALIDATION=PASS
-ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS
-ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS
-ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS
-ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS
-ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS
-ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS
-ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS
-ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS
-ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS
-ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS
-ISSUE26_NOISE_REMOVAL_VALIDATION=PASS
-ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS
-ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS
-ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS
-ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS
-ISSUE40_ANALYSIS_PRESET_VALIDATION=PASS
-ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS
-ISSUE42_PREVIEW_MINI_TOOLBAR_VALIDATION=PASS
-ISSUE43_UNDO_REDO_VALIDATION=PASS
-ISSUE44_DIFFERENCE_PREVIEW_VALIDATION=PASS
-ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS
-ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS
-ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS
-FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS
 ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
+ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS
+ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS
+ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS
+ISSUE48_FILL_TOOL_VALIDATION=PASS
+ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS
 ```
 
 ## ドキュメント
 
-計画、仕様、利用方法、配布用文案は `docs/` 配下にあります。
-
-- マニュアル: `docs/manual.md`
-- 利用条件: `docs/terms.md`
-- リリースノート: `docs/release-notes-v1.0.4.md`
-- BOOTH 商品説明文案: `docs/booth-copy.md`
+- Manual: `docs/manual.md`
+- 手動テスト: `docs/manual-test-layered-editing.md`
+- 塗りつぶしテスト: `docs/manual-test-fill-tool.md`
+- Export alpha テスト: `docs/manual-test-export-alpha-transparency.md`
+- リリースノート: `docs/release-notes-v1.1.0.md`
+- BOOTH 商品ページ Markdown: `docs/booth-copy.md`
 
 ## リリースビルド
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.0.4
-powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.0.4
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.1.0
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.1.0
 ```
 
-出力先:
+出力:
 
 ```text
-ReleaseBuilds/PaletteVariantGenerator_v1.0.4.zip
-ReleaseBuilds/PaletteVariantGenerator_v1.0.4.unitypackage
+ReleaseBuilds/PaletteVariantGenerator_v1.1.0.zip
+ReleaseBuilds/PaletteVariantGenerator_v1.1.0.unitypackage
 ```
 
-GitHub Actions の `Release Package` workflow でも tracked files から同じ ZIP を生成します。
-
-## サンプル
-
-検証用サンプルアイコンは以下にあります。
-
-```text
-Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
-```
+GitHub Release には ZIP と `.unitypackage` の両方を添付します。
 
 ## 既知の制限
 
-- 初回リリースの UI は IMGUI ベースです。
-- 色距離は RGB / HSV / Lab から選択できます。RGB は高速で安定、HSV は色相差を扱いやすく、Lab は見た目に近い近傍色判定に向いています。
-- SpriteAtlas の直接編集は対象外です。
-- フォルダ単位の一括処理は Texture2D アセットを対象にしています。SpriteAtlas の直接編集は対象外です。
-
-## Agent 向けドキュメント
-
-- `Agents.md`
-- `Skill.md`
-
-## Category Presets
-
-The Analyze section includes category presets for Transparent PNG, White Background JPG, Line Art/Icon, Gem, and Plant assets. Selecting a preset updates analysis, grouping, noise removal, and edge cleanup settings together.
-
-Preset details are documented in `docs/analysis-category-presets.md`.
-
-## Preview Brush
-
-Set Preview Mode to `BrushSelect` to collect multiple palette colors from the preview. Use `Create Brush Rules` to create or enable per-color rules for the selected colors.
+- SpriteAtlas の直接編集は対象外です。Texture2D / PNG / JPG アセットを対象にしてください。
+- 元画像ファイルは直接上書きしません。読み込み画像への直接編集はセッション内バッファと書き出し PNG に反映されます。
+- `Alpha Is Transparency` の自動設定は Unity Project の `Assets/` 配下に出力した PNG に限ります。

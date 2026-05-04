@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.4",
+    [string]$Version = "1.1.0",
     [string]$UnityPath = "C:\Program Files\Unity\6000.4.0f1\Editor\Unity.exe",
     [switch]$SkipUnityPackage
 )
@@ -63,7 +63,7 @@ if (-not $SkipUnityPackage) {
         "-logFile", $unityPackageLogPath
     )
 
-    $process = Start-Process -FilePath $UnityPath -ArgumentList $arguments -Wait -PassThru
+    $process = Start-Process -FilePath $UnityPath -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
     if ($process.ExitCode -ne 0) {
         throw "UnityPackage export failed with exit code $($process.ExitCode). Log: $unityPackageLogPath"
     }

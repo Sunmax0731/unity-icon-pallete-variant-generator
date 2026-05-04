@@ -2,120 +2,112 @@
 
 ## 1. 背景
 
-`unity-icon-pallete-variant-generator` は色解析と差し替えには強い一方で、最終調整のために外部 DCC ツールへ戻る必要があった。今回の拡張では、Unity Editor 内で完結する軽量な描画・合成ワークフローを追加する。
-
-本要件は GitHub Issue `#48` を実装契約とする。
+`unity-icon-pallete-variant-generator` は色解析と色置換を中心にしたツールだったが、最終調整のために外部 DCC ツールへ戻る必要があった。Issue `#48` では、Unity Editor 内で完結する軽量な描画、レイヤー、直接編集、透過編集ワークフローを追加する。
 
 ## 2. 目的
 
-- Unity Editor 拡張のデザインガイドラインに沿って、画面の情報設計を整理する
-- プレビュー上で指定箇所を直接編集できる描画ツール群を追加する
-- 複数の画像や描画結果を重ねられるレイヤー機能を追加する
-- セッション保存、プレビュー、PNG 出力に新しい編集状態を反映する
+- Unity Editor 拡張のデザインガイドラインに沿って画面の責務を整理する。
+- Preview 上で読み込み画像またはレイヤーを直接編集できるようにする。
+- ブラシ、消しゴム、塗りつぶし、ぼかし、スムース、ノイズ除去を追加する。
+- 複数画像や描画結果を重ねられるレイヤー機能を追加する。
+- JPEG 由来画像でも内部 RGBA バッファにより透過編集できるようにする。
+- Preview / Export / Session に編集結果を一貫して反映する。
 
-## 3. 参照
-
-- `D:\Claude\UnityEditor-Dev\workspace-guides\UnityEditorDesign.md`
-- `docs/requirements.md`
-- `docs/specification.md`
-- `docs/architecture.md`
-- `docs/development_plan.md`
-- `docs/color_variant_rule.schema.json`
-
-## 4. 対象範囲
+## 3. 対象範囲
 
 ### 対象
 
-- Unity Editor Window のレイアウト再設計
-- レイヤー一覧、アクティブレイヤー制御、表示・ロック・不透明度管理
-- 描画ツール
-  - ブラシ
-  - 消しゴム
-  - ぼかし
-  - 平滑化
-  - ノイズ除去
-- プレビューと書き出しへのレイヤー合成反映
-- セッション JSON の保存/読込拡張
-- EditMode テスト、手動確認手順書
+- メイン画面の UI 再設計
+- Tool Settings の折りたたみ
+- Preview キャンバスのリサイズ
+- Paint Layer / Image Layer
+- Layer visible / lock / opacity / order / duplicate / delete
+- `編集対象 = 読み込み画像` / `アクティブレイヤー`
+- Brush / Eraser / Fill / Blur / Smooth / NoiseRemoval
+- JPEG の内部 RGBA 化
+- 出力 PNG の alpha 保持と `Alpha Is Transparency` 自動設定
+- Session JSON の保存 / 読み込み
+- 自動検証と手動確認ドキュメント
 
 ### 非対象
 
-- ランタイム機能
-- Photoshop 相当の高度なブレンドモード一式
+- SpriteAtlas の直接編集
 - ベクターレイヤー
+- Photoshop 相当の高度なブレンドモード
 - アニメーションタイムライン
+- Runtime 機能
 
-## 5. 機能要件
+## 4. 機能要件
 
-### FR-LUI-001 画面設計
+### FR-UI-001 画面設計
 
-- Toolbar / Settings / Preview Workspace / Inspector / Report の責務分離を明確にする
-- Unity Editor らしい文言、余白、状態表示、空状態、警告導線を採用する
-- 主要操作は Toolbar に集約し、詳細設定は Foldout に置く
+- Toolbar / Settings / Preview Workspace / Inspector / Report の責務を分離する。
+- 日本語モードでは主要 UI を日本語表示にする。
+- Tool Settings は折りたたみ可能にする。
+- Preview キャンバスはドラッグで高さを変更できる。
 
 ### FR-LYR-001 レイヤー管理
 
-- セッションは複数レイヤーを保持できる
-- 各レイヤーは以下を持つ
-  - `id`
-  - `displayName`
-  - `visible`
-  - `locked`
-  - `opacity`
-  - `blendMode`
-  - `offsetX`
-  - `offsetY`
-  - `pixels`
-  - `sourceAssetPath` 任意
-- レイヤー種別は最低限 `Paint` と `Image` を持つ
-- レイヤーの追加、複製、削除、並び替え、表示切替、ロック切替を行える
+- セッションは複数レイヤーを保持できる。
+- レイヤーは `Paint` と `Image` を持つ。
+- 各レイヤーは `id`、`displayName`、`visible`、`locked`、`opacity`、`blendMode`、`offsetX`、`offsetY`、`sourceAssetPath`、`pixelData` を持つ。
+- レイヤーの追加、複製、削除、並び替え、表示切替、ロック切替、不透明度変更を行える。
+- `visible = false` のレイヤーは Preview / Export へ合成しない。
+- `locked = true` のレイヤーは描画編集できない。
 
-### FR-DRW-001 ブラシ
+### FR-DRW-001 編集対象
 
-- アクティブレイヤーに対して色と透明度を塗れる
-- ブラシサイズと強さを設定できる
-- 連続ドラッグで描画できる
+- `読み込み画像` を選ぶと、セッション内の `sourcePixelData` を編集する。
+- `アクティブレイヤー` を選ぶと、選択中レイヤーの `pixelData` を編集する。
+- 元画像アセットは直接上書きしない。
+- 編集結果は Preview、Export、Session JSON に反映する。
 
-### FR-DRW-002 消しゴム
+### FR-DRW-002 ブラシ
 
-- アクティブレイヤーのアルファを減算できる
-- ブラシと同じサイズ/強さの概念を使う
+- 指定した色、描画不透明度、ブラシサイズ、強さで対象を塗る。
+- ドラッグ中にストローク補間し、線飛びを抑える。
+- 編集中も Preview にリアルタイムで反映する。
 
-### FR-DRW-003 ぼかし
+### FR-DRW-003 消しゴム
 
-- アクティブレイヤーの局所領域に対して平均化ベースのぼかしを適用できる
+- 対象の alpha を減算する。
+- 読み込み画像とアクティブレイヤーの両方に適用できる。
+- JPEG 由来の読み込み画像にも内部 RGBA バッファ経由で透明化できる。
 
-### FR-DRW-004 平滑化
+### FR-DRW-004 塗りつぶし
 
-- アクティブレイヤーの局所領域で近傍色へ寄せる
-- ぼかしより輪郭破壊を抑える
+- クリックしたピクセルと同じ RGBA の上下左右連結領域だけを塗りつぶす。
+- 斜め接続は連結とみなさない。
+- 透明ピクセル同士の連結領域も対象にする。
+- ドラッグではなく 1 回のクリックで 1 領域を確定する。
 
-### FR-DRW-005 ノイズ除去
+### FR-DRW-005 ぼかし / スムース
 
-- 現行の前処理サービスとは別に、アクティブレイヤーへ局所適用できる
-- 小さな孤立ピクセル塊の補正を行える
+- ぼかしはブラシ範囲内を平均化する。
+- スムースは近傍色へ寄せ、ぼかしより穏やかに境界をならす。
 
-### FR-LYR-002 画像レイヤー
+### FR-DRW-006 ノイズ除去
 
-- 追加画像を読み込み、ベース結果の上に重ねられる
-- 画像レイヤーは不透明度と表示/ロックを変更できる
+- 小さな孤立領域を周辺色で補正する。
+- ツールとして局所適用できる。
 
-### FR-EXP-001 出力
+### FR-EXP-001 書き出し
 
-- Preview と Export は同一の合成結果を使う
-- PNG 出力はベースの色変換結果にレイヤー合成を反映する
-- 元画像は変更しない
+- Preview と Export は同一の合成経路を使う。
+- 色置換、読み込み画像への直接編集、レイヤー合成を PNG に反映する。
+- 出力先が `Assets/` 配下の場合、`Alpha Is Transparency` を ON にする。
 
 ### FR-SES-001 セッション
 
-- レイヤー構成、ツール設定、アクティブツール、アクティブレイヤーを保存/復元する
-- 旧セッションを読み込んだ場合は互換初期値を補う
+- レイヤー構成、アクティブレイヤー、描画ツール設定、読み込み画像の直接編集バッファを保存 / 復元する。
+- 旧セッション読み込み時は既定値で補完する。
 
-## 6. 受け入れ条件
+## 5. 受け入れ条件
 
-- メイン画面が Unity Editor デザインガイドラインに沿って整理されている
-- ブラシで色と透明度を塗れる
-- 消しゴム、ぼかし、平滑化、ノイズ除去が動作する
-- 複数レイヤーを重ねた結果を Preview/Export に反映できる
-- Session JSON にレイヤー情報が保存される
-- EditMode テストが追加され、手動確認手順書が更新されている
+- Unity `6000.4.0f1` でコンパイルエラーがない。
+- Brush / Eraser / Fill / Blur / Smooth / NoiseRemoval が Preview 上で動作する。
+- 読み込み画像とアクティブレイヤーの両方を編集できる。
+- JPEG 読み込み画像に消しゴムを使い、透明化結果を PNG に出力できる。
+- 複数レイヤーを重ねた結果が Preview / Export に反映される。
+- Session JSON にレイヤーと直接編集結果が保存される。
+- `ISSUE48_*_VALIDATION=PASS` marker が出力される。

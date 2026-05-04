@@ -1,66 +1,78 @@
 # 描画編集リファクタリング方針
 
-## 1. 背景
+## 背景
 
-`PaletteVariantGeneratorWindow` には、以下の責務が混在していた。
+描画機能の追加により、EditorWindow に次の責務が集中しやすくなりました。
 
-- Tool Settings / Preview / Layers の UI 構築
-- 入力イベント処理
-- 描画対象の選択
-- ストローク中バッファの保持
-- `sourcePixelData` / `layer.pixelData` への commit
-- Preview 再構築
+- Preview の UI と入力イベント。
+- 編集対象の判定。
+- Brush / Eraser / Fill などのピクセル処理。
+- 読み込み画像バッファとレイヤーバッファへの commit。
+- Preview 用 Texture の再構築。
 
-この構成では、`読み込み画像` と `アクティブレイヤー` の編集経路が Window 内の分岐で増殖し、Brush / Eraser の組み合わせで回帰が起こりやすかった。
+この状態では、読み込み画像とアクティブレイヤーの分岐、Brush と Eraser の分岐、比較表示と Paint 表示の分岐が複雑になり、回帰が起こりやすくなります。
 
-## 2. 新しい責務分割
+## 採用した分割
 
-### Window
+### PaletteVariantGeneratorWindow
 
-- UI の構築
-- Preview pointer event の受付
-- 画面表示用 `Texture2D` の寿命管理
-- report message / button state の更新
+- UI 表示。
+- Preview のマウスイベント受け取り。
+- 画像座標への変換。
+- Service 呼び出し。
+- ステータスメッセージ表示。
 
 ### PaintStrokeSessionService
 
-- 描画対象に応じたストローク用ピクセルバッファの開始
-- Brush / Eraser / Blur / Smooth / NoiseRemoval の適用
-- 補間付きストロークの継続
-- `sourcePixelData` または `layer.pixelData` への commit
+- 編集対象の解決。
+- ストローク開始 / 更新 / 終了。
+- 高速ドラッグ時の補間点生成。
+- Fill の one-shot 制御。
+- `sourcePixelData` または `layer.pixelData` への反映。
 
 ### RasterPaintService
 
-- 1 回の tool 適用ロジック
-- ストローク補間
-- ノイズ除去 / 平滑化 / ぼかし
+- Brush。
+- Eraser。
+- Fill。
+- Blur。
+- Smooth。
+- NoiseRemoval。
+
+ピクセル配列を受け取り、ツールごとの処理だけを行います。UI や Texture2D の生成には関与しません。
 
 ### LayerCompositingService
 
-- ベース Preview とレイヤーの合成
+- 読み込み画像編集バッファ、色置換結果、レイヤーを合成する。
+- Preview と Export の見た目を一致させる。
 
-## 3. 採用パターン
+## 設計上のルール
 
-全面的な MVVM 化ではなく、既存 Window を view/controller として残しつつ、描画状態だけを専用 service へ抽出する形を採用した。
+- 元画像アセットを直接変更しない。
+- JPEG は編集前に内部 RGBA バッファへ正規化する。
+- Eraser は Brush 色で塗らず、対象ピクセルの alpha を変更する。
+- Fill はクリックした RGBA の上下左右連結領域だけを処理する。
+- Paint モード中は比較表示よりリアルタイム編集表示を優先する。
+- Preview 用 Texture の再構築は必要な範囲に抑える。
 
-理由:
+## 検証対象
 
-- 既存 UI Toolkit Window を全面書き換えせずに責務を減らせる
-- 不具合が集中している描画編集経路を優先して単純化できる
-- EditMode テストを service 単位で追加しやすい
+- 読み込み画像に Brush が効く。
+- 読み込み画像に Eraser が効き、alpha が下がる。
+- JPEG 読み込み画像でも Eraser の結果が PNG Export に反映される。
+- 描画レイヤーに Brush / Eraser が効く。
+- Fill が読み込み画像と描画レイヤーの両方に効く。
+- Preview Mode や比較モードを切り替えても Paint 入力が失われない。
 
-## 4. 追加したテスト観点
+## 関連 marker
 
-- `PaintStrokeSessionServiceTests`
-  - `読み込み画像` に対して Brush 後 Eraser で alpha が 0 になる
-  - `アクティブレイヤー` に対して Brush 後 Eraser で alpha が 0 になる
-- `PaletteVariantGeneratorWindowTests`
-  - Preview 上の source direct edit で、描画後に消しゴムを当てると source pixel と preview 表示の両方が変化し、`RefreshAfterPreview()` 後も戻らない
-- `PaletteVariantGeneratorValidation`
-  - batch 実行で direct source brush -> eraser の回帰を検出する
-
-## 5. 今後の分離候補
-
-- Preview 表示切り替えを `PreviewPresentationService` に抽出
-- report message / localized label 生成を `WindowTextService` に抽出
-- Undo/Redo snapshot 制御を `SessionHistoryService` に抽出
+```text
+ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS
+ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS
+ISSUE48_FILL_TOOL_VALIDATION=PASS
+ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS
+ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS
+```

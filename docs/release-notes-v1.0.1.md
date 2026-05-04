@@ -1,60 +1,27 @@
 # リリースノート - v1.0.1
 
-## 概要
-
 `Unity Icon Palette Variant Generator` の v1.0.1 リリースです。
-
-このリリースでは、v1.0.0 以降に追加した色距離、フォルダ一括処理、ScriptableObject プリセット、ドッキング向けレイアウト、UI Toolkit 移行準備、リリース自動化を含めています。
 
 ## 主な変更
 
 - RGB / HSV / Lab の色距離モードを追加しました。
-- 近傍色しきい値を UI から調整できるようにしました。
-- 複数 Texture2D を対象にしたフォルダ一括処理を追加しました。
-- 置換ルールを ScriptableObject プリセットアセットとして共有できるようにしました。
-- パレット、バリエーション、置換ルール、色別ルール周辺のスクロールと横幅を調整しました。
-- main window を UI Toolkit root + `IMGUIContainer` の hybrid 構成に移行しました。
-- 評価用 UI Toolkit preview window は通常メニューから非表示にしました。
-- ローカル QA 用アセットを `.gitignore` に追加し、リリース ZIP に含まれないようにしました。
+- `Max Color Distance` によるグループ調整を追加しました。
+- Folder Batch Export を追加しました。
+- ScriptableObject プリセットを追加しました。
+- ドッキング時の横幅とスクロール表示を改善しました。
+- UI Toolkit 移行に向けた構成整理を行いました。
 
 ## 検証
-
-- Unity: `6000.4.0f1`
-- コマンド:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-marker:
+主要 marker:
 
 ```text
-ISSUE1_SCAFFOLD_VALIDATION=PASS
-ISSUE2_IMAGE_PALETTE_VALIDATION=PASS
-ISSUE3_COLOR_GROUPING_VALIDATION=PASS
-ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
-ISSUE5_PNG_EXPORT_VALIDATION=PASS
-ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
-ISSUE8_SAMPLE_QA_VALIDATION=PASS
 ISSUE10_UI_POLISH_VALIDATION=PASS
 ISSUE12_VARIATION_UX_VALIDATION=PASS
-ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
-ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS
 ISSUE18_RULE_PRESET_VALIDATION=PASS
-ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS
-ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS
-ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS
-ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS
-ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS
-ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS
-ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS
-ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS
-ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS
-ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
 ```
-
-## 既知の制限
-
-- 純 UI Toolkit への本番置換は #25 で管理します。
-- SpriteAtlas の直接編集は対象外です。

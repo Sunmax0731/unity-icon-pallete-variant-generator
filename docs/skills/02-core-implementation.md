@@ -2,37 +2,33 @@
 
 ## 目的
 
-画像解析、色抽出、グルーピング、色置換、PNG 出力、JSON 保存などの中核処理を実装する工程の Skill。
+画像解析、色置換、レイヤー合成、描画ツール、Export、Session 保存などの中核処理を、保守しやすい Service 単位で実装するための工程ガイドです。
 
 ## 配置ルール
 
-- Models: `Packages/com.sunmax0731.icon-palette-variant-generator/Runtime/Models`
-- Services: `Packages/com.sunmax0731.icon-palette-variant-generator/Runtime/Services`
-- Utilities: `Packages/com.sunmax0731.icon-palette-variant-generator/Runtime/Utilities`
-- Editor-only asset loading: `Packages/com.sunmax0731.icon-palette-variant-generator/Editor/Services`
+- Runtime Models: `Packages/com.sunmax0731.icon-palette-variant-generator/Runtime/Models`
+- Runtime Services: `Packages/com.sunmax0731.icon-palette-variant-generator/Runtime/Services`
+- Runtime Utilities: `Packages/com.sunmax0731.icon-palette-variant-generator/Runtime/Utilities`
+- Editor Services: `Packages/com.sunmax0731.icon-palette-variant-generator/Editor/Services`
+- Editor Window: `Packages/com.sunmax0731.icon-palette-variant-generator/Editor/Windows`
+- Validation: `Packages/com.sunmax0731.icon-palette-variant-generator/Editor/Validation`
 
 ## 実装原則
 
-- `EditorWindow` にアルゴリズムを直接書かない。
-- Service は EditMode テストしやすい API にする。
-- Model は `[Serializable]` を基本にし、`JsonUtility` で保存しやすい List 中心の構造にする。
-- Dictionary や `UnityEngine.Object` 参照を保存形式にしない。
-- 一時生成した `Texture2D` は破棄責任を明確にする。
-- Issue や検証ログに残す説明は日本語で記載する。
+- EditorWindow に画像処理を直接実装しない。
+- Service は EditMode test しやすい API にする。
+- Model は `[Serializable]` と List 中心の構造にする。
+- Dictionary や `UnityEngine.Object` 参照を JSON 保存形式に含めない。
+- 元画像ファイルを直接上書きしない。
+- 一時 `Texture2D` は破棄責務を明確にする。
 
-## 機能仕様
+## 中核仕様
 
-### 色抽出
+### 画像解析
 
 - `Alpha Threshold` 以下のピクセルは解析対象外にする。
-- `Quantize Step` でアンチエイリアス由来の近似色をまとめる。
+- `Quantize Step` で近似色をまとめる。
 - 出現数と出現率を保持する。
-
-### グルーピング
-
-- 初期実装は RGB 距離と簡易 K-Means を基本にする。
-- `Max Color Distance` で代表色から遠い色を別グループへ分離する。
-- グループ ID と `PaletteColorEntry.groupId` を同期する。
 
 ### 色置換
 
@@ -40,13 +36,24 @@
 output = Lerp(original, target, blendRatio)
 ```
 
-- `GroupUniform`: グループの Target Color / Blend Ratio をグループ内の全色に適用する。
-- `PerColor`: 有効な個別色ルールだけを適用し、未設定色は変更しない。
-- `Hybrid`: 有効な個別色ルールを優先し、未設定色はグループ設定へフォールバックする。
-- `preserveAlpha` が有効な場合、元ピクセルの alpha を維持する。
+- `GroupUniform`: グループ単位で置換する。
+- `PerColor`: 有効な色別ルールのみ置換する。
+- `Hybrid`: 色別ルールを優先し、未設定色はグループルールにフォールバックする。
 
-## 追加時の検証
+### 描画
 
-- Service ごとに focused EditMode test を追加または更新する。
-- `PaletteVariantGeneratorValidation` に headless marker を追加する。
-- 必要に応じて `tools/validation/run-editmode-tests.ps1` の marker チェックを更新する。
+- `RasterPaintService` が Brush / Eraser / Fill / Blur / Smooth / NoiseRemoval を担当する。
+- `PaintStrokeSessionService` が編集対象解決、ストローク補間、commit を担当する。
+- Eraser は色で塗らず alpha を下げる。
+- Fill は RGBA が一致する上下左右連結領域だけを対象にする。
+
+### Export
+
+- `PngExportService` は PNG ファイルの出力だけを担当する。
+- `ExportedTextureImportSettingsService` は `Assets/` 配下の `Alpha Is Transparency` 設定だけを担当する。
+
+## 検証ルール
+
+- Service 追加時は focused EditMode test を追加する。
+- 重要な回帰は `PaletteVariantGeneratorValidation` に marker を追加する。
+- `tools/validation/run-editmode-tests.ps1` の marker 期待値も更新する。

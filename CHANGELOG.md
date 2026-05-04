@@ -1,5 +1,32 @@
 # 変更履歴
 
+## 1.1.0 - 2026-05-05
+
+### 追加
+
+- Unity Editor 拡張の画面を Toolbar / Settings / Preview / Inspector / Report の責務に沿って整理し、日本語モードの主要 UI 文言を日本語化しました。
+- Paint Layer / Image Layer、表示切替、ロック、並び替え、複製、削除、不透明度を含むレイヤー編集を追加しました。
+- 読み込み画像へ直接編集できる `編集対象` を追加しました。元画像ファイルは上書きせず、セッション内の RGBA バッファに保持します。
+- ブラシ、消しゴム、ぼかし、スムース、ノイズ除去、塗りつぶしツールを追加しました。
+- JPEG 読み込み画像を内部で PNG 相当の RGBA バッファとして扱い、消しゴムで透明化できるようにしました。
+- Preview キャンバスのリサイズ、描画中のリアルタイム反映、ブラシストローク補間を追加しました。
+- Export / Export All / Folder Batch Export でレイヤー合成と読み込み画像への直接編集を反映するようにしました。
+- `Assets/` 配下に出力した PNG の `Alpha Is Transparency` を自動で ON にする処理を追加しました。
+- Issue #48 の直接編集、JPEG 透過、Fill、Tool popup 同期、Export alpha import 設定の検証 marker を追加しました。
+
+### 変更
+
+- 描画処理を `RasterPaintService`、ストローク中バッファ管理を `PaintStrokeSessionService`、出力後 import 設定を `ExportedTextureImportSettingsService` に分離し、Window から画像処理責務を切り出しました。
+- Session JSON に source pixel buffer、レイヤー、描画ツール設定を保存するようにしました。
+
+## 1.0.4 - 2026-04-26
+
+### 変更
+
+- 公開メニューを `Tools > Palette Variant Generator > メイン画面`、`ライセンス`、`バージョン情報` に統一しました。
+- MIT License 表記、README、Manual、Release checklist、Validation checklist、配布物の整合性を更新しました。
+- ZIP と `.unitypackage` の両方をリリース成果物として扱う方針を明文化しました。
+
 ## 1.0.3 - 2026-04-26
 
 ### 追加

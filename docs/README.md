@@ -1,38 +1,51 @@
-# Unity Icon Palette Variant Generator 開発準備ドキュメント
+# Unity Icon Palette Variant Generator ドキュメント
 
-## 概要
+`Unity Icon Palette Variant Generator` は、Unity Editor 上で画像の色を解析し、近傍色のグルーピング、色置換、レイヤー合成、簡易描画ツールを使って色違いアイコンを生成する Editor 拡張です。
 
-`Unity Icon Palette Variant Generator` は、Unity プロジェクト内の画像アセットから色を抽出し、近傍色を自動グルーピングした上で、グループ単位またはカラーコード単位の置換ルールを使って、単一のアイテムアイコンから複数の色違いパターンを生成する Unity エディタ拡張です。
+## 現行バージョン
 
-MMORPG / RPG / アイテム制作向けに、鉱石、木材、薬草、料理、装備、宝石などの素材アイコンを効率よく量産することを主目的とします。
+- Package version: `1.1.0`
+- Unity: `6000.4.0f1`
+- 主な対象: PNG / JPEG / Texture2D
+- 配布形式: UPM パッケージ ZIP / `.unitypackage`
 
 ## ドキュメント一覧
 
 | ファイル | 内容 |
 |---|---|
-| `requirements.md` | 要件定義書。目的、対象ユーザー、機能要件、非機能要件、受け入れ基準を整理。 |
-| `specification.md` | 仕様書。画面構成、処理フロー、パレット生成、グルーピング、置換、エクスポート仕様を整理。 |
-| `architecture.md` | 設計書。MVP 構成、主要クラス、データモデル、サービス分割、フォルダ構成を整理。 |
-| `development_plan.md` | 開発計画。実装フェーズ、タスク、優先度、テスト観点、リリース準備を整理。 |
-| `color_variant_rule.schema.json` | セッション / プリセット保存用 JSON スキーマ草案。 |
-| `release-checklist.md` | Release Package workflow と手動 fallback の確認手順。 |
-| `ui-toolkit-migration.md` | UI Toolkit 移行判断とドッキング向け compact layout の確認観点。 |
-| `../Agents.md` | AI Agent / Codex に実装を依頼するための作業指示書。 |
-| `../Skill.md` | 工程別 Skill の入口。 |
-| `skills/` | Issue、実装、UI、検証、Release の工程別 Skill。 |
+| `requirements.md` | ツール全体の要件定義。v1.1.0 のレイヤー、描画、JPEG 透過編集も含む。 |
+| `specification.md` | 操作仕様、データ仕様、色置換、描画ツール、Export 仕様。 |
+| `architecture.md` | EditorWindow、Model、Service、Validation の責務分割。 |
+| `development_plan.md` | 実装フェーズ、完了状態、リリース準備項目。 |
+| `manual.md` | 利用者向けマニュアル。 |
+| `validation-checklist.md` | 自動 / 手動検証項目。 |
+| `release-checklist.md` | v1.1.0 リリース準備手順。 |
+| `release-notes-v1.1.0.md` | v1.1.0 のリリースノート。 |
+| `booth-copy.md` | BOOTH 商品紹介編集ページ用 Markdown。 |
+| `manual-test-layered-editing.md` | レイヤーと描画ワークフローの手動確認。 |
+| `manual-test-fill-tool.md` | 塗りつぶしツールの手動確認。 |
+| `manual-test-export-alpha-transparency.md` | Export 後の `Alpha Is Transparency` 確認。 |
+| `paint-editing-refactor.md` | 描画処理の責務分割方針。 |
+| `jpeg-source-transparency.md` | JPEG 読み込み画像の内部 RGBA 化と透過編集仕様。 |
+| `color_variant_rule.schema.json` | ルール / セッション JSON の保存形式。 |
+| `skills/` | Agent 向けの工程別作業ガイド。 |
 
-## 想定メニュー
+## 標準検証
 
-```text
-Tools > Palette Variant Generator > メイン画面
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-## 最小 MVP
+リリース前は次も実行します。
 
-1. Unity プロジェクト内の PNG / Texture2D を選択する
-2. 画像から色を抽出する
-3. 近い色を任意グループ数にまとめる
-4. グループごとに置換色と反映率を設定する
-5. 変換後プレビューを表示する
-6. PNG として別名出力する
-7. 設定を JSON として保存 / 読み込みできる
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.1.0
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.1.0
+```
+
+## 注意
+
+- 元画像ファイルは直接上書きしません。
+- 読み込み画像への直接編集は、セッション内 RGBA バッファと Export PNG に反映します。
+- JPEG は内部で PNG 相当の RGBA バッファとして扱うため、消しゴムで透明化できます。
+- `Alpha Is Transparency` の自動設定は、Unity Project の `Assets/` 配下へ出力した PNG が対象です。

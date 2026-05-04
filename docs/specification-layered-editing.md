@@ -4,80 +4,64 @@
 
 ### Toolbar
 
-- `Source`
-- `Analyze`
-- `Auto Group`
-- `Preview`
-- `Export`
-- `Session`
-- `Help`
-- `Language`
-
-補助操作:
-
-- `Add Paint Layer`
-- `Add Image Layer`
-- `Duplicate Layer`
-- `Delete Layer`
+- Source Image
+- Analyze
+- Auto Group
+- Preview
+- Export
+- Export All
+- Undo / Redo
+- Save Session / Load Session
+- Help
+- Language
+- Auto Preview
 
 ### Settings Column
 
-- Source Info
-- Analyze Settings
-- Group Settings
-- Export Settings
-- Tool Settings
+- ソース情報
+- 解析設定
+- グループ設定
+- ツール設定
+- 書き出し設定
+- プリセットアセット
 
 ### Preview Workspace
 
-- Before / After / Composite の比較表示
-- ツールバー
-  - Tool
-  - Size
-  - Strength
-  - Opacity
-  - Color
-- 描画対象は Composite Preview 上のアクティブレイヤー
+- Preview Mode
+- Brush Size shortcut
+- Compare mode
+- Zoom
+- Split position
+- Selection Highlight
+- Effect Highlight
+- Resizable preview canvas
+- Selected color information
+- Palette list
 
 ### Inspector Column
 
 - Layers
-- Active Layer Details
-- Replacement Rules
-- Color Rules
-
-### Report
-
-- エラー
-- 警告
-- 直近の操作結果
+- Variations
+- Group replacement rules
+- Per-color replacement rules
 
 ## 2. データモデル
 
-### 2.1 LayerBlendMode
-
-- `Normal`
-
-### 2.2 LayerKind
-
-- `Paint`
-- `Image`
-
-### 2.3 DrawToolKind
+### DrawToolKind
 
 - `Brush`
 - `Eraser`
 - `Blur`
 - `Smooth`
 - `NoiseRemoval`
+- `Fill`
 
-### 2.4 LayerPixelData
+### PaintEditTarget
 
-- `width`
-- `height`
-- `rgbaBytesBase64`
+- `SourceImage`: セッション内の読み込み画像 RGBA バッファを編集する。
+- `ActiveLayer`: アクティブな Paint / Image Layer を編集する。
 
-### 2.5 RasterLayer
+### RasterLayer
 
 - `id`
 - `displayName`
@@ -91,8 +75,9 @@
 - `sourceAssetPath`
 - `pixelData`
 
-### 2.6 DrawingToolSettings
+### DrawingToolSettings
 
+- `paintTarget`
 - `activeTool`
 - `brushSize`
 - `strength`
@@ -103,60 +88,83 @@
 - `smoothIterations`
 - `blurRadius`
 
+### PaletteVariantSession 追加項目
+
+- `sourcePixelData`: 読み込み画像への直接編集結果。
+- `layers`: レイヤー一覧。
+- `activeLayerId`: アクティブレイヤー。
+- `drawingToolSettings`: 描画ツール設定。
+
 ## 3. 合成仕様
 
-### 3.1 ベース画像
+1. 元画像または `sourcePixelData` をベースにする。
+2. 色置換ルールを適用してベース Preview を作る。
+3. `visible = true` のレイヤーを下から順に Normal 合成する。
+4. 各レイヤーは `opacity` を alpha に乗算する。
+5. Preview と Export は同じ合成経路を使う。
 
-- 色変換後の Preview 画像をレイヤー合成の土台とする
-- レイヤー合成は Export にも同じ順序で適用する
+## 4. 描画仕様
 
-### 3.2 合成順
+### Brush
 
-1. 色解析・グループ化・置換ルールでベース結果を作る
-2. `visible = true` のレイヤーを下から順に合成する
-3. 各レイヤーは `opacity` を乗算して `Normal` 合成する
+- 円形ブラシで `paintColor` と `paintOpacity` を適用する。
+- `strength` で既存色との混合量を調整する。
+- ドラッグ中は前回座標と現在座標を補間して連続適用する。
 
-## 4. ツール仕様
+### Eraser
 
-### 4.1 Brush
+- 円形ブラシ範囲の alpha を減算する。
+- RGB は保持し、alpha のみ減衰させる。
+- SourceImage / ActiveLayer の両方に適用できる。
 
-- 円形ブラシ
-- ドラッグ中の座標列を補間しながら塗る
-- `paintColor` と `paintOpacity` を使う
+### Fill
 
-### 4.2 Eraser
+- 開始ピクセルの RGBA と完全一致する上下左右連結領域を flood fill する。
+- Fill は 1 ストロークにつき 1 回だけ適用する。
+- 塗り色は `paintColor` と `paintOpacity` を使う。
 
-- 円形ブラシ
-- アクティブレイヤーの alpha を減算する
-- RGB は維持、alpha のみ減衰
+### Blur
 
-### 4.3 Blur
+- ブラシ範囲内に box blur を適用する。
+- 半径は `blurRadius` を使う。
 
-- ブラシ範囲内に簡易 box blur を適用する
-- 半径は `blurRadius`
+### Smooth
 
-### 4.4 Smooth
+- ブラシ範囲内で近傍平均へ寄せる。
+- 反復数は `smoothIterations` を使う。
 
-- ブラシ範囲内に対して近傍平均との差分を弱く寄せる
-- ぼかしより強度を抑える
+### NoiseRemoval
 
-### 4.5 Noise Removal
+- ブラシ範囲内の小さな孤立領域を周囲色で補正する。
+- `noiseRegionPixels` と `noiseThreshold` を使う。
 
-- ブラシ範囲を抽出して、小領域に対して既存 `NoiseRemovalService` を適用する
-- 出力はアクティブレイヤーへ戻す
+## 5. JPEG 透過編集
 
-## 5. セッション互換
+- JPEG は読み込み時に RGBA32 の編集バッファへ正規化する。
+- 消しゴムで alpha 0 を作れる。
+- 元 JPEG ファイルは上書きしない。
+- Session JSON と Export PNG では alpha を保持する。
 
-- `schemaVersion` を `1.1.0` に更新する
-- 旧 JSON 読み込み時は以下を補完する
-  - `layers = []`
-  - `drawingToolSettings = default`
-  - `activeLayerId = ""`
+## 6. Export 仕様
 
-## 6. テスト対象
+- PNG は元画像と同じ幅・高さで出力する。
+- 色置換、source direct edit、layer composite を反映する。
+- 出力先が `Assets/` 配下の場合、`ExportedTextureImportSettingsService` が TextureImporter を更新する。
+- `alphaSource = FromInput`、`alphaIsTransparency = true` にする。
+
+## 7. Session 互換
+
+- 旧 JSON に `sourcePixelData` がない場合、読み込み画像から作成する。
+- 旧 JSON に `layers` がない場合、空配列を補う。
+- 旧 JSON に `drawingToolSettings` がない場合、既定値を補う。
+
+## 8. テスト対象
 
 - Layer compositing
-- Brush / Eraser pixel write
-- Blur / Smooth mutation
+- Brush / Eraser / Fill pixel write
+- Blur / Smooth / NoiseRemoval mutation
+- SourceImage direct edit
+- JPEG internal RGBA buffer
+- Export alpha import settings
 - Layer session serialization
-- Legacy session migration
+- Tool popup synchronization

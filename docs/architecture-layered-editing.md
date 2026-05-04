@@ -2,90 +2,89 @@
 
 ## 1. 方針
 
-既存 `PaletteVariantGeneratorWindow` は機能集中が進んでいるため、今回の拡張では UI 側に直接画像処理を書き足さず、描画とレイヤー合成をサービスへ分離する。Window は操作の仲介に留める。
+`PaletteVariantGeneratorWindow` は UI と操作仲介に寄せ、画像処理、レイヤー合成、描画、出力後 import 設定は Service へ分離する。全面的な MVVM 化ではなく、既存 IMGUI / UI Toolkit hybrid を維持しながら、回帰しやすい描画経路をサービス化する。
 
-## 2. 追加コンポーネント
+## 2. 主要コンポーネント
 
-### Runtime/Models
+### PaletteVariantGeneratorWindow
 
-- `DrawToolKind`
-- `LayerBlendMode`
-- `LayerKind`
-- `DrawingToolSettings`
-- `LayerPixelData`
-- `RasterLayer`
-
-### Runtime/Services
-
-- `LayerTextureSerializationService`
-- `LayerCompositingService`
-- `RasterPaintService`
-- `LayerSessionMigrationService`
-
-## 3. 役割分担
-
-### LayerTextureSerializationService
-
-- `Color32[]` と Base64 文字列の相互変換
-- Session JSON 保存時の変換責務
+- UI 構築
+- Preview pointer event の受付
+- Session 状態の保持
+- Service 呼び出し
+- 表示用 Texture2D の寿命管理
+- report message / button state の更新
 
 ### LayerCompositingService
 
-- ベース画像 + レイヤー一覧を合成して `Texture2D` を返す
-- Preview / Export の共通経路にする
+- ベース画像とレイヤー一覧を合成する。
+- Preview / Export の共通経路にする。
+- 既存 Texture2D へ更新する API を持ち、描画中の不要な再生成を抑える。
 
 ### RasterPaintService
 
-- レイヤー上の局所編集を担当
-- `Brush`
-- `Eraser`
-- `Blur`
-- `Smooth`
-- `NoiseRemoval`
+- 1 回のツール適用ロジックを担当する。
+- Brush / Eraser / Fill / Blur / Smooth / NoiseRemoval を扱う。
+- Brush / Eraser 用に座標間補間を提供する。
 
-### LayerSessionMigrationService
+### PaintStrokeSessionService
 
-- 旧 `schemaVersion` セッションへレイヤー既定値を補う
+- SourceImage / ActiveLayer のどちらを編集するかを解決する。
+- ドラッグ中の mutable pixel buffer を保持する。
+- Fill は 1 ストローク 1 回に制限する。
+- commit 時に `sourcePixelData` または `activeLayer.pixelData` へ戻す。
 
-## 4. Window への組み込み
+### TextureAssetLoader
 
-### 4.1 Preview
+- Texture2D / PNG / JPG を編集可能な RGBA32 バッファとして読み込む。
+- JPEG の内部 PNG 相当バッファ化を担当する。
 
-- 既存 `RefreshAfterPreview()` で色変換後テクスチャを作る
-- その結果を `LayerCompositingService.Compose()` に渡して最終 Preview を得る
+### ExportedTextureImportSettingsService
 
-### 4.2 Export
+- Export 後の PNG が `Assets/` 配下か判定する。
+- TextureImporter を取得し、`alphaSource = FromInput`、`alphaIsTransparency = true` を設定する。
 
-- `ExportPreview()` と `ExportAllVariations()` は、色変換後のテクスチャへ同じレイヤー合成を適用してから PNG 出力する
+## 3. データフロー
 
-### 4.3 UI
+1. Source image を指定する。
+2. `TextureAssetLoader` が編集可能な読み込み画像バッファを用意する。
+3. Analyze / Auto Group / Replacement でベース Preview を作る。
+4. `LayerCompositingService` が source direct edit と layer composite を反映した最終 Preview を作る。
+5. Preview 上の pointer event を `PaintStrokeSessionService` に渡す。
+6. `RasterPaintService` が対象 pixel buffer を変更する。
+7. 描画中は表示用 Texture2D を更新し、commit 時に Session へ戻す。
+8. Export 時は同じ合成経路で PNG を作る。
+9. `ExportedTextureImportSettingsService` が Unity import 設定を更新する。
 
-- Preview interaction mode を描画ツール選択へ拡張する
-- Layers セクションを追加し、アクティブレイヤーを明示する
-- Tool Settings は左カラムに寄せ、描画の実行対象と現在色はプレビュー直上にも表示する
+## 4. Undo / Redo
 
-## 5. データフロー
+- 既存の session snapshot 方式を継続する。
+- 描画開始前に snapshot を積む。
+- ストローク中は連続 snapshot を積まない。
+- commit 後に Preview を更新する。
 
-1. Source image load
-2. Palette extract
-3. Auto group / manual rule edit
-4. Base replacement preview build
-5. Layer composite preview build
-6. User edits active layer with raster tool
-7. Composite preview rebuild
-8. Session save or PNG export
+## 5. 性能対策
 
-## 6. Undo/Redo
+- 描画中は全体再解析を行わない。
+- 表示用 Texture2D は可能な限り再利用する。
+- Brush / Eraser は座標補間のみを行い、重い Preview 再生成を遅延させる。
+- Fill は 1 click 1 flood fill とし、ドラッグ中に繰り返し実行しない。
 
-- 既存の session snapshot 方式を継続利用する
-- 描画開始前に session snapshot を積む
-- ストローク中は連続 snapshot を積まない
+## 6. リスクと対策
 
-## 7. リスクと対策
+| リスク | 対策 |
+|---|---|
+| Window が肥大化する | 描画、合成、読み込み、import 設定を Service へ切り出す |
+| SourceImage と ActiveLayer の分岐が増える | `PaintStrokeSessionService` で編集対象解決を一元化する |
+| JPEG の alpha が失われる | 内部 RGBA バッファと PNG 出力を正とする |
+| Export と Preview がずれる | `LayerCompositingService` を共通経路にする |
+| 出力 PNG が Unity で透過扱いにならない | `ExportedTextureImportSettingsService` で import 設定を更新する |
 
-- `PaletteVariantGeneratorWindow.cs` がさらに肥大化する
-  - 対策: 新規処理はサービス化し、Window 側は呼び出しのみに留める
-- レイヤーの JSON が肥大化する
-  - 対策: Base64 圧縮なしでまず正しさ優先、将来圧縮余地を残す
-- 大画像での描画再生成コスト
-  - 対策: 編集対象レイヤーのみ変更し、Composite 生成を単純な 1 パスに留める
+## 7. 検証
+
+- `RasterPaintServiceTests`: Brush / Eraser / Fill / Blur / NoiseRemoval
+- `PaintStrokeSessionServiceTests`: SourceImage / ActiveLayer commit、stroke interpolation、Fill one-shot
+- `PaletteVariantGeneratorWindowTests`: Preview 経由の直接編集、Fill、tool popup 同期
+- `TextureAssetLoaderTests`: JPEG RGBA buffer
+- `ExportedTextureImportSettingsServiceTests`: `Alpha Is Transparency`
+- `PaletteVariantGeneratorValidation`: Issue #48 headless validation markers

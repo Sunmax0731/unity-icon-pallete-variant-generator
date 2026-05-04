@@ -1,145 +1,171 @@
-# レイヤー対応描画拡張 手動確認手順
+# レイヤー対応描画拡張 手動確認
 
-## 1. 前提
+## 前提
 
 - Unity `6000.4.0f1`
-- リポジトリ: `unity-icon-pallete-variant-generator`
-- 検証コマンド:
+- メニュー: `Tools > Palette Variant Generator > メイン画面`
+- 自動検証:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-## 2. 事前準備
+## 事前準備
 
-1. Unity でプロジェクトを開く。
-2. `Tools > Palette Variant Generator > メイン画面` を開く。
-3. `Assets/9cA7K7cS_400x400.jpg` または `Samples~/SampleIcons/pixel_art_64.png` を `Source Image` に設定する。
-4. `Analyze` を実行する。
-5. `Auto Group` を実行する。
-6. `Preview` を実行する。
+1. Unity で本プロジェクトを開く。
+2. `Source Image` に PNG または JPEG を指定する。
+3. `Analyze` を実行する。
+4. `Auto Group` を実行する。
+5. `Preview` を実行する。
+6. Language を `Japanese` にする。
 
-## 3. テストケース
+## TC-UI-01 画面構成
 
-### TC-UI-01 画面構成
-
-1. Toolbar に主要操作が並んでいることを確認する。
-2. 左に Settings、中央に Preview、右に Inspector / Layer / Variation があることを確認する。
-3. `Tool Settings` が折りたたみ可能であることを確認する。
-4. 日本語モード時、主要な設定項目と選択肢が日本語で表示されることを確認する。
-
-### TC-UI-02 Preview サイズ変更
-
-1. Preview 画像の直下にあるリサイズハンドルをドラッグする。
+1. 上部 toolbar に Source / Analyze / Auto Group / Preview / Export / Session / Help / Language があることを確認する。
+2. 左に解析設定、グループ設定、ツール設定、書き出し設定があることを確認する。
+3. 中央に Preview と Palette があることを確認する。
+4. 右に Layers、Variations、置換ルール、色別ルールがあることを確認する。
 
 期待結果:
-- Preview の表示キャンバス高さが追従して変わる
-- ドラッグ後も Preview 操作が継続できる
 
-### TC-LYR-01 Paint Layer 追加
+- 日本語モードでは主要 UI 文言が日本語で表示される。
+- `ツール設定` を折りたためる。
 
-1. `Add Paint Layer` を押す。
-2. Layers に新規レイヤーが追加されることを確認する。
-3. 新規レイヤーが active になることを確認する。
+## TC-UI-02 Preview サイズ変更
 
-### TC-DRW-00 読み込み画像へ直接編集
+1. Preview 直下のリサイズハンドルをドラッグする。
 
-1. `Tool Settings` の `編集対象` を `読み込み画像` にする。
-2. `Preview Mode` を `Paint` にする。
-3. `Tool` を `Brush` にする。
+期待結果:
+
+- Preview 表示領域の高さが変わる。
+- サイズ変更後も Preview のクリック、ドラッグ、ズームが動作する。
+
+## TC-LYR-01 Paint Layer 追加
+
+1. `描画レイヤー追加` を押す。
+
+期待結果:
+
+- Layers に新しい描画レイヤーが追加される。
+- 新しいレイヤーが active になる。
+
+## TC-LYR-02 Image Layer 追加
+
+1. `画像レイヤー追加` を押す。
+2. 追加する PNG を選択する。
+3. レイヤー opacity を変更する。
+
+期待結果:
+
+- 画像レイヤーが一覧に追加される。
+- Preview で opacity 付き合成が確認できる。
+
+## TC-LYR-03 Visible / Lock
+
+1. Layer の visible を OFF にする。
+2. visible を ON に戻す。
+3. lock を ON にして描画を試す。
+
+期待結果:
+
+- visible OFF で該当レイヤーが非表示になる。
+- lock ON では描画できず、状態が壊れない。
+
+## TC-DRW-00 読み込み画像へ直接編集
+
+1. `ツール設定 > 編集対象` を `読み込み画像` にする。
+2. `プレビューモード` を `描画` にする。
+3. `ツール` を `ブラシ` にする。
 4. Preview 上をドラッグする。
 
 期待結果:
-- レイヤーを追加しなくても描画できる
-- 読み込み画像そのものに対して描画結果が反映される
-- `編集対象 = 読み込み画像` の間は、比較表示より編集面のリアルタイム反映が優先される
 
-### TC-DRW-01 Brush
+- レイヤーがなくても描画できる。
+- 元画像ファイルは上書きされない。
+- 描画結果は Preview と Export PNG に反映される。
+
+## TC-DRW-01 Brush
 
 1. `編集対象` を `アクティブレイヤー` にする。
-2. `Preview Mode` を `Paint` にする。
-3. Tool を `Brush` にする。
-4. `Add Paint Layer` でレイヤーを追加して active にする。
-5. Color を赤、不透明度を `0.5` 以上に設定する。
-6. Preview 上をドラッグする。
+2. `描画レイヤー追加` で active layer を作る。
+3. `ツール` を `ブラシ` にする。
+4. Brush Size、色、不透明度を設定する。
+5. Preview 上をゆっくり / 速くドラッグする。
 
 期待結果:
-- ドラッグ中も Preview が白くならず、ストロークがリアルタイムで見える
-- active layer に描画が反映される
-- Composite Preview に結果が反映される
 
-### TC-DRW-02 Eraser
+- ドラッグ中も白くならず、リアルタイムに描画が見える。
+- 高速ドラッグしても線が大きく飛ばない。
+- active layer に描画される。
 
-1. 同じレイヤーを active にしたまま Tool を `Eraser` にする。
-2. 塗った箇所をドラッグする。
+## TC-DRW-02 Eraser
 
-期待結果:
-- ドラッグ中も Preview が白くならず、消去範囲がリアルタイムで見える
-- 該当部分の alpha が減る
-- 下のベース画像が見える
-
-### TC-DRW-03 Blur
-
-1. Tool を `Blur` にする。
-2. 塗り境界付近をドラッグする。
+1. Brush で描画済みの状態にする。
+2. `ツール` を `消しゴム` にする。
+3. 描画箇所をドラッグする。
 
 期待結果:
-- 境界が平滑化されてにじむ
 
-### TC-DRW-04 Smooth
+- 該当箇所の alpha が下がり、下の画像が見える。
+- 読み込み画像対象でも透明化できる。
+- JPEG 読み込み画像の場合も Export PNG で透明化が保持される。
 
-1. Tool を `Smooth` にする。
+## TC-DRW-03 Blur
+
+1. `ツール` を `ぼかし` にする。
+2. 色境界付近をドラッグする。
+
+期待結果:
+
+- 境界がぼやける。
+- Preview がリアルタイムに更新される。
+
+## TC-DRW-04 Smooth
+
+1. `ツール` を `スムース` にする。
 2. ざらついた境界をドラッグする。
 
 期待結果:
-- Blur より穏やかに境界がならされる
 
-### TC-DRW-05 Noise Removal
+- 境界が弱く平滑化される。
 
-1. 小さな孤立ドットがある箇所か、ブラシで意図的に `1px` ノイズを作る。
-2. Tool を `NoiseRemoval` にする。
-3. 高コントラストなノイズを消す場合は `Noise Threshold` を高めに設定する。
-4. ノイズ周辺をドラッグする。
+## TC-DRW-05 Noise Removal
 
-期待結果:
-- 小さな孤立ピクセルが周辺色で埋まる
-- 透明に囲まれたノイズは透明へ戻せる
-
-### TC-LYR-02 Image Layer
-
-1. `Add Image Layer` を押す。
-2. 追加用の PNG を選択する。
-3. opacity を `0.5` に下げる。
+1. 小さな孤立ドットがある状態にする。
+2. `ツール` を `ノイズ除去` にする。
+3. Noise Threshold を調整し、ノイズ周辺をドラッグする。
 
 期待結果:
-- レイヤー一覧に画像レイヤーが追加される
-- Composite Preview で透過合成される
 
-### TC-LYR-03 Visible / Lock
+- 孤立ピクセルが周辺色で埋まる。
+- 大きな領域は不用意に消えない。
 
-1. Layer の visible を OFF にする。
-2. Preview から該当レイヤーの効果が消えることを確認する。
-3. visible を ON に戻す。
-4. lock を ON にして描画を試す。
+## TC-DRW-06 Fill
+
+詳細は `docs/manual-test-fill-tool.md` を参照する。
 
 期待結果:
-- visible OFF で非表示になる
-- lock 中は描画できず、警告または無効化状態になる
 
-### TC-SES-01 Session Save / Load
+- クリックしたピクセルと同じ RGBA の上下左右連結領域だけが塗りつぶされる。
+- 透明領域も対象にできる。
 
-1. 描画済みの状態で `Save Session` を押す。
-2. `Load Session` を押し、保存した JSON を読み込む。
+## TC-SES-01 Session Save / Load
 
-期待結果:
-- Layer 構成、active layer、描画結果、Tool 設定が復元される
-- 読み込み画像への直接編集内容も復元される
-
-### TC-EXP-01 Export
-
-1. 描画とレイヤーを含んだ状態で `Export` を実行する。
-2. 出力 PNG を Unity または画像ビューアで確認する。
+1. レイヤーと描画結果がある状態で `Save Session` を実行する。
+2. `Load Session` で保存した JSON を読み込む。
 
 期待結果:
-- Preview と同じ見た目で PNG が出力される
-- 元画像ファイルは変更されていない
+
+- レイヤー構成、active layer、描画結果、ツール設定が復元される。
+- 読み込み画像への直接編集内容も復元される。
+
+## TC-EXP-01 Export
+
+1. 描画、レイヤー、色置換を含む状態で `Export` を実行する。
+2. 出力 PNG を Unity または外部ビューアで確認する。
+
+期待結果:
+
+- Preview と同じ見た目の PNG が出力される。
+- 元画像ファイルは変更されていない。
+- `Assets/` 配下に出力した場合、`Alpha Is Transparency` が ON になる。

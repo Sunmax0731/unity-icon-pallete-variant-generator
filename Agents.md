@@ -2,21 +2,23 @@
 
 ## 1. 目的
 
-このファイルは、AI Agent / Codex が `Unity Icon Palette Variant Generator` の実装を進めるための指示書である。
+このファイルは、AI Agent / Codex が `Unity Icon Palette Variant Generator` の実装、検証、リリース準備を行うための指示書である。
 
-本ツールは Unity Editor 上で画像の色を解析し、近傍色のグルーピングと色置換により、単一アイコンから複数の色違いパターンを生成するエディタ拡張である。
+本ツールは Unity Editor 上で画像の色を解析し、近傍色グルーピング、色置換、レイヤー合成、描画ツールを使って、単一アイコンから複数の色違い PNG を生成する Editor 拡張である。
 
 ## 2. 実装対象
 
-対象は Unity Editor 拡張のみ。
-
-ランタイム機能は実装しない。
+- Unity Editor 拡張のみを対象にする。
+- ランタイムゲーム機能は実装しない。
+- 元画像ファイルを直接上書きしない。
+- 読み込み画像への直接編集は、セッション内の RGBA バッファと書き出し PNG に反映する。
 
 推奨メニュー:
 
 ```text
 Tools > Palette Variant Generator > メイン画面
-Tools > Palette Variant Generator
+Tools > Palette Variant Generator > ライセンス
+Tools > Palette Variant Generator > バージョン情報
 ```
 
 ## 3. 参照すべきドキュメント
@@ -28,85 +30,49 @@ Tools > Palette Variant Generator
 3. `docs/architecture.md`
 4. `docs/development_plan.md`
 5. `docs/color_variant_rule.schema.json`
-6. `Skill.md`
-7. 作業工程に対応する `docs/skills/*.md`
+6. `docs/requirements-layered-editing.md`
+7. `docs/specification-layered-editing.md`
+8. `docs/architecture-layered-editing.md`
+9. `docs/paint-editing-refactor.md`
+10. `docs/jpeg-source-transparency.md`
+11. `Skill.md`
+12. 作業工程に対応する `docs/skills/*.md`
+
+UI 改修時は `D:\Claude\UnityEditor-Dev\workspace-guides\UnityEditorDesign.md` を参照し、Toolbar / Settings / Preview Workspace / Inspector / Report の責務分離を優先する。
 
 ## 4. 実装原則
 
 - GitHub Issue を確認し、Issue 起点で作業する。
-- Issue は日本語で作成・更新する。タイトル、本文、コメント、完了報告も日本語を基本とする。
+- Issue、コメント、完了報告は日本語を基本とする。
 - 実装 Issue ごとに作業範囲を区切る。
 - Unity `6000.4.0f1` で検証してから commit / close する。
-- 検証用にユーザーが追加した `Assets/` 配下の画像は、タスクで明示されない限りコミットしない。
+- ユーザーが検証用に追加した `Assets/` 配下の画像や session/preset は、明示されない限りコミットしない。
 - EditorWindow に全ロジックを詰め込まない。
-- 画像解析、色抽出、グルーピング、置換、出力、JSON 保存は Service として分離する。
+- 画像解析、色抽出、グルーピング、置換、レイヤー合成、描画、出力、JSON 保存は Service として分離する。
 - Model は `[Serializable]` を基本とし、Unity の `JsonUtility` で保存しやすい構造にする。
 - Dictionary をそのまま保存形式に使わない。
-- 元画像を直接変更しない。
-- 出力画像は別ファイルとして保存する。
 - 一時生成した `Texture2D` の破棄漏れに注意する。
 - Editor 専用コードは `Editor` フォルダ配下に配置する。
 
-## 5. 推奨実装順
+## 5. 現在の主要構成
 
-1. フォルダ構成作成
-2. Model / enum 作成
-3. Service の単体実装
-4. EditorWindow の最小 UI 作成
-5. Presenter 接続
-6. プレビュー処理追加
-7. PNG 出力追加
-8. セッション保存 / 読み込み追加
-9. バリエーション管理追加
-10. テスト追加
+- `ColorExtractionService`: Texture2D からパレット色を抽出する。
+- `ColorGroupingService`: 近傍色をグルーピングする。
+- `ColorReplacementService`: 置換ルールを適用して Preview / Export のベース画像を作る。
+- `LayerCompositingService`: ベース画像と Paint / Image Layer を合成する。
+- `RasterPaintService`: Brush / Eraser / Fill / Blur / Smooth / NoiseRemoval をピクセル配列へ適用する。
+- `PaintStrokeSessionService`: ドラッグ中の編集バッファ、ストローク補間、commit を管理する。
+- `TextureAssetLoader`: JPEG を含む読み込み画像を RGBA 編集バッファとして扱う。
+- `ExportedTextureImportSettingsService`: `Assets/` 配下の出力 PNG に `Alpha Is Transparency` を設定する。
+- `SessionJsonService`: Session JSON の保存 / 読み込みを担当する。
 
-## 6. コードスタイル
+## 6. 重要仕様
 
-- C# の public class には概要コメントを付ける。
-- public method には目的、引数、戻り値が分かるコメントを付ける。
-- null チェックを省略しない。
-- ファイル IO は例外処理を入れる。
-- UI 表示文言は分かりやすく短くする。
-- ユーザー向け UI 文言は日本語を基本とする。
-- 命名は役割が分かるようにする。
+### 6.1 透明ピクセル
 
-例:
+透明ピクセルは初期設定では解析・変換対象外にする。`Alpha Threshold` 以下のピクセルは無視する。
 
-```csharp
-public sealed class ColorExtractionService
-{
-    /// <summary>
-    /// Texture2D から解析対象ピクセルの色を抽出し、出現数付きのパレットを生成する。
-    /// </summary>
-    public IReadOnlyList<PaletteColorEntry> Extract(Texture2D texture, AnalyzeSettings settings)
-    {
-        // implementation
-    }
-}
-```
-
-## 7. UI 実装方針
-
-MVP は IMGUI でよい。
-
-現行 UI は以下のパネル分割を基本にする。
-
-- 上部: Source / Analyze / Auto Group / Preview / Export / Session / Help / Language
-- 左: 解析設定 / グループ設定 / 出力設定 / 画像情報
-- 中央: Before / After プレビュー / スクロール可能な Palette
-- 右: グループ置換ルール / 色別置換ルール / バリエーション
-
-選択中のグループまたは色は、プレビュー上の overlay と連動させる。
-
-## 8. 重要な仕様
-
-### 8.1 透明ピクセル
-
-透明ピクセルは初期設定では解析・変換対象外にする。
-
-Alpha Threshold 以下のピクセルは無視する。
-
-### 8.2 色置換
+### 6.2 色置換
 
 基本式は以下。
 
@@ -116,61 +82,63 @@ output = Lerp(original, target, ratio)
 
 ratio は 0.0 から 1.0。
 
-### 8.3 優先順位
-
-色置換ルールの優先順位は以下。
+### 6.3 優先順位
 
 1. `GroupUniform`: グループルールを適用する。
 2. `PerColor`: 有効な個別カラーコードルールのみ適用する。
 3. `Hybrid`: 有効な個別カラーコードルールを優先し、未設定色はグループルールへフォールバックする。
 4. 該当ルールがない場合は変換しない。
 
-### 8.4 PNG 出力
+### 6.4 描画対象
+
+- `読み込み画像`: セッション内の `sourcePixelData` を編集する。JPEG も内部 RGBA バッファとして扱い、消しゴムで alpha を 0 にできる。
+- `アクティブレイヤー`: Paint Layer / Image Layer の pixelData を編集する。ロック中は編集しない。
+
+### 6.5 塗りつぶし
+
+塗りつぶしは、クリックしたピクセルと同じ RGBA の上下左右連結領域だけを対象にする。斜め接続は対象外。透明ピクセル同士の連結領域も対象にする。
+
+### 6.6 PNG 出力
 
 - 元画像と同じ幅・高さで出力する。
 - アルファを維持する。
+- レイヤー合成と読み込み画像への直接編集を反映する。
 - 既存ファイルがある場合は Conflict Mode に従う。
 - 出力後に `AssetDatabase.Refresh` を行う。
+- 出力先が `Assets/` 配下の場合、TextureImporter の `Alpha Is Transparency` を ON にする。
 
-## 9. テスト対象
+## 7. UI 方針
 
-最低限、以下のテストを作成する。
+- 上部: Source / Analyze / Auto Group / Preview / Export / Session / Help / Language
+- 左: ソース情報 / 解析設定 / グループ設定 / ツール設定 / 書き出し設定 / プリセット
+- 中央: Preview / 選択色情報 / Palette
+- 右: Layers / Variations / 置換ルール / 色別ルール
+- 日本語モードでは主要 UI 文言を日本語にする。
+- Tool Settings は折りたたみ可能にする。
+- Preview はリサイズ可能にし、Zoom / Drag Pan / Split / SideBySide を維持する。
+
+## 8. テスト対象
+
+最低限、以下を検証する。
 
 - `ColorQuantizationServiceTests`
 - `ColorDistanceServiceTests`
 - `ColorExtractionServiceTests`
 - `ColorReplacementServiceTests`
+- `LayerCompositingServiceTests`
+- `RasterPaintServiceTests`
+- `PaintStrokeSessionServiceTests`
+- `TextureAssetLoaderTests`
+- `ExportedTextureImportSettingsServiceTests`
 - `SessionJsonServiceTests`
 
-## 10. 禁止事項
-
-- 元画像ファイルを直接上書きしない。
-- EditorWindow 内に重い処理をベタ書きしない。
-- `Resources` フォルダ前提の実装にしない。
-- `Application.dataPath` と `Assets/` 相対パスを混同しない。
-- JSON に `UnityEngine.Object` 参照を直接保存しない。
-- 画像解析時に毎フレーム重い処理を走らせない。
-
-## 11. 完了時の確認
-
-実装後、以下を確認する。
-
-- Unity がコンパイルエラーなしで起動する。
-- メニューからウィンドウが開く。
-- PNG を選択して色抽出できる。
-- グループ数を指定して自動グループ化できる。
-- 色変更プレビューが表示される。
-- PNG 出力できる。
-- JSON 保存 / 読み込みできる。
-- 元画像が変更されていない。
-
-標準検証コマンド:
+## 9. 標準検証
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-現時点の主要マーカー:
+主要 marker:
 
 ```text
 ISSUE1_SCAFFOLD_VALIDATION=PASS
@@ -181,28 +149,36 @@ ISSUE5_PNG_EXPORT_VALIDATION=PASS
 ISSUE6_SESSION_JSON_VALIDATION=PASS
 ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
 ISSUE8_SAMPLE_QA_VALIDATION=PASS
-ISSUE10_UI_POLISH_VALIDATION=PASS
+ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
+ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS
+ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS
+ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS
+ISSUE48_FILL_TOOL_VALIDATION=PASS
+ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS
 ```
 
-## 12. 残タスク方針
-
-GitHub Issue の open 状態を確認し、優先度と実行可能性が高いものから進める。
-
-## 13. Release Artifact Policy
+## 10. Release Artifact Policy
 
 - GitHub Release には ZIP と `.unitypackage` 単体の両方を必ず添付する。
 - `tools\release\build-release.ps1 -Version <version>` で `ReleaseBuilds/PaletteVariantGenerator_v<version>.zip` と `ReleaseBuilds/PaletteVariantGenerator_v<version>.unitypackage` を生成する。
-- `tools\release\test-release-package.ps1 -Version <version>` で ZIP と `.unitypackage` の両方を検証してから公開する。
-- 既存 Release に後から成果物を追加した場合も、`gh release view <tag> --json assets` で ZIP と `.unitypackage` の両方が表示されることを確認する。
+- `tools\release\test-release-package.ps1 -Version <version>` で ZIP と `.unitypackage` の両方を検証する。
+- 既存 Release に成果物を追加した場合も、`gh release view <tag> --json assets` で ZIP と `.unitypackage` の両方が表示されることを確認する。
 
-## Shared Unity Editor Extension Convention
+## 11. リリース準備時の更新対象
 
-- Public menu entries use `Tools > Palette Variant Generator > メイン画面`, `Tools > Palette Variant Generator > ライセンス`, and `Tools > Palette Variant Generator > バージョン情報`.
-- Keep developer-only or helper commands under a secondary group such as `Developer` or `Utilities`.
-- The license is MIT License. Keep `README.md`, package README, docs, release notes, and the Unity Editor license window aligned with MIT.
-- When menu or license text changes, update README, manual, validation checklist, release notes, BOOTH/GitHub release copy, and release package contents in the same change.
+- `Packages/com.sunmax0731.icon-palette-variant-generator/package.json`
+- `README.md`
+- `Packages/com.sunmax0731.icon-palette-variant-generator/README.md`
+- `CHANGELOG.md`
+- `docs/manual.md`
+- `docs/validation-checklist.md`
+- `docs/release-checklist.md`
+- `docs/release-notes-vX.Y.Z.md`
+- `docs/booth-copy.md`
+- `Agents.md`
+- `Skill.md`
 
-## Layered Editing Extension Notes
-
-- レイヤー/描画拡張を行う場合は `docs/requirements-layered-editing.md`、`docs/specification-layered-editing.md`、`docs/architecture-layered-editing.md` を先に確認する。
-- UI 改修時は `D:\Claude\UnityEditor-Dev\workspace-guides\UnityEditorDesign.md` を参照し、Toolbar / Settings / Preview Workspace / Inspector / Report の責務分離を優先する。
+メニュー、ライセンス、UI 文言、配布形式が変わる場合は、BOOTH / GitHub Release 向け説明文も同じ変更で更新する。

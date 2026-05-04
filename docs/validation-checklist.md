@@ -2,90 +2,118 @@
 
 ## 実行条件
 
-- 日付: 2026-04-25
-- Unity: 6000.4.0f1
+- 日付: 2026-05-05
+- Unity: `6000.4.0f1`
 - Repository: `unity-icon-pallete-variant-generator`
-- 検証コマンド:
+- Version: `1.1.0`
+
+標準検証コマンド:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 ```
 
-## サンプルアセット
+## 自動検証 marker
 
-サンプルは以下に格納しています。
+以下の marker が Unity log / validation output に出力されること。
 
 ```text
-Packages/com.sunmax0731.icon-palette-variant-generator/Samples~/SampleIcons
+ISSUE1_SCAFFOLD_VALIDATION=PASS
+ISSUE2_IMAGE_PALETTE_VALIDATION=PASS
+ISSUE3_COLOR_GROUPING_VALIDATION=PASS
+ISSUE4_REPLACEMENT_PREVIEW_VALIDATION=PASS
+ISSUE5_PNG_EXPORT_VALIDATION=PASS
+ISSUE6_SESSION_JSON_VALIDATION=PASS
+ISSUE7_VARIATION_BATCH_EXPORT_VALIDATION=PASS
+ISSUE8_SAMPLE_QA_VALIDATION=PASS
+ISSUE10_UI_POLISH_VALIDATION=PASS
+ISSUE12_VARIATION_UX_VALIDATION=PASS
+ISSUE13_AUTO_PREVIEW_DEBOUNCE_VALIDATION=PASS
+ISSUE17_PREVIEW_NAVIGATION_VALIDATION=PASS
+ISSUE18_RULE_PRESET_VALIDATION=PASS
+ISSUE19_MANUAL_GROUP_EDITING_VALIDATION=PASS
+ISSUE20_COLOR_DISTANCE_MODE_VALIDATION=PASS
+ISSUE21_FOLDER_BATCH_EXPORT_VALIDATION=PASS
+ISSUE22_SCRIPTABLE_OBJECT_PRESET_VALIDATION=PASS
+ISSUE23_DOCKED_LAYOUT_VALIDATION=PASS
+ISSUE23_UI_TOOLKIT_PREVIEW_VALIDATION=PASS
+ISSUE23_UI_TOOLKIT_INTERACTION_VALIDATION=PASS
+ISSUE23_MAIN_WINDOW_UI_TOOLKIT_HOST_VALIDATION=PASS
+ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS
+ISSUE25_PREVIEW_MENU_HIDDEN_VALIDATION=PASS
+ISSUE25_UI_TOOLKIT_PRODUCTION_VALIDATION=PASS
+ISSUE26_NOISE_REMOVAL_VALIDATION=PASS
+ISSUE27_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS
+ISSUE28_EXPORT_UI_DISCLOSURE_VALIDATION=PASS
+ISSUE29_OPAQUE_EDGE_OUTSIDE_CLEANUP_VALIDATION=PASS
+ISSUE30_EXPORT_SETTINGS_WINDOW_VALIDATION=PASS
+ISSUE31_PREVIEW_COLOR_PICK_VALIDATION=PASS
+ISSUE32_SELECTION_HIGHLIGHT_VALIDATION=PASS
+ISSUE33_UI_TOOLKIT_PREVIEW_ZOOM_VALIDATION=PASS
+ISSUE34_UI_TOOLKIT_PREVIEW_DRAG_PAN_VALIDATION=PASS
+ISSUE35_PREVIEW_DISPLAY_CACHE_VALIDATION=PASS
+ISSUE36_DELAYED_PREVIEW_REFRESH_VALIDATION=PASS
+ISSUE37_SELECTED_COLOR_INFO_VALIDATION=PASS
+ISSUE38_PALETTE_RULE_STATUS_VALIDATION=PASS
+ISSUE39_EFFECT_HIGHLIGHT_VALIDATION=PASS
+ISSUE40_ANALYSIS_PRESET_VALIDATION=PASS
+ISSUE41_COLLAPSIBLE_SETTINGS_VALIDATION=PASS
+ISSUE42_PREVIEW_MINI_TOOLBAR_VALIDATION=PASS
+ISSUE43_UNDO_REDO_VALIDATION=PASS
+ISSUE44_DIFFERENCE_PREVIEW_VALIDATION=PASS
+ISSUE45_EXPORT_PRECHECK_VALIDATION=PASS
+ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS
+ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS
+ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS
+ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS
+ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS
+ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS
+ISSUE48_FILL_TOOL_VALIDATION=PASS
+ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS
+FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS
 ```
 
-| サンプル | 目的 | 結果 |
+## 手動 QA
+
+| ID | 確認項目 | 期待結果 |
 |---|---|---|
-| `transparent_64.png` | 64x64 透明 PNG | PASS |
-| `transparent_128.png` | 128x128 透明 PNG | PASS |
-| `antialias_128.png` | アンチエイリアスあり透明 PNG | PASS |
-| `pixel_art_64.png` | ドット絵風透明 PNG | PASS |
+| TC-UI-01 | `Tools > Palette Variant Generator > メイン画面` から開く | Toolbar / Settings / Preview / Inspector が表示される |
+| TC-UI-02 | 日本語モード | 主要 UI 文言が日本語で表示される |
+| TC-UI-03 | Tool Settings foldout | 折りたたみ / 展開できる |
+| TC-UI-04 | Preview キャンバス resize | ドラッグで高さが変わり、Preview 操作が継続できる |
+| TC-DRW-01 | 読み込み画像にブラシ | レイヤーなしでも描画でき、元アセットは上書きされない |
+| TC-DRW-02 | 読み込み画像に消しゴム | PNG / JPEG 由来画像で該当箇所が透明になる |
+| TC-DRW-03 | アクティブレイヤーにブラシ | Paint Layer に描画され、合成 Preview に反映される |
+| TC-DRW-04 | アクティブレイヤーに消しゴム | レイヤーの alpha が減り、下の画像が見える |
+| TC-DRW-05 | Blur / Smooth | 境界が局所的にならされる |
+| TC-DRW-06 | Noise Removal | 小さな孤立色が周辺色で補正される |
+| TC-DRW-07 | Fill | クリック色と同じ RGBA の上下左右連結領域だけが塗りつぶされる |
+| TC-LYR-01 | Paint Layer 追加 | レイヤーが追加され active になる |
+| TC-LYR-02 | Image Layer 追加 | 画像レイヤーが合成される |
+| TC-LYR-03 | Visible / Lock | 非表示は合成から除外され、Lock 中は編集できない |
+| TC-SES-01 | Session Save / Load | レイヤー、描画、読み込み画像直接編集、ツール設定が復元される |
+| TC-EXP-01 | Export | Preview と同じ PNG が出力される |
+| TC-EXP-02 | Export All | 対象バリエーションがすべて出力される |
+| TC-EXP-03 | Export alpha import | `Assets/` 配下の出力 PNG の `Alpha Is Transparency` が ON になる |
 
-## 自動検証結果
+## リリース検証
 
-| 確認項目 | 結果 |
-|---|---|
-| Unity がコンパイルエラーなしで起動する | PASS |
-| validation entry point から EditorWindow を開ける | PASS |
-| 生成サンプルでパレット抽出できる | PASS |
-| 自動グルーピング service が検証されている | PASS |
-| グループ単位 / 色単位 / Hybrid 置換が検証されている | PASS |
-| PNG 出力が検証されている | PASS |
-| セッション JSON の保存 / 読み込みが検証されている | PASS |
-| バリエーションと一括出力 snapshot が検証されている | PASS |
-| サンプル PNG のバイト列が validation 後も変わらない | PASS |
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\release\build-release.ps1 -Version 1.1.0
+powershell -ExecutionPolicy Bypass -File tools\release\test-release-package.ps1 -Version 1.1.0
+```
 
-## 手動 QA 項目
+期待結果:
 
-| ワークフロー | 結果 | 備考 |
-|---|---|---|
-| `Tools > Palette Variant Generator > メイン画面` から開く | PASS | headless で EditorWindow 作成を検証。リリース前に目視確認を推奨。 |
-| サンプル PNG を Analyze する | PASS | サンプル抽出 validation で検証。 |
-| Auto Group | PASS | グルーピング validation で検証。 |
-| Preview replacement | PASS | 置換 validation で検証。 |
-| Export PNG | PASS | PNG export validation で検証。 |
-| Save Session / Load Session | PASS | JSON validation で検証。 |
-| Language menu / Help window | PASS | compile と window code path で検証。リリース前に目視確認を推奨。 |
-| Palette scroll | PASS | UI 実装済み。リリース前に目視確認を推奨。 |
-| Variation Add / Duplicate / Remove | PASS | variation service validation で検証。 |
-| Variation Active / Export state display | PASS | issue 12 variation UX validation で検証。目視確認を推奨。 |
-| Auto Preview debounce | PASS | issue 13 debounce validation で検証。目視確認を推奨。 |
-| プレビューのズーム / パン / split 比較 | PASS | issue 17 preview navigation validation で検証。目視確認を推奨。 |
-| 置換ルールプリセット export / import | PASS | issue 18 rule preset validation で検証。 |
-| ScriptableObject プリセットアセット | PASS | issue 22 preset asset validation で作成、適用、更新を検証。 |
-| ドッキング向け compact layout | PASS | issue 23 docked layout validation で最小サイズと切り替え条件を検証。wide / compact の目視確認を推奨。 |
-| UI Toolkit プレビュー Window | PASS | issue 23 UI Toolkit preview validation で評価用 window と主要セクション構成を検証。本番操作は IMGUI 版を使用。 |
-| UI Toolkit 標準コントロール同等性 | PASS | ObjectField / ColorField / PopupField / ScrollView / Slider と preview pan / wheel zoom / split compare の入力受け口を検証。 |
-| Main Window UI Toolkit ホスト | PASS | 本番 window が UI Toolkit root と ScrollView で開き、IMGUIContainer に依存しないことを検証。 |
-| UI Toolkit 本番導入 | PASS | issue 25 production UI Toolkit validation で、主要セクションと ObjectField / ColorField / ScrollView が本番 window に存在することを検証。 |
-| UI Toolkit プレビューメニュー非表示 | PASS | issue 25 preview menu hidden validation で、評価用 preview window が通常メニューに表示されないことを検証。 |
-| ノイズ削除 | PASS | issue 26 noise removal validation で、小さな色領域を同一グループ内の近傍色で補正できることを検証。 |
-| エッジ外側クリーンアップ | PASS | issue 27 edge outside cleanup validation で、本体外側近傍の小領域を透明化できることを検証。 |
-| Export 詳細設定の必要時表示 | PASS | issue 28 export UI disclosure validation で、書き出し関連の詳細設定が初期状態で折りたたまれることを検証。 |
-| Previewクリック色ピック | PASS | issue 31 preview color pick validation で、Preview座標からパレット色を選択し、色別ルール編集へ接続できることを検証。 |
-| 選択色ハイライト | PASS | issue 32 selection highlight validation で、選択色のハイライト表示ON/OFFを検証。 |
-| UI Toolkit Preview Zoom | PASS | issue 33 UI Toolkit preview zoom validation で、Zoom表示用テクスチャ生成とtexcoord計算を検証。 |
-| UI Toolkit Preview Drag Pan | PASS | issue 34 UI Toolkit preview drag pan validation で、ズーム時のドラッグpanと範囲クランプを検証。 |
-| Preview表示キャッシュ | PASS | issue 35 preview display cache validation で、同一表示状態の表示用テクスチャ再利用を検証。 |
-| Preview更新の遅延実行 | PASS | issue 36 delayed preview refresh validation で、Preview更新がキュー化され、遅延処理後にAfter Previewが生成されることを検証。 |
-| 選択色情報パネル | PASS | issue 37 selected color info validation で、未選択状態、選択色HEX、Group、透明置換状態の表示情報を検証。 |
-| Release Package workflow / ZIP 検証 | PASS | issue 24 release automation validation と `test-release-package.ps1` で検証。 |
-| パレット色の手動グループ移動 | PASS | issue 19 manual group editing validation で検証。目視確認を推奨。 |
-| Export All | PASS | variation snapshot と export service validation で検証。 |
-
-## リリース blocker
-
-- 自動検証ゲートで検出された code blocker はありません。
-- 残りの改善作業は GitHub Issue で管理します。
+- `ReleaseBuilds/PaletteVariantGenerator_v1.1.0.zip` が存在する。
+- `ReleaseBuilds/PaletteVariantGenerator_v1.1.0.unitypackage` が存在する。
+- ZIP に `Assets/`、`Library/`、`Logs/`、`Temp/`、`Validation/`、`ReleaseBuilds/` が含まれない。
+- ZIP と `.unitypackage` の両方を GitHub Release に添付できる。
 
 ## 既知の制限
 
-- 初回リリースの UI は IMGUI ベースです。
-- 色距離は RGB / HSV / Lab から選択できます。Lab 色距離は知覚差に近い近傍色判定として検証対象です。
-- SpriteAtlas の直接編集は v1.0.4 の対象外です。
-- フォルダ単位の一括処理は Texture2D アセットを対象に検証します。
+- SpriteAtlas の直接編集は対象外。
+- `Alpha Is Transparency` 自動設定は `Assets/` 配下に出力した PNG のみ対象。
+- 読み込み画像への直接編集は元ファイルではなく Session JSON / Export PNG に保持される。
