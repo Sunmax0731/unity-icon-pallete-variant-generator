@@ -176,6 +176,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private int activePaintHeight;
         private bool activePaintDirty;
         private PaintEditTarget activePaintTarget;
+        private bool activePaintHasLastPoint;
+        private Vector2Int activePaintLastPoint;
 
         [MenuItem("Tools/Palette Variant Generator/メイン画面")]
         public static void Open()
@@ -2536,6 +2538,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             redoSnapshots.Clear();
             activePaintDirty = false;
             activePaintTarget = session.drawingToolSettings.paintTarget;
+            activePaintHasLastPoint = false;
+            activePaintLastPoint = default;
 
             if (activePaintTarget == PaintEditTarget.SourceImage)
             {
@@ -2603,6 +2607,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             activePaintWidth = 0;
             activePaintHeight = 0;
             activePaintDirty = false;
+            activePaintHasLastPoint = false;
+            activePaintLastPoint = default;
         }
 
         private void ApplyActivePaintToolFromPreview(Image image, Vector2 localPosition)
@@ -2626,15 +2632,31 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 }
             }
 
-            rasterPaintService.ApplyTool(
-                activePaintPixels,
-                activePaintWidth,
-                activePaintHeight,
-                centerX,
-                centerY,
-                session.drawingToolSettings);
+            Vector2Int currentPoint = new Vector2Int(centerX, centerY);
+            if (ShouldInterpolateContinuousStroke() && activePaintHasLastPoint)
+            {
+                rasterPaintService.ApplyStroke(
+                    activePaintPixels,
+                    activePaintWidth,
+                    activePaintHeight,
+                    activePaintLastPoint,
+                    currentPoint,
+                    session.drawingToolSettings);
+            }
+            else
+            {
+                rasterPaintService.ApplyTool(
+                    activePaintPixels,
+                    activePaintWidth,
+                    activePaintHeight,
+                    centerX,
+                    centerY,
+                    session.drawingToolSettings);
+            }
 
             activePaintDirty = true;
+            activePaintHasLastPoint = true;
+            activePaintLastPoint = currentPoint;
 
             if (activePaintTarget == PaintEditTarget.SourceImage)
             {
@@ -2662,6 +2684,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             UpdatePreviewImagesImmediately();
             Repaint();
+        }
+
+        private bool ShouldInterpolateContinuousStroke()
+        {
+            return session.drawingToolSettings.activeTool == DrawToolKind.Brush
+                || session.drawingToolSettings.activeTool == DrawToolKind.Eraser;
         }
 
         private bool TryAddBrushPaletteColorAtSourcePixel(int x, int y)

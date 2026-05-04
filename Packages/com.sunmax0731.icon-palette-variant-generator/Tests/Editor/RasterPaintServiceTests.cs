@@ -57,6 +57,33 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
+        public void ApplyStrokeInterpolatesBetweenFastMousePoints()
+        {
+            Color32[] pixels = new Color32[25];
+            RasterPaintService service = new RasterPaintService();
+            service.ApplyStroke(
+                pixels,
+                5,
+                5,
+                new Vector2Int(0, 2),
+                new Vector2Int(4, 2),
+                new DrawingToolSettings
+                {
+                    activeTool = DrawToolKind.Brush,
+                    brushSize = 1,
+                    strength = 1f,
+                    paintOpacity = 1f,
+                    paintColor = new Color32(255, 0, 0, 255)
+                });
+
+            Assert.That(pixels[(2 * 5) + 0].r, Is.EqualTo(255));
+            Assert.That(pixels[(2 * 5) + 1].r, Is.EqualTo(255));
+            Assert.That(pixels[(2 * 5) + 2].r, Is.EqualTo(255));
+            Assert.That(pixels[(2 * 5) + 3].r, Is.EqualTo(255));
+            Assert.That(pixels[(2 * 5) + 4].r, Is.EqualTo(255));
+        }
+
+        [Test]
         public void BlurMutatesCenterPixel()
         {
             Color32[] pixels =

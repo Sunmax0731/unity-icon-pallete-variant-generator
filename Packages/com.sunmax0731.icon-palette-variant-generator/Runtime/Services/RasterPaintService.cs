@@ -12,6 +12,41 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
     {
         private const uint TransparentNeighborKey = uint.MaxValue;
 
+        /// <summary>
+        /// Applies the active tool continuously between two pixel coordinates.
+        /// </summary>
+        public void ApplyStroke(
+            Color32[] pixels,
+            int width,
+            int height,
+            Vector2Int from,
+            Vector2Int to,
+            DrawingToolSettings settings)
+        {
+            if (pixels == null)
+            {
+                throw new ArgumentNullException(nameof(pixels));
+            }
+
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            int radius = Mathf.Max(0, settings.brushSize / 2);
+            float spacing = Mathf.Max(1f, radius * 0.5f);
+            float distance = Vector2Int.Distance(from, to);
+            int steps = Mathf.Max(1, Mathf.CeilToInt(distance / spacing));
+
+            for (int step = 0; step <= steps; step++)
+            {
+                float t = steps == 0 ? 0f : step / (float)steps;
+                int x = Mathf.RoundToInt(Mathf.Lerp(from.x, to.x, t));
+                int y = Mathf.RoundToInt(Mathf.Lerp(from.y, to.y, t));
+                ApplyTool(pixels, width, height, x, y, settings);
+            }
+        }
+
         public void ApplyTool(
             Color32[] pixels,
             int width,
