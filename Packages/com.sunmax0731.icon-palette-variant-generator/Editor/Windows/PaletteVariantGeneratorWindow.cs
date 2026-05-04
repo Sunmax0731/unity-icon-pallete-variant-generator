@@ -1786,11 +1786,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private bool ShouldUseSourceEditingPreviewOnly()
         {
-            return previewPaintActive
-                && previewInteractionMode == PreviewInteractionMode.Paint
+            return previewInteractionMode == PreviewInteractionMode.Paint
                 && session?.drawingToolSettings != null
-                && session.drawingToolSettings.paintTarget == PaintEditTarget.SourceImage
-                && activePaintTarget == PaintEditTarget.SourceImage;
+                && session.drawingToolSettings.paintTarget == PaintEditTarget.SourceImage;
         }
 
         private bool ShouldUseSplitPreviewDisplay()
