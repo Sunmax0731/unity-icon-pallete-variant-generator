@@ -81,6 +81,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue46BoundaryTrimCleanup();
             ValidateIssue47PreviewBrushSelection();
             ValidateIssue48DirectSourceEraser();
+            ValidateIssue48ToolPopupSync();
             ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
             ValidateIssue8Samples();
@@ -130,6 +131,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE46_BOUNDARY_TRIM_VALIDATION=PASS");
             Debug.Log("ISSUE47_PREVIEW_BRUSH_SELECTION_VALIDATION=PASS");
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
         }
@@ -1797,6 +1799,51 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             if (SamePixel(beforePreview, afterRefreshPreview))
             {
                 throw new System.InvalidOperationException("Direct source eraser preview display rolled back after preview refresh.");
+            }
+
+            window.Close();
+        }
+
+        private static void ValidateIssue48ToolPopupSync()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for tool popup sync validation.");
+            }
+
+            Texture2D texture = CreatePreviewPickValidationTexture();
+            window.SetValidationSession(
+                texture,
+                new PaletteVariantSession
+                {
+                    drawingToolSettings = new DrawingToolSettings
+                    {
+                        paintTarget = PaintEditTarget.SourceImage,
+                        activeTool = DrawToolKind.Brush
+                    }
+                });
+
+            if (!window.IsToolPopupStateSyncedForValidation())
+            {
+                throw new System.InvalidOperationException("Tool popup did not sync to source brush settings after session replacement.");
+            }
+
+            window.SetValidationSession(
+                texture,
+                new PaletteVariantSession
+                {
+                    drawingToolSettings = new DrawingToolSettings
+                    {
+                        paintTarget = PaintEditTarget.ActiveLayer,
+                        activeTool = DrawToolKind.Eraser
+                    }
+                });
+
+            if (!window.IsToolPopupStateSyncedForValidation())
+            {
+                throw new System.InvalidOperationException("Tool popup did not sync to active layer eraser settings after session replacement.");
             }
 
             window.Close();

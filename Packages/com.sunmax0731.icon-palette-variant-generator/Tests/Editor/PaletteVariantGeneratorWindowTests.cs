@@ -81,5 +81,47 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             window.Close();
             Object.DestroyImmediate(texture);
         }
+
+        [Test]
+        public void ToolPopupValuesStaySyncedAfterSessionReplacement()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            Assert.That(window, Is.Not.Null);
+
+            Texture2D texture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
+            {
+                name = "ToolPopupSyncValidation"
+            };
+            texture.SetPixels32(new[] { new Color32(255, 255, 0, 255) });
+            texture.Apply();
+
+            window.SetValidationSession(
+                texture,
+                new PaletteVariantSession
+                {
+                    drawingToolSettings = new DrawingToolSettings
+                    {
+                        paintTarget = PaintEditTarget.SourceImage,
+                        activeTool = DrawToolKind.Brush
+                    }
+                });
+            Assert.That(window.IsToolPopupStateSyncedForValidation(), Is.True);
+
+            window.SetValidationSession(
+                texture,
+                new PaletteVariantSession
+                {
+                    drawingToolSettings = new DrawingToolSettings
+                    {
+                        paintTarget = PaintEditTarget.ActiveLayer,
+                        activeTool = DrawToolKind.Eraser
+                    }
+                });
+            Assert.That(window.IsToolPopupStateSyncedForValidation(), Is.True);
+
+            window.Close();
+            Object.DestroyImmediate(texture);
+        }
     }
 }

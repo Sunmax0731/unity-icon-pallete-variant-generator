@@ -156,6 +156,10 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Label sourcePathLabel;
         private Label sourceSizeLabel;
         private Label sourcePaletteLabel;
+        private PopupField<string> paintTargetPopup;
+        private PopupField<string> drawToolPopup;
+        private PopupField<string> previewInteractionModePopup;
+        private PopupField<string> previewCompareModePopup;
         private Image beforePreviewImage;
         private Image afterPreviewImage;
         private ScrollView layerListElement;
@@ -644,18 +648,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             EnsureLayerSessionState();
             VisualElement section = CreateUiSection("tool-section", T("toolSettings", "Tool Settings"));
-            section.Add(CreateEnumField("paint-target-popup", T("paintTarget", "Paint Target"), session.drawingToolSettings.paintTarget, value =>
+            paintTargetPopup = CreateEnumField("paint-target-popup", T("paintTarget", "Paint Target"), session.drawingToolSettings.paintTarget, value =>
             {
                 session.drawingToolSettings.paintTarget = (PaintEditTarget)value;
                 EnsurePreviewModeMatchesActiveTool();
                 RefreshUiToolkitContent();
-            }));
-            section.Add(CreateEnumField("draw-tool-popup", T("tool", "Tool"), session.drawingToolSettings.activeTool, value =>
+            });
+            section.Add(paintTargetPopup);
+            drawToolPopup = CreateEnumField("draw-tool-popup", T("tool", "Tool"), session.drawingToolSettings.activeTool, value =>
             {
                 session.drawingToolSettings.activeTool = (DrawToolKind)value;
                 EnsurePreviewModeMatchesActiveTool();
                 RefreshUiToolkitContent();
-            }));
+            });
+            section.Add(drawToolPopup);
             section.Add(CreateSliderInt("draw-brush-size-slider", T("brushSize", "Brush Size"), session.drawingToolSettings.brushSize, 1, 64, value =>
             {
                 session.drawingToolSettings.brushSize = Mathf.Max(1, value | 1);
@@ -785,23 +791,25 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             miniToolbar.Add(CreateStatusBadge($"{T("zoom", "Zoom")} {previewZoom:0.##}x", BadgeNeutralColor));
             miniToolbar.Add(CreateStatusBadge(LocalizeEnumValue(previewCompareMode), previewCompareMode == PreviewCompareMode.Split ? BadgeActiveColor : BadgeNeutralColor));
             section.Add(miniToolbar);
-            section.Add(CreateEnumField("preview-interaction-mode-popup", T("previewMode", "Preview Mode"), previewInteractionMode, value =>
+            previewInteractionModePopup = CreateEnumField("preview-interaction-mode-popup", T("previewMode", "Preview Mode"), previewInteractionMode, value =>
             {
                 ResetPreviewInteractionState();
                 previewInteractionMode = (PreviewInteractionMode)value;
                 RefreshUiToolkitContent();
-            }));
+            });
+            section.Add(previewInteractionModePopup);
             section.Add(CreateSliderInt("preview-brush-size-slider", T("brushSize", "Brush Size"), previewBrushSize, 1, 33, value =>
             {
                 previewBrushSize = Mathf.Max(1, value | 1);
                 RefreshUiToolkitContent();
             }));
-            section.Add(CreateEnumField("compare-mode-popup", T("compareMode", "Compare"), previewCompareMode, value =>
+            previewCompareModePopup = CreateEnumField("compare-mode-popup", T("compareMode", "Compare"), previewCompareMode, value =>
             {
                 ResetPreviewInteractionState();
                 previewCompareMode = (PreviewCompareMode)value;
                 RefreshUiToolkitContent();
-            }));
+            });
+            section.Add(previewCompareModePopup);
             section.Add(CreateSlider("preview-zoom-slider", T("zoom", "Zoom"), previewZoom, MinPreviewZoom, MaxPreviewZoom, value =>
             {
                 previewZoom = Mathf.Clamp(value, MinPreviewZoom, MaxPreviewZoom);
@@ -922,6 +930,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             {
                 sourcePaletteLabel.text = $"{T("paletteColors", "Palette Colors")}: {session.paletteColors.Count} / {T("groups", "Groups")}: {session.colorGroups.Count}";
             }
+
+            SyncInteractivePopupValues();
 
             if (beforePreviewImage != null)
             {
@@ -3031,7 +3041,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return field;
         }
 
-        private VisualElement CreateEnumField(string name, string label, System.Enum value, System.Action<System.Enum> onChanged)
+        private PopupField<string> CreateEnumField(string name, string label, System.Enum value, System.Action<System.Enum> onChanged)
         {
             System.Enum[] values = System.Enum.GetValues(value.GetType()).Cast<System.Enum>().ToArray();
             List<string> labels = values.Select(LocalizeEnumValue).ToList();
@@ -3049,6 +3059,37 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 ApplyUiChange(() => onChanged(values[nextIndex]));
             });
             return field;
+        }
+
+        private void SyncInteractivePopupValues()
+        {
+            if (session?.drawingToolSettings != null)
+            {
+                SetEnumPopupValueWithoutNotify(paintTargetPopup, session.drawingToolSettings.paintTarget);
+                SetEnumPopupValueWithoutNotify(drawToolPopup, session.drawingToolSettings.activeTool);
+            }
+
+            SetEnumPopupValueWithoutNotify(previewInteractionModePopup, previewInteractionMode);
+            SetEnumPopupValueWithoutNotify(previewCompareModePopup, previewCompareMode);
+        }
+
+        private void SetEnumPopupValueWithoutNotify(PopupField<string> field, System.Enum value)
+        {
+            if (field == null || value == null)
+            {
+                return;
+            }
+
+            string label = LocalizeEnumValue(value);
+            if (field.choices == null || !field.choices.Contains(label))
+            {
+                return;
+            }
+
+            if (field.value != label)
+            {
+                field.SetValueWithoutNotify(label);
+            }
         }
 
         private string LocalizeEnumValue(System.Enum value)
@@ -5076,6 +5117,24 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             session.drawingToolSettings.activeTool = tool;
             EnsurePreviewModeMatchesActiveTool();
             RefreshUiToolkitContent();
+        }
+
+        internal string GetPaintTargetPopupValueForValidation()
+        {
+            return paintTargetPopup?.value ?? string.Empty;
+        }
+
+        internal string GetDrawToolPopupValueForValidation()
+        {
+            return drawToolPopup?.value ?? string.Empty;
+        }
+
+        internal bool IsToolPopupStateSyncedForValidation()
+        {
+            return paintTargetPopup != null
+                && drawToolPopup != null
+                && paintTargetPopup.value == LocalizeEnumValue(session.drawingToolSettings.paintTarget)
+                && drawToolPopup.value == LocalizeEnumValue(session.drawingToolSettings.activeTool);
         }
 
         internal void SetBrushSettingsForValidation(int brushSize, float strength)
