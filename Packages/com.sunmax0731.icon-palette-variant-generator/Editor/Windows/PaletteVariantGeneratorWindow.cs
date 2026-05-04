@@ -2443,6 +2443,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
         private void ApplySessionSourcePixelsToReadableImageIfAvailable()
         {
+            if (activePaintPixels != null && activePaintTarget == PaintEditTarget.SourceImage)
+            {
+                return;
+            }
+
             if (readableSourceImage == null
                 || session.sourcePixelData == null
                 || session.sourcePixelData.width != readableSourceImage.width
