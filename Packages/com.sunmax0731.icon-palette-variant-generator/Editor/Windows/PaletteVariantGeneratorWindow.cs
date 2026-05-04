@@ -148,6 +148,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private Image beforePreviewImage;
         private Image afterPreviewImage;
         private ScrollView layerListElement;
+        private Button addPaintLayerButton;
+        private Button addImageLayerButton;
+        private Button duplicateLayerButton;
+        private Button moveLayerUpButton;
+        private Button moveLayerDownButton;
+        private Button deleteLayerButton;
         private ScrollView paletteListElement;
         private ScrollView groupListElement;
         private ScrollView variationListElement;
@@ -659,14 +665,35 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             EnsureLayerSessionState();
             VisualElement section = CreateUiSection("layer-section", "Layers");
-            section.Add(CreateButtonRow(
-                ("Add Paint Layer", AddPaintLayer, readableSourceImage != null),
-                ("Add Image Layer", AddImageLayer, readableSourceImage != null),
-                ("Duplicate Layer", DuplicateActiveLayer, GetActiveLayer() != null)));
-            section.Add(CreateButtonRow(
-                ("Move Up", MoveActiveLayerUp, CanMoveActiveLayer(-1)),
-                ("Move Down", MoveActiveLayerDown, CanMoveActiveLayer(1)),
-                ("Delete Layer", RemoveActiveLayer, GetActiveLayer() != null)));
+            VisualElement editRow = new VisualElement();
+            editRow.style.flexDirection = FlexDirection.Row;
+            editRow.style.flexWrap = Wrap.Wrap;
+            editRow.style.marginTop = 4f;
+            addPaintLayerButton = new Button(() => RunUiToolkitAction(AddPaintLayer)) { text = "Add Paint Layer" };
+            addImageLayerButton = new Button(() => RunUiToolkitAction(AddImageLayer)) { text = "Add Image Layer" };
+            duplicateLayerButton = new Button(() => RunUiToolkitAction(DuplicateActiveLayer)) { text = "Duplicate Layer" };
+            addPaintLayerButton.style.marginRight = 4f;
+            addImageLayerButton.style.marginRight = 4f;
+            duplicateLayerButton.style.marginRight = 4f;
+            editRow.Add(addPaintLayerButton);
+            editRow.Add(addImageLayerButton);
+            editRow.Add(duplicateLayerButton);
+            section.Add(editRow);
+
+            VisualElement orderRow = new VisualElement();
+            orderRow.style.flexDirection = FlexDirection.Row;
+            orderRow.style.flexWrap = Wrap.Wrap;
+            orderRow.style.marginTop = 4f;
+            moveLayerUpButton = new Button(() => RunUiToolkitAction(MoveActiveLayerUp)) { text = "Move Up" };
+            moveLayerDownButton = new Button(() => RunUiToolkitAction(MoveActiveLayerDown)) { text = "Move Down" };
+            deleteLayerButton = new Button(() => RunUiToolkitAction(RemoveActiveLayer)) { text = "Delete Layer" };
+            moveLayerUpButton.style.marginRight = 4f;
+            moveLayerDownButton.style.marginRight = 4f;
+            deleteLayerButton.style.marginRight = 4f;
+            orderRow.Add(moveLayerUpButton);
+            orderRow.Add(moveLayerDownButton);
+            orderRow.Add(deleteLayerButton);
+            section.Add(orderRow);
             layerListElement = new ScrollView(ScrollViewMode.Vertical) { name = "layer-scroll-view" };
             layerListElement.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             layerListElement.style.height = LayerListHeight;
@@ -888,6 +915,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             RefreshSelectedColorInfoElement();
             RefreshPaletteListElement();
             RefreshLayerListElement();
+            RefreshLayerButtonStates();
             RefreshVariationListElement();
             RefreshReplacementRuleElement();
             RefreshColorRuleElement();
@@ -1095,6 +1123,41 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 });
 
                 layerListElement.Add(row);
+            }
+        }
+
+        private void RefreshLayerButtonStates()
+        {
+            bool canAddLayer = GetCanvasWidth() > 0 && GetCanvasHeight() > 0;
+            bool hasActiveLayer = GetActiveLayer() != null;
+            if (addPaintLayerButton != null)
+            {
+                addPaintLayerButton.SetEnabled(canAddLayer);
+            }
+
+            if (addImageLayerButton != null)
+            {
+                addImageLayerButton.SetEnabled(canAddLayer);
+            }
+
+            if (duplicateLayerButton != null)
+            {
+                duplicateLayerButton.SetEnabled(hasActiveLayer);
+            }
+
+            if (moveLayerUpButton != null)
+            {
+                moveLayerUpButton.SetEnabled(CanMoveActiveLayer(1));
+            }
+
+            if (moveLayerDownButton != null)
+            {
+                moveLayerDownButton.SetEnabled(CanMoveActiveLayer(-1));
+            }
+
+            if (deleteLayerButton != null)
+            {
+                deleteLayerButton.SetEnabled(hasActiveLayer);
             }
         }
 
