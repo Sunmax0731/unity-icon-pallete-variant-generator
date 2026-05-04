@@ -2529,6 +2529,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             {
                 case DrawToolKind.Brush:
                 case DrawToolKind.Eraser:
+                case DrawToolKind.Fill:
                 case DrawToolKind.Blur:
                 case DrawToolKind.Smooth:
                 case DrawToolKind.NoiseRemoval:
@@ -3147,6 +3148,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
                 ExportConflictMode.Duplicate => "複製",
                 DrawToolKind.Brush => "ブラシ",
                 DrawToolKind.Eraser => "消しゴム",
+                DrawToolKind.Fill => "塗りつぶし",
                 DrawToolKind.Blur => "ぼかし",
                 DrawToolKind.Smooth => "スムース",
                 DrawToolKind.NoiseRemoval => "ノイズ除去",

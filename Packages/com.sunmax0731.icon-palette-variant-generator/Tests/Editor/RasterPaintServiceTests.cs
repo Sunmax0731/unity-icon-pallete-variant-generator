@@ -84,6 +84,78 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
+        public void FillRecolorsOnlyContiguousMatchingRgbaRegion()
+        {
+            Color32 red = new Color32(255, 0, 0, 255);
+            Color32 blue = new Color32(0, 0, 255, 255);
+            Color32 green = new Color32(0, 255, 0, 255);
+            Color32[] pixels =
+            {
+                red, red, blue,
+                red, green, red,
+                blue, blue, red
+            };
+
+            new RasterPaintService().ApplyTool(
+                pixels,
+                3,
+                3,
+                0,
+                0,
+                new DrawingToolSettings
+                {
+                    activeTool = DrawToolKind.Fill,
+                    strength = 1f,
+                    paintOpacity = 1f,
+                    paintColor = new Color32(255, 255, 0, 128)
+                });
+
+            Assert.That(pixels[0], Is.EqualTo(new Color32(255, 255, 0, 128)));
+            Assert.That(pixels[1], Is.EqualTo(new Color32(255, 255, 0, 128)));
+            Assert.That(pixels[3], Is.EqualTo(new Color32(255, 255, 0, 128)));
+            Assert.That(pixels[5], Is.EqualTo(red));
+            Assert.That(pixels[8], Is.EqualTo(red));
+            Assert.That(pixels[2], Is.EqualTo(blue));
+            Assert.That(pixels[4], Is.EqualTo(green));
+        }
+
+        [Test]
+        public void FillCanTargetContiguousTransparentPixels()
+        {
+            Color32 opaque = new Color32(255, 0, 0, 255);
+            Color32[] pixels =
+            {
+                default, default, opaque,
+                default, opaque, default,
+                opaque, default, default
+            };
+
+            new RasterPaintService().ApplyTool(
+                pixels,
+                3,
+                3,
+                0,
+                0,
+                new DrawingToolSettings
+                {
+                    activeTool = DrawToolKind.Fill,
+                    strength = 1f,
+                    paintOpacity = 1f,
+                    paintColor = new Color32(0, 255, 0, 96)
+                });
+
+            Color32 fill = new Color32(0, 255, 0, 96);
+            Assert.That(pixels[0], Is.EqualTo(fill));
+            Assert.That(pixels[1], Is.EqualTo(fill));
+            Assert.That(pixels[3], Is.EqualTo(fill));
+            Assert.That(pixels[5], Is.EqualTo(default(Color32)));
+            Assert.That(pixels[7], Is.EqualTo(default(Color32)));
+            Assert.That(pixels[8], Is.EqualTo(default(Color32)));
+            Assert.That(pixels[2], Is.EqualTo(opaque));
+            Assert.That(pixels[4], Is.EqualTo(opaque));
+        }
+
+        [Test]
         public void BlurMutatesCenterPixel()
         {
             Color32[] pixels =

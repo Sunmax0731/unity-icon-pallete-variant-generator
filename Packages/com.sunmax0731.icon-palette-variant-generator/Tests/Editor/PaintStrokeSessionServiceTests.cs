@@ -92,5 +92,47 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
 
             Assert.That(eraseCommit.Pixels[0].a, Is.EqualTo(0));
         }
+
+        [Test]
+        public void FillStrokeAppliesOnlyInitialClickedRegion()
+        {
+            LayerTextureSerializationService serializationService = new LayerTextureSerializationService();
+            PaintStrokeSessionService service = new PaintStrokeSessionService(serializationService, new RasterPaintService());
+            Color32 red = new Color32(255, 0, 0, 255);
+            RasterLayer layer = new RasterLayer
+            {
+                id = "layer",
+                pixelData = serializationService.Serialize(
+                    new[]
+                    {
+                        red,
+                        new Color32(0, 0, 255, 255),
+                        red
+                    },
+                    3,
+                    1)
+            };
+
+            PaletteVariantSession session = new PaletteVariantSession
+            {
+                drawingToolSettings = new DrawingToolSettings
+                {
+                    paintTarget = PaintEditTarget.ActiveLayer,
+                    activeTool = DrawToolKind.Fill,
+                    strength = 1f,
+                    paintOpacity = 1f,
+                    paintColor = new Color32(0, 255, 0, 255)
+                }
+            };
+
+            PaintStrokeSession fillStroke = service.Begin(session, null, layer);
+            service.Apply(fillStroke, session.drawingToolSettings, 0, 0);
+            service.Apply(fillStroke, session.drawingToolSettings, 2, 0);
+            PaintStrokeCommitResult commit = service.Commit(fillStroke, session, layer);
+
+            Assert.That(commit.Pixels[0], Is.EqualTo(new Color32(0, 255, 0, 255)));
+            Assert.That(commit.Pixels[1], Is.EqualTo(new Color32(0, 0, 255, 255)));
+            Assert.That(commit.Pixels[2], Is.EqualTo(red));
+        }
     }
 }

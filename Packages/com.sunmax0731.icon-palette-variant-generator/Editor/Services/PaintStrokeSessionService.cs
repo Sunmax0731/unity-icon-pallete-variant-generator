@@ -78,6 +78,11 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
                 throw new ArgumentNullException(nameof(settings));
             }
 
+            if (settings.activeTool == DrawToolKind.Fill && session.IsDirty)
+            {
+                return;
+            }
+
             Vector2Int currentPoint = new Vector2Int(x, y);
             if (ShouldInterpolate(settings.activeTool) && session.HasLastPoint)
             {

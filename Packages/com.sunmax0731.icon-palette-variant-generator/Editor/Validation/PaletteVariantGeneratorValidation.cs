@@ -22,12 +22,14 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue48JpegSourceEraser();
             ValidateIssue48JpegWindowEraser();
             ValidateIssue48ExportAlphaTransparency();
+            ValidateIssue48FillTool();
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS");
+            Debug.Log("ISSUE48_FILL_TOOL_VALIDATION=PASS");
         }
 
         public static void RunScaffoldValidation()
@@ -95,6 +97,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             ValidateIssue48JpegSourceEraser();
             ValidateIssue48JpegWindowEraser();
             ValidateIssue48ExportAlphaTransparency();
+            ValidateIssue48FillTool();
             ValidateIssue48ToolPopupSync();
             ValidatePreviewVisibilityAndParameterHelpFollowup();
             ValidateIssue24ReleaseAutomation();
@@ -150,6 +153,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS");
+            Debug.Log("ISSUE48_FILL_TOOL_VALIDATION=PASS");
             Debug.Log("ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
@@ -2128,6 +2132,75 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 }
 
                 AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        private static void ValidateIssue48FillTool()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            if (window == null)
+            {
+                throw new System.InvalidOperationException("Main window could not be opened for fill tool validation.");
+            }
+
+            Texture2D texture = new Texture2D(3, 2, TextureFormat.RGBA32, false)
+            {
+                name = "Issue48FillToolValidation"
+            };
+            Color32 red = new Color32(255, 0, 0, 255);
+            Color32 transparent = default;
+            try
+            {
+                texture.SetPixels32(new[]
+                {
+                    red, red, new Color32(0, 0, 255, 255),
+                    transparent, red, transparent
+                });
+                texture.Apply(false, false);
+
+                window.SetValidationSession(
+                    texture,
+                    new PaletteVariantSession
+                    {
+                        drawingToolSettings = new DrawingToolSettings
+                        {
+                            paintTarget = PaintEditTarget.SourceImage,
+                            activeTool = DrawToolKind.Fill,
+                            strength = 1f,
+                            paintOpacity = 1f,
+                            paintColor = new Color32(0, 255, 0, 128)
+                        }
+                    });
+                window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
+                window.ApplyPaintAtSourcePixelForValidation(0, 0);
+
+                Color32 fill = new Color32(0, 255, 0, 128);
+                if (!SamePixel(window.GetSourcePixelForValidation(0, 0), fill)
+                    || !SamePixel(window.GetSourcePixelForValidation(1, 0), fill)
+                    || !SamePixel(window.GetSourcePixelForValidation(1, 1), fill))
+                {
+                    throw new System.InvalidOperationException("Fill tool did not recolor the contiguous matching source region.");
+                }
+
+                if (SamePixel(window.GetSourcePixelForValidation(2, 0), fill)
+                    || !SamePixel(window.GetSourcePixelForValidation(0, 1), transparent)
+                    || !SamePixel(window.GetSourcePixelForValidation(2, 1), transparent))
+                {
+                    throw new System.InvalidOperationException("Fill tool modified non-matching or disconnected pixels.");
+                }
+
+                window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
+                window.SetDrawToolForValidation(DrawToolKind.Fill);
+                if (!window.IsToolPopupStateSyncedForValidation())
+                {
+                    throw new System.InvalidOperationException("Fill tool popup state did not stay synced.");
+                }
+            }
+            finally
+            {
+                window.Close();
+                Object.DestroyImmediate(texture);
             }
         }
 

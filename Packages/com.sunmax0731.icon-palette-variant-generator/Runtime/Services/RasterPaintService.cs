@@ -74,6 +74,9 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 case DrawToolKind.Eraser:
                     Erase(pixels, width, height, centerX, centerY, radius, settings.strength);
                     break;
+                case DrawToolKind.Fill:
+                    FloodFill(pixels, width, height, centerX, centerY, settings.paintColor, settings.paintOpacity, settings.strength);
+                    break;
                 case DrawToolKind.Blur:
                     Blur(pixels, width, height, centerX, centerY, Mathf.Max(1, settings.blurRadius), settings.strength);
                     break;
@@ -106,6 +109,61 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                 pixel.a = (byte)Mathf.Clamp(Mathf.RoundToInt(pixel.a * (1f - eraseRatio)), 0, 255);
                 pixels[index] = pixel;
             });
+        }
+
+        private static void FloodFill(Color32[] pixels, int width, int height, int startX, int startY, Color32 color, float opacity, float strength)
+        {
+            if (width <= 0 || height <= 0 || startX < 0 || startY < 0 || startX >= width || startY >= height)
+            {
+                return;
+            }
+
+            int startIndex = (startY * width) + startX;
+            Color32 target = pixels[startIndex];
+            Color32 fill = Lerp(target, color, Mathf.Clamp01(opacity) * Mathf.Clamp01(strength));
+            if (SameColor(target, fill))
+            {
+                return;
+            }
+
+            bool[] visited = new bool[pixels.Length];
+            Queue<int> queue = new Queue<int>();
+            visited[startIndex] = true;
+            queue.Enqueue(startIndex);
+
+            while (queue.Count > 0)
+            {
+                int index = queue.Dequeue();
+                if (!SameColor(pixels[index], target))
+                {
+                    continue;
+                }
+
+                pixels[index] = fill;
+                int x = index % width;
+                int y = index / width;
+                EnqueueFloodFill(queue, visited, width, height, x + 1, y);
+                EnqueueFloodFill(queue, visited, width, height, x - 1, y);
+                EnqueueFloodFill(queue, visited, width, height, x, y + 1);
+                EnqueueFloodFill(queue, visited, width, height, x, y - 1);
+            }
+        }
+
+        private static void EnqueueFloodFill(Queue<int> queue, bool[] visited, int width, int height, int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= width || y >= height)
+            {
+                return;
+            }
+
+            int index = (y * width) + x;
+            if (visited[index])
+            {
+                return;
+            }
+
+            visited[index] = true;
+            queue.Enqueue(index);
         }
 
         private static void Blur(Color32[] pixels, int width, int height, int centerX, int centerY, int radius, float strength)

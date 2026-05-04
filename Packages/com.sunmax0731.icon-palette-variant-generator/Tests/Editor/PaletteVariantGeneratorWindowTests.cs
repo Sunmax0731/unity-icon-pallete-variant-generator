@@ -124,6 +124,50 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
+        public void DirectSourceFillRecolorsContiguousMatchingPixels()
+        {
+            PaletteVariantGeneratorWindow.Open();
+            PaletteVariantGeneratorWindow window = EditorWindow.GetWindow<PaletteVariantGeneratorWindow>();
+            Assert.That(window, Is.Not.Null);
+
+            Texture2D texture = new Texture2D(3, 1, TextureFormat.RGBA32, false)
+            {
+                name = "DirectSourceFillValidation"
+            };
+            Color32 red = new Color32(255, 0, 0, 255);
+            texture.SetPixels32(new[]
+            {
+                red,
+                red,
+                new Color32(0, 0, 255, 255)
+            });
+            texture.Apply();
+
+            window.SetValidationSession(
+                texture,
+                new PaletteVariantSession
+                {
+                    drawingToolSettings = new DrawingToolSettings
+                    {
+                        paintTarget = PaintEditTarget.SourceImage,
+                        activeTool = DrawToolKind.Fill,
+                        strength = 1f,
+                        paintOpacity = 1f,
+                        paintColor = new Color32(0, 255, 0, 128)
+                    }
+                });
+            window.SetPreviewInteractionModeForValidation(PreviewInteractionMode.Paint);
+            window.ApplyPaintAtSourcePixelForValidation(0, 0);
+
+            Assert.That(window.GetSourcePixelForValidation(0, 0), Is.EqualTo(new Color32(0, 255, 0, 128)));
+            Assert.That(window.GetSourcePixelForValidation(1, 0), Is.EqualTo(new Color32(0, 255, 0, 128)));
+            Assert.That(window.GetSourcePixelForValidation(2, 0), Is.EqualTo(new Color32(0, 0, 255, 255)));
+
+            window.Close();
+            Object.DestroyImmediate(texture);
+        }
+
+        [Test]
         public void ToolPopupValuesStaySyncedAfterSessionReplacement()
         {
             PaletteVariantGeneratorWindow.Open();

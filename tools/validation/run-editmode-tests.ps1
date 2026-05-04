@@ -234,6 +234,10 @@ if (-not (Select-String -Path $logPath -Pattern "ISSUE48_EXPORT_ALPHA_TRANSPAREN
     throw "Unity export alpha transparency validation did not emit pass marker. Log: $logPath"
 }
 
+if (-not (Select-String -Path $logPath -Pattern "ISSUE48_FILL_TOOL_VALIDATION=PASS" -Quiet)) {
+    throw "Unity fill tool validation did not emit pass marker. Log: $logPath"
+}
+
 if (-not (Select-String -Path $logPath -Pattern "ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS" -Quiet)) {
     throw "Unity tool popup sync validation did not emit pass marker. Log: $logPath"
 }
@@ -298,6 +302,7 @@ Set-Content -LiteralPath $resultsPath -Value @(
     "ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS",
     "ISSUE48_JPG_WINDOW_ERASER_VALIDATION=PASS",
     "ISSUE48_EXPORT_ALPHA_TRANSPARENCY_VALIDATION=PASS",
+    "ISSUE48_FILL_TOOL_VALIDATION=PASS",
     "ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS",
     "FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS",
     "ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS"
