@@ -1760,11 +1760,19 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 throw new System.InvalidOperationException("Validation setup expected opaque source pixel before erasing.");
             }
 
+            Color32 beforePreview = window.GetPrimaryPreviewPixelForValidation(0, 0);
+
             window.ApplyPaintAtSourcePixelForValidation(0, 0);
             Color32 erased = window.GetSourcePixelForValidation(0, 0);
             if (erased.a != 0)
             {
                 throw new System.InvalidOperationException($"Direct source eraser did not clear alpha. Actual alpha: {erased.a}");
+            }
+
+            Color32 erasedPreview = window.GetPrimaryPreviewPixelForValidation(0, 0);
+            if (SamePixel(beforePreview, erasedPreview))
+            {
+                throw new System.InvalidOperationException("Direct source eraser changed source alpha but preview display did not change.");
             }
 
             window.RefreshAfterPreviewForValidation();
@@ -1774,7 +1782,21 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 throw new System.InvalidOperationException($"Direct source eraser alpha rolled back after preview refresh. Actual alpha: {afterRefresh.a}");
             }
 
+            Color32 afterRefreshPreview = window.GetPrimaryPreviewPixelForValidation(0, 0);
+            if (SamePixel(beforePreview, afterRefreshPreview))
+            {
+                throw new System.InvalidOperationException("Direct source eraser preview display rolled back after preview refresh.");
+            }
+
             window.Close();
+        }
+
+        private static bool SamePixel(Color32 left, Color32 right)
+        {
+            return left.r == right.r
+                && left.g == right.g
+                && left.b == right.b
+                && left.a == right.a;
         }
 
         private static void ValidatePreviewVisibilityAndParameterHelpFollowup()

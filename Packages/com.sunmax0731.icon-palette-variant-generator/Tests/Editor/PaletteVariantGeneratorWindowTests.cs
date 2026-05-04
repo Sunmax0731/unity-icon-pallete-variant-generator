@@ -58,12 +58,16 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             window.SetPaintTargetForValidation(PaintEditTarget.SourceImage);
             window.SetDrawToolForValidation(DrawToolKind.Eraser);
             window.SetBrushSettingsForValidation(1, 1f);
+
+            Color32 beforePreview = window.GetPrimaryPreviewPixelForValidation(0, 0);
             window.ApplyPaintAtSourcePixelForValidation(0, 0);
 
             Assert.That(window.GetSourcePixelForValidation(0, 0).a, Is.EqualTo(0));
+            Assert.That(window.GetPrimaryPreviewPixelForValidation(0, 0), Is.Not.EqualTo(beforePreview));
 
             window.RefreshAfterPreviewForValidation();
             Assert.That(window.GetSourcePixelForValidation(0, 0).a, Is.EqualTo(0));
+            Assert.That(window.GetPrimaryPreviewPixelForValidation(0, 0), Is.Not.EqualTo(beforePreview));
 
             window.Close();
             Object.DestroyImmediate(texture);

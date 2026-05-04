@@ -5176,6 +5176,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             return readableSourceImage.GetPixels32()[(y * readableSourceImage.width) + x];
         }
 
+        internal Color32 GetPrimaryPreviewPixelForValidation(int x, int y)
+        {
+            Texture2D texture = GetPrimaryPreviewDisplayTexture();
+            if (texture == null || x < 0 || y < 0 || x >= texture.width || y >= texture.height)
+            {
+                return default;
+            }
+
+            return texture.GetPixels32()[(y * texture.width) + x];
+        }
+
         internal bool AddBrushSelectionAtSourcePixelForValidation(int x, int y)
         {
             return TryAddBrushPaletteColorAtSourcePixel(x, y);
