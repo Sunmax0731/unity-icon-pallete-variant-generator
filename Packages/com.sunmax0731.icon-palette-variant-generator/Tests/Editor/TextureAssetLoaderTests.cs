@@ -17,6 +17,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
             string absolutePath = Path.Combine(Directory.GetCurrentDirectory(), assetPath);
             Texture2D source = null;
             Texture2D readable = null;
+            Texture2D roundTripPng = null;
 
             try
             {
@@ -56,9 +57,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
                 readable.Apply(false, false);
 
                 Assert.That(readable.GetPixels32()[0].a, Is.EqualTo(0));
+
+                byte[] pngBytes = readable.EncodeToPNG();
+                roundTripPng = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                Assert.That(ImageConversion.LoadImage(roundTripPng, pngBytes, false), Is.True);
+                Assert.That(roundTripPng.GetPixels32()[0].a, Is.EqualTo(0));
+                Assert.That(TextureAssetLoader.IsJpegAssetPath(assetPath), Is.True);
             }
             finally
             {
+                if (roundTripPng != null)
+                {
+                    Object.DestroyImmediate(roundTripPng);
+                }
+
                 if (readable != null)
                 {
                     Object.DestroyImmediate(readable);

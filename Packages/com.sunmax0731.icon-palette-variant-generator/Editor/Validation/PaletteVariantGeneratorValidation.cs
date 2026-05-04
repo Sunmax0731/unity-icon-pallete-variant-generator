@@ -23,6 +23,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
         }
 
         public static void RunScaffoldValidation()
@@ -140,6 +141,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             Debug.Log("ISSUE48_DIRECT_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_RGB_SOURCE_ERASER_VALIDATION=PASS");
             Debug.Log("ISSUE48_JPG_SOURCE_ERASER_VALIDATION=PASS");
+            Debug.Log("ISSUE48_JPG_INTERNAL_PNG_CONVERSION_VALIDATION=PASS");
             Debug.Log("ISSUE48_TOOL_POPUP_SYNC_VALIDATION=PASS");
             Debug.Log("FOLLOWUP_PREVIEW_VISIBILITY_HELP_VALIDATION=PASS");
             Debug.Log("ISSUE24_RELEASE_AUTOMATION_VALIDATION=PASS");
@@ -1866,6 +1868,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
             string absolutePath = Path.Combine(Directory.GetCurrentDirectory(), assetPath);
             Texture2D source = null;
             Texture2D readable = null;
+            Texture2D roundTripPng = null;
 
             try
             {
@@ -1920,9 +1923,27 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Validation
                 {
                     throw new System.InvalidOperationException($"JPG source eraser did not preserve transparent alpha. Actual alpha: {erased.a}");
                 }
+
+                byte[] pngBytes = readable.EncodeToPNG();
+                roundTripPng = new Texture2D(readable.width, readable.height, TextureFormat.RGBA32, false);
+                if (!ImageConversion.LoadImage(roundTripPng, pngBytes, false))
+                {
+                    throw new System.InvalidOperationException("Edited JPG source could not be encoded as an internal PNG image.");
+                }
+
+                Color32 roundTripErased = roundTripPng.GetPixels32()[0];
+                if (roundTripErased.a != 0)
+                {
+                    throw new System.InvalidOperationException($"Internal PNG conversion did not preserve erased alpha. Actual alpha: {roundTripErased.a}");
+                }
             }
             finally
             {
+                if (roundTripPng != null)
+                {
+                    Object.DestroyImmediate(roundTripPng);
+                }
+
                 if (readable != null)
                 {
                     Object.DestroyImmediate(readable);

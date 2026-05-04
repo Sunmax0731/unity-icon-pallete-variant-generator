@@ -4016,8 +4016,22 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             InvalidateSelectionOverlay();
             DestroyAfterPreview();
             DestroyReplacementPreview();
-            reportMessage = $"Analyzed {session.paletteColors.Count} palette colors from {assetPath}.";
+            reportMessage = BuildAnalyzeReportMessage(assetPath, session.paletteColors.Count);
             reportType = MessageType.Info;
+        }
+
+        private string BuildAnalyzeReportMessage(string assetPath, int paletteColorCount)
+        {
+            if (TextureAssetLoader.IsJpegAssetPath(assetPath))
+            {
+                return displayLanguage == PaletteVariantDisplayLanguage.Japanese
+                    ? $"JPEGを内部の透過編集用PNGバッファに変換しました。元画像は変更しません。パレット色数: {paletteColorCount}"
+                    : $"Converted JPEG to an internal transparent PNG editing buffer. Original asset is unchanged. Palette colors: {paletteColorCount}";
+            }
+
+            return displayLanguage == PaletteVariantDisplayLanguage.Japanese
+                ? $"{assetPath} から {paletteColorCount} 色を解析しました。"
+                : $"Analyzed {paletteColorCount} palette colors from {assetPath}.";
         }
 
         private void AutoGroupPalette()

@@ -10,7 +10,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
     public sealed class TextureAssetLoader
     {
         /// <summary>
-        /// Loads a Unity project texture as an editable RGBA32 texture.
+        /// Loads a Unity project texture as an editable RGBA32 texture. JPG assets are kept unchanged on disk, but the internal buffer is PNG-compatible so eraser transparency can be preserved.
         /// </summary>
         public bool TryLoadReadableTexture(Texture2D source, out Texture2D readableTexture, out string assetPath, out string error)
         {
@@ -69,6 +69,17 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Services
                 error = ex.Message;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Returns true when a project asset path points to a JPEG source that needs an internal transparent editing buffer.
+        /// </summary>
+        public static bool IsJpegAssetPath(string assetPath)
+        {
+            string extension = Path.GetExtension(assetPath);
+            return string.Equals(extension, ".jpg", System.StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".jpeg", System.StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".jpe", System.StringComparison.OrdinalIgnoreCase);
         }
 
         private static Texture2D CreateEditableRgbaTexture(Texture2D decodedTexture, string sourceName)
