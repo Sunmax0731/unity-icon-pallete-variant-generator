@@ -75,7 +75,8 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 
 1. 小さな孤立ドットがある箇所か、ブラシで意図的に `1px` ノイズを作る。
 2. Tool を `NoiseRemoval` にする。
-3. ノイズ周辺をドラッグする。
+3. 高コントラストなノイズを消す場合は `Noise Threshold` を高めに設定する。
+4. ノイズ周辺をドラッグする。
 
 期待結果:
 - 小さな孤立ピクセルが周辺色で埋まる

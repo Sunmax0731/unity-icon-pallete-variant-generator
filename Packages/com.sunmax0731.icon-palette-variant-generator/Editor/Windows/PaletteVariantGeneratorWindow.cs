@@ -26,6 +26,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private const float MinPreviewHeight = 260f;
         private const float MinPreviewZoom = 1f;
         private const float MaxPreviewZoom = 8f;
+        private const float MaxRgbColorDistance = 442f;
         private const float PaletteListHeight = 170f;
         private const float LayerListHeight = 150f;
         private const float VariationListHeight = 126f;
@@ -645,7 +646,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             {
                 session.drawingToolSettings.noiseRegionPixels = value;
             }));
-            section.Add(CreateSlider("draw-noise-threshold-slider", "Noise Threshold", session.drawingToolSettings.noiseThreshold, 0f, 255f, value =>
+            section.Add(CreateSlider("draw-noise-threshold-slider", "Noise Threshold", session.drawingToolSettings.noiseThreshold, 0f, MaxRgbColorDistance, value =>
             {
                 session.drawingToolSettings.noiseThreshold = value;
             }));
