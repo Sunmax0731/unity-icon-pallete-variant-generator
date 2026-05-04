@@ -178,9 +178,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         private PaintEditTarget activePaintTarget;
         private bool activePaintHasLastPoint;
         private Vector2Int activePaintLastPoint;
-        private Color32[] originalSourcePixels;
-        private int originalSourceWidth;
-        private int originalSourceHeight;
 
         [MenuItem("Tools/Palette Variant Generator/メイン画面")]
         public static void Open()
@@ -2391,23 +2388,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             texture.Apply(false, false);
         }
 
-        private void CacheOriginalSourcePixels(Texture2D texture)
-        {
-            if (texture == null)
-            {
-                originalSourcePixels = null;
-                originalSourceWidth = 0;
-                originalSourceHeight = 0;
-                return;
-            }
-
-            Color32[] pixels = texture.GetPixels32();
-            originalSourcePixels = new Color32[pixels.Length];
-            Array.Copy(pixels, originalSourcePixels, pixels.Length);
-            originalSourceWidth = texture.width;
-            originalSourceHeight = texture.height;
-        }
-
         private void ApplySessionSourcePixelsToReadableImageIfAvailable()
         {
             if (readableSourceImage == null
@@ -2653,11 +2633,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }
 
             Vector2Int currentPoint = new Vector2Int(centerX, centerY);
-            if (ShouldRestoreSourceFromReference())
-            {
-                ApplySourceRestoreStroke(currentPoint);
-            }
-            else if (ShouldInterpolateContinuousStroke() && activePaintHasLastPoint)
+            if (ShouldInterpolateContinuousStroke() && activePaintHasLastPoint)
             {
                 rasterPaintService.ApplyStroke(
                     activePaintPixels,
@@ -2708,41 +2684,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             UpdatePreviewImagesImmediately();
             Repaint();
-        }
-
-        private bool ShouldRestoreSourceFromReference()
-        {
-            return activePaintTarget == PaintEditTarget.SourceImage
-                && session.drawingToolSettings.activeTool == DrawToolKind.Eraser
-                && originalSourcePixels != null
-                && originalSourceWidth == activePaintWidth
-                && originalSourceHeight == activePaintHeight
-                && originalSourcePixels.Length == activePaintPixels?.Length;
-        }
-
-        private void ApplySourceRestoreStroke(Vector2Int currentPoint)
-        {
-            if (ShouldInterpolateContinuousStroke() && activePaintHasLastPoint)
-            {
-                rasterPaintService.RestoreStrokeFromReference(
-                    activePaintPixels,
-                    originalSourcePixels,
-                    activePaintWidth,
-                    activePaintHeight,
-                    activePaintLastPoint,
-                    currentPoint,
-                    session.drawingToolSettings);
-                return;
-            }
-
-            rasterPaintService.RestoreFromReference(
-                activePaintPixels,
-                originalSourcePixels,
-                activePaintWidth,
-                activePaintHeight,
-                currentPoint.x,
-                currentPoint.y,
-                session.drawingToolSettings);
         }
 
         private bool ShouldInterpolateContinuousStroke()
@@ -3993,7 +3934,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
 
             DestroyReadableSourceImage();
             readableSourceImage = loadedTexture;
-            CacheOriginalSourcePixels(loadedTexture);
             sourceAssetPath = assetPath;
             session.sourceImageAssetPath = assetPath;
             session.sourcePixelData = layerTextureSerializationService.Serialize(loadedTexture.GetPixels32(), loadedTexture.width, loadedTexture.height);
@@ -4469,7 +4409,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             if (sourceImage != null && textureAssetLoader.TryLoadReadableTexture(sourceImage, out Texture2D loadedTexture, out _, out loadError))
             {
                 readableSourceImage = loadedTexture;
-                CacheOriginalSourcePixels(loadedTexture);
                 if (session.sourcePixelData != null
                     && session.sourcePixelData.width == loadedTexture.width
                     && session.sourcePixelData.height == loadedTexture.height

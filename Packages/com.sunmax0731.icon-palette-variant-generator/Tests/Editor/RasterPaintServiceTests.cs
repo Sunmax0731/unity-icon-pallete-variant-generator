@@ -84,42 +84,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Tests
         }
 
         [Test]
-        public void RestoreFromReferenceReturnsPixelsToOriginalColor()
-        {
-            Color32[] original = new Color32[9];
-            for (int index = 0; index < original.Length; index++)
-            {
-                original[index] = new Color32(255, 255, 0, 255);
-            }
-
-            Color32[] edited = new Color32[9];
-            for (int index = 0; index < edited.Length; index++)
-            {
-                edited[index] = new Color32(255, 0, 0, 255);
-            }
-
-            RasterPaintService service = new RasterPaintService();
-            service.RestoreFromReference(
-                edited,
-                original,
-                3,
-                3,
-                1,
-                1,
-                new DrawingToolSettings
-                {
-                    activeTool = DrawToolKind.Eraser,
-                    brushSize = 3,
-                    strength = 1f
-                });
-
-            Assert.That(edited[4].r, Is.EqualTo(255));
-            Assert.That(edited[4].g, Is.EqualTo(255));
-            Assert.That(edited[4].b, Is.EqualTo(0));
-            Assert.That(edited[4].a, Is.EqualTo(255));
-        }
-
-        [Test]
         public void BlurMutatesCenterPixel()
         {
             Color32[] pixels =

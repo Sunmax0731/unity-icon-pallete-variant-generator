@@ -47,47 +47,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
             }
         }
 
-        /// <summary>
-        /// Restores pixels continuously from a reference buffer between two coordinates.
-        /// </summary>
-        public void RestoreStrokeFromReference(
-            Color32[] pixels,
-            Color32[] referencePixels,
-            int width,
-            int height,
-            Vector2Int from,
-            Vector2Int to,
-            DrawingToolSettings settings)
-        {
-            if (pixels == null)
-            {
-                throw new ArgumentNullException(nameof(pixels));
-            }
-
-            if (referencePixels == null)
-            {
-                throw new ArgumentNullException(nameof(referencePixels));
-            }
-
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
-
-            int radius = Mathf.Max(0, settings.brushSize / 2);
-            float spacing = Mathf.Max(1f, radius * 0.5f);
-            float distance = Vector2Int.Distance(from, to);
-            int steps = Mathf.Max(1, Mathf.CeilToInt(distance / spacing));
-
-            for (int step = 0; step <= steps; step++)
-            {
-                float t = steps == 0 ? 0f : step / (float)steps;
-                int x = Mathf.RoundToInt(Mathf.Lerp(from.x, to.x, t));
-                int y = Mathf.RoundToInt(Mathf.Lerp(from.y, to.y, t));
-                RestoreFromReference(pixels, referencePixels, width, height, x, y, settings);
-            }
-        }
-
         public void ApplyTool(
             Color32[] pixels,
             int width,
@@ -125,41 +84,6 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Services
                     RemoveNoise(pixels, width, height, centerX, centerY, radius, settings.noiseRegionPixels, settings.noiseThreshold);
                     break;
             }
-        }
-
-        /// <summary>
-        /// Restores pixels from a reference buffer within the current brush region.
-        /// </summary>
-        public void RestoreFromReference(
-            Color32[] pixels,
-            Color32[] referencePixels,
-            int width,
-            int height,
-            int centerX,
-            int centerY,
-            DrawingToolSettings settings)
-        {
-            if (pixels == null)
-            {
-                throw new ArgumentNullException(nameof(pixels));
-            }
-
-            if (referencePixels == null)
-            {
-                throw new ArgumentNullException(nameof(referencePixels));
-            }
-
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
-
-            int radius = Mathf.Max(0, settings.brushSize / 2);
-            VisitCircle(width, height, centerX, centerY, radius, (x, y) =>
-            {
-                int index = (y * width) + x;
-                pixels[index] = referencePixels[index];
-            });
         }
 
         private static void Paint(Color32[] pixels, int width, int height, int centerX, int centerY, int radius, Color32 color, float opacity, float strength)
