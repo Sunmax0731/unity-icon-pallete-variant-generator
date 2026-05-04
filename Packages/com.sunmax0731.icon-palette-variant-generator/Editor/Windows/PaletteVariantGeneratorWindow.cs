@@ -922,16 +922,12 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             if (beforePreviewImage != null)
             {
                 beforePreviewImage.style.height = previewCanvasHeight;
-                if (previewCompareMode != PreviewCompareMode.Split)
+                if (!ShouldUseSplitPreviewDisplay())
                 {
                     DestroySplitPreviewTexture();
                 }
 
-                beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Difference
-                    ? GetDisplayPreviewTexture(GetDiffPreviewTexture(), HighlightPreviewSlot.Split)
-                    : previewCompareMode == PreviewCompareMode.Split
-                    ? GetDisplayPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
-                    : GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+                beforePreviewImage.image = GetPrimaryPreviewDisplayTexture();
                 beforePreviewImage.style.display = DisplayStyle.Flex;
             }
 
@@ -939,7 +935,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             {
                 afterPreviewImage.style.height = previewCanvasHeight;
                 afterPreviewImage.image = GetDisplayPreviewTexture(afterPreview, HighlightPreviewSlot.After);
-                afterPreviewImage.style.display = previewCompareMode == PreviewCompareMode.Split || previewCompareMode == PreviewCompareMode.Difference || afterPreview == null
+                afterPreviewImage.style.display = ShouldShowSecondaryPreviewPane()
                     ? DisplayStyle.None
                     : DisplayStyle.Flex;
             }
@@ -1784,6 +1780,40 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             splitPreviewTexture.SetPixels32(outputPixels);
             splitPreviewTexture.Apply(false, false);
             return splitPreviewTexture;
+        }
+
+        private bool ShouldUseSourceEditingPreviewOnly()
+        {
+            return previewInteractionMode == PreviewInteractionMode.Paint
+                && session?.drawingToolSettings != null
+                && session.drawingToolSettings.paintTarget == PaintEditTarget.SourceImage;
+        }
+
+        private bool ShouldUseSplitPreviewDisplay()
+        {
+            return previewCompareMode == PreviewCompareMode.Split && !ShouldUseSourceEditingPreviewOnly();
+        }
+
+        private Texture2D GetPrimaryPreviewDisplayTexture()
+        {
+            if (ShouldUseSourceEditingPreviewOnly())
+            {
+                return GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+            }
+
+            return previewCompareMode == PreviewCompareMode.Difference
+                ? GetDisplayPreviewTexture(GetDiffPreviewTexture(), HighlightPreviewSlot.Split)
+                : previewCompareMode == PreviewCompareMode.Split
+                ? GetDisplayPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
+                : GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+        }
+
+        private bool ShouldShowSecondaryPreviewPane()
+        {
+            return ShouldUseSourceEditingPreviewOnly()
+                || previewCompareMode == PreviewCompareMode.Split
+                || previewCompareMode == PreviewCompareMode.Difference
+                || afterPreview == null;
         }
 
         private Texture2D GetDiffPreviewTexture()
@@ -5558,16 +5588,20 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
         {
             if (beforePreviewImage != null)
             {
-                beforePreviewImage.image = previewCompareMode == PreviewCompareMode.Difference
-                    ? GetDisplayPreviewTexture(GetDiffPreviewTexture(), HighlightPreviewSlot.Split)
-                    : previewCompareMode == PreviewCompareMode.Split
-                    ? GetDisplayPreviewTexture(GetSplitPreviewTexture(), HighlightPreviewSlot.Split)
-                    : GetDisplayPreviewTexture(readableSourceImage, HighlightPreviewSlot.Before);
+                if (!ShouldUseSplitPreviewDisplay())
+                {
+                    DestroySplitPreviewTexture();
+                }
+
+                beforePreviewImage.image = GetPrimaryPreviewDisplayTexture();
             }
 
             if (afterPreviewImage != null)
             {
                 afterPreviewImage.image = GetDisplayPreviewTexture(afterPreview, HighlightPreviewSlot.After);
+                afterPreviewImage.style.display = ShouldShowSecondaryPreviewPane()
+                    ? DisplayStyle.None
+                    : DisplayStyle.Flex;
             }
         }
 

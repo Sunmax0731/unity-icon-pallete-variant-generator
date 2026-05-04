@@ -52,6 +52,7 @@ powershell -ExecutionPolicy Bypass -File tools\validation\run-editmode-tests.ps1
 期待結果:
 - レイヤーを追加しなくても描画できる
 - 読み込み画像そのものに対して描画結果が反映される
+- `編集対象 = 読み込み画像` の間は、比較表示より編集面のリアルタイム反映が優先される
 
 ### TC-DRW-01 Brush
 
