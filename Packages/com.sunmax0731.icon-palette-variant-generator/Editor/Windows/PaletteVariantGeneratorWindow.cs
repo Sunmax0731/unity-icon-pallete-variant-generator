@@ -625,6 +625,8 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             section.Add(CreateEnumField("draw-tool-popup", "Tool", session.drawingToolSettings.activeTool, value =>
             {
                 session.drawingToolSettings.activeTool = (DrawToolKind)value;
+                EnsurePreviewModeMatchesActiveTool();
+                RefreshUiToolkitContent();
             }));
             section.Add(CreateSliderInt("draw-brush-size-slider", "Brush Size", session.drawingToolSettings.brushSize, 1, 64, value =>
             {
@@ -757,6 +759,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             section.Add(miniToolbar);
             section.Add(CreateEnumField("preview-interaction-mode-popup", T("previewMode", "Preview Mode"), previewInteractionMode, value =>
             {
+                ResetPreviewInteractionState();
                 previewInteractionMode = (PreviewInteractionMode)value;
                 RefreshUiToolkitContent();
             }));
@@ -767,6 +770,7 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             }));
             section.Add(CreateEnumField("compare-mode-popup", T("compareMode", "Compare"), previewCompareMode, value =>
             {
+                ResetPreviewInteractionState();
                 previewCompareMode = (PreviewCompareMode)value;
                 RefreshUiToolkitContent();
             }));
@@ -2181,6 +2185,41 @@ namespace Sunmax0731.IconPaletteVariantGenerator.Editor.Windows
             previewDragActive = false;
             previewDragMoved = false;
             previewDragPointerId = -1;
+        }
+
+        private void ResetPreviewInteractionState()
+        {
+            ReleasePreviewPointerCapture(beforePreviewImage);
+            ReleasePreviewPointerCapture(afterPreviewImage);
+            CancelPreviewDrag();
+            previewBrushActive = false;
+        }
+
+        private void ReleasePreviewPointerCapture(Image image)
+        {
+            if (image == null || previewDragPointerId < 0)
+            {
+                return;
+            }
+
+            if (image.HasPointerCapture(previewDragPointerId))
+            {
+                image.ReleasePointer(previewDragPointerId);
+            }
+        }
+
+        private void EnsurePreviewModeMatchesActiveTool()
+        {
+            switch (session.drawingToolSettings.activeTool)
+            {
+                case DrawToolKind.Brush:
+                case DrawToolKind.Eraser:
+                case DrawToolKind.Blur:
+                case DrawToolKind.Smooth:
+                case DrawToolKind.NoiseRemoval:
+                    previewInteractionMode = PreviewInteractionMode.Paint;
+                    return;
+            }
         }
 
         private void ApplyPreviewPanDrag(Vector2 delta, float previewWidth, float previewHeight)
